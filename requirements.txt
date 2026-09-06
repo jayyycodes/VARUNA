@@ -1,0 +1,14 @@
+fastapi
+uvicorn[standard]
+pydantic>=2.0
+langgraph
+langchain
+redis
+psycopg2-binary
+sqlalchemy
+geoalchemy2
+shapely
+httpx
+pytest
+pytest-asyncio
+python-dotenv
