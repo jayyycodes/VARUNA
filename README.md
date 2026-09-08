@@ -183,7 +183,7 @@ must never be replaced by an LLM-generated guess.
 |---|---|
 | Orchestration | LangGraph (Python) |
 | Backend API | FastAPI |
-| LLM | GTP-OSS 120B / LLAMA 70B versitile, tool-calling — **confirm final provider before build** |
+| LLM | **Groq** (primary, e.g. `llama-3.3-70b-versatile`) + **Cerebras** (fallback/RAG, e.g. `llama3.1-70b`) — both free tier, routed via `backend/gateway/ai_gateway.py` |
 | Spatial DB | PostgreSQL + PostGIS (Supabase) |
 | Vector Store | pgvector / Chroma |
 | Cache / Session | Redis |
@@ -237,7 +237,37 @@ to that specific agent.
 
 ## 10. Build Order
 
-1. **Day 0:** Jay sets up repo, Docker Compose, message envelope schema
+### Day 0 — done by Jay before anyone else writes agent logic
+
+1. Repo created, tasks assigned ✅
+2. `docker compose up -d` — brings up Postgres+PostGIS and Redis (no custom
+   image build needed, both use pre-built images from Docker Hub)
+3. Verify Postgres is reachable and `infra/init.sql` ran automatically
+   (check: `docker exec -it <postgres_container> psql -U varuna -d varuna -c '\dt'`
+   — should list `users`, `conversations`, `messages`, `query_runs`,
+   `agent_runs`, `risk_verdicts`)
+4. Copy `.env.example` → `.env`, fill in `GROQ_API_KEY` and `CEREBRAS_API_KEY`
+   (free signup at console.groq.com and cloud.cerebras.ai)
+5. `pip install -r requirements.txt`
+6. Sanity-check the AI Gateway: run one `call_llm("planner", [...])` call
+   from a Python shell against Groq, confirm the Cerebras fallback path
+   works by temporarily using a bad Groq key
+7. **Message envelope schema — what "Day 0" actually means for this:**
+   the schema itself (`backend/schemas/envelope.py`) is already written.
+   Day 0's job is not to design it further — it's to make sure everyone
+   has *read* it and agrees to return exactly this shape from their
+   agent, since `agent_runs.output_data` in the DB and every downstream
+   consumer (Risk Agent, Visualization Agent) depends on it staying
+   consistent. Treat it as locked unless there's a real reason to change
+   it — and if it changes, that's a message to the whole team, not a
+   silent edit.
+8. Push `.env.example` (never `.env`), confirm `.gitignore` is catching
+   `.env` and `__pycache__/` before anyone commits
+9. Share with the team: repo URL, "run `docker compose up -d` then read
+   your agent's README" — that's the only onboarding needed
+
+### Day 1 onward
+
 2. **Day 1:** Weather Agent (Cbum) + Geofencing Agent (Vedant) start on real data; Planner skeleton (Jay) starts against mocked agent responses
 3. **Day 2:** Marine & Fishing Agent (Jaish) + Risk Agent rule engine (Jaish) built; Planner wired to real Weather + Geofencing agents
 4. **Day 3:** Frontend shell + map (Adeey) against mocked JSON; Visualization Agent response schema finalized

@@ -3,6 +3,7 @@ uvicorn[standard]
 pydantic>=2.0
 langgraph
 langchain
+litellm
 redis
 psycopg2-binary
 sqlalchemy
@@ -12,3 +13,4 @@ httpx
 pytest
 pytest-asyncio
 python-dotenv
+geopandas
