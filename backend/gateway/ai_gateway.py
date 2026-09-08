@@ -5,7 +5,7 @@ Every LLM call in the system goes through `call_llm()`.
 No agent holds provider API keys directly.
 
 Provides:
-  - Provider abstraction via LiteLLM (Groq, Cerebras, or any OpenAI-compatible)
+  - Direct ultra-fast async provider clients (Groq + Cerebras) with httpx transport
   - Automatic fallback: primary model fails → fallback model
   - Per-agent model routing (cheaper model for intent, larger for planning)
   - Structured logging of latency + token usage
@@ -19,40 +19,68 @@ Usage:
 import os
 import logging
 import time
-
+from typing import Any
 from dotenv import load_dotenv
-from litellm import acompletion
+from openai import AsyncOpenAI
 
 load_dotenv()
 logger = logging.getLogger("varuna.gateway")
 
+GROQ_KEY = os.getenv("GROQ_API_KEY", "")
+GROQ_BASE = os.getenv("GROQ_BASE_URL", "https://api.groq.com/openai/v1")
+
+CEREBRAS_KEY = os.getenv("CEREBRAS_API_KEY", "")
+CEREBRAS_BASE = os.getenv("CEREBRAS_BASE_URL", "https://api.cerebras.ai/v1")
+
+# Initialize SDK clients
+groq_client = AsyncOpenAI(api_key=GROQ_KEY, base_url=GROQ_BASE) if GROQ_KEY else None
+cerebras_client = AsyncOpenAI(api_key=CEREBRAS_KEY, base_url=CEREBRAS_BASE) if CEREBRAS_KEY else None
 
 # ── Model routing table ───────────────────────────────────────────────
-# Each agent role maps to a model. Override any of these via .env.
-# Format: "provider/model_name" — LiteLLM resolves the provider.
-
 MODELS: dict[str, str] = {
-    "planner":      os.getenv("PLANNER_MODEL",      "groq/openai/gpt-oss-120b"),
-    "intent":       os.getenv("INTENT_MODEL",        "groq/openai/gpt-oss-120b"),
-    "risk_explain": os.getenv("RISK_EXPLAIN_MODEL",  "groq/openai/gpt-oss-120b"),
-    "rag":          os.getenv("RAG_MODEL",           "groq/qwen/qwen3.8-27b"),
-    "synthesizer":  os.getenv("SYNTHESIZER_MODEL",   "groq/openai/gpt-oss-120b"),
-    "default":      os.getenv("FALLBACK_MODEL",      "groq/qwen/qwen3.8-27b"),
+    "planner":      os.getenv("PLANNER_MODEL",      "openai/gpt-oss-120b"),
+    "intent":       os.getenv("INTENT_MODEL",        "openai/gpt-oss-120b"),
+    "risk_explain": os.getenv("RISK_EXPLAIN_MODEL",  "openai/gpt-oss-120b"),
+    "rag":          os.getenv("RAG_MODEL",           "qwen/qwen3.8-27b"),
+    "synthesizer":  os.getenv("SYNTHESIZER_MODEL",   "openai/gpt-oss-120b"),
+    "default":      os.getenv("FALLBACK_MODEL",      "openai/gpt-oss-120b"),
 }
 
-FALLBACK_MODEL: str = os.getenv("FALLBACK_MODEL", "groq/qwen/qwen3.8-27b")
+FALLBACK_MODEL: str = os.getenv("FALLBACK_MODEL", "openai/gpt-oss-120b")
 
 
-# ── Startup checks ────────────────────────────────────────────────────
+def _clean_model_name(raw_model: str) -> tuple[str, str]:
+    """Determine provider and clean model name."""
+    if raw_model.startswith("groq/"):
+        return "groq", raw_model[5:]
+    if raw_model.startswith("cerebras/"):
+        return "cerebras", raw_model[9:]
+    return "groq", raw_model
 
-def _check_api_keys() -> None:
-    """Warn early if provider keys are missing."""
-    if not os.getenv("GROQ_API_KEY"):
-        logger.warning("[gateway] GROQ_API_KEY not set — Groq models will fail")
-    if not os.getenv("CEREBRAS_API_KEY"):
-        logger.warning("[gateway] CEREBRAS_API_KEY not set — Cerebras fallback will fail")
 
-_check_api_keys()
+async def _execute_chat(
+    client: AsyncOpenAI | None,
+    model_name: str,
+    messages: list[dict],
+    temperature: float,
+    max_tokens: int,
+    response_format: dict | None,
+) -> str:
+    """Execute completion request with AsyncOpenAI client."""
+    if not client:
+        raise ValueError("Client for provider is not configured or missing API key.")
+
+    kwargs: dict[str, Any] = {
+        "model": model_name,
+        "messages": messages,
+        "temperature": temperature,
+        "max_tokens": max_tokens,
+    }
+    if response_format is not None:
+        kwargs["response_format"] = response_format
+
+    resp = await client.chat.completions.create(**kwargs)
+    return resp.choices[0].message.content or ""
 
 
 # ── Public API ─────────────────────────────────────────────────────────
@@ -67,61 +95,46 @@ async def call_llm(
 ) -> str:
     """
     Route an LLM call through the AI Gateway with automatic fallback.
-
-    Args:
-        role: Routing key — determines which model to use (see MODELS dict).
-              One of: "planner", "intent", "risk_explain", "rag", "synthesizer".
-        messages: Chat messages in OpenAI format
-                  [{"role": "system", "content": "..."}, ...].
-        temperature: Sampling temperature (lower = more deterministic).
-        max_tokens: Maximum completion tokens.
-        response_format: Optional, e.g. {"type": "json_object"} for JSON mode.
-
-    Returns:
-        The assistant's response content as a string.
-
-    Raises:
-        Exception: If both primary and fallback providers fail.
     """
-    model = MODELS.get(role, MODELS["default"])
+    target_model = MODELS.get(role, MODELS["default"])
+    provider, model_name = _clean_model_name(target_model)
 
-    kwargs: dict = {
-        "model": model,
-        "messages": messages,
-        "temperature": temperature,
-        "max_tokens": max_tokens,
-    }
-    if response_format is not None:
-        kwargs["response_format"] = response_format
-
-    # ── Try primary model ──────────────────────────────────────────
+    # 1. Try Primary Provider (Groq)
     t0 = time.monotonic()
     try:
-        resp = await acompletion(**kwargs)
+        active_client = groq_client if provider == "groq" else cerebras_client
+        content = await _execute_chat(
+            active_client,
+            model_name,
+            messages,
+            temperature,
+            max_tokens,
+            response_format,
+        )
         ms = (time.monotonic() - t0) * 1000
-        tok = resp.usage.total_tokens if resp.usage else "?"
-        logger.info(f"[gateway] {role} → {model}  OK  ({ms:.0f}ms, {tok} tok)")
-        return resp.choices[0].message.content
+        logger.info(f"[gateway] {role} → {provider}/{model_name} OK ({ms:.0f}ms)")
+        return content
 
     except Exception as primary_err:
-        logger.warning(f"[gateway] {role} → {model}  FAILED: {primary_err}")
-        # If we're already on the fallback model, don't retry the same thing
-        if model == FALLBACK_MODEL:
-            raise
+        logger.warning(f"[gateway] {role} → {provider}/{model_name} FAILED: {primary_err}")
 
-    # ── Try fallback model ─────────────────────────────────────────
-    kwargs["model"] = FALLBACK_MODEL
+    # 2. Try Fallback Provider (Cerebras or Secondary)
+    fb_provider, fb_model = _clean_model_name(FALLBACK_MODEL)
     t0 = time.monotonic()
     try:
-        resp = await acompletion(**kwargs)
-        ms = (time.monotonic() - t0) * 1000
-        tok = resp.usage.total_tokens if resp.usage else "?"
-        logger.info(
-            f"[gateway] {role} → {FALLBACK_MODEL} (fallback) OK  "
-            f"({ms:.0f}ms, {tok} tok)"
+        fallback_client = cerebras_client if fb_provider == "cerebras" or groq_client is None else groq_client
+        content = await _execute_chat(
+            fallback_client,
+            fb_model,
+            messages,
+            temperature,
+            max_tokens,
+            response_format,
         )
-        return resp.choices[0].message.content
+        ms = (time.monotonic() - t0) * 1000
+        logger.info(f"[gateway] {role} → {fb_provider}/{fb_model} (fallback) OK ({ms:.0f}ms)")
+        return content
 
     except Exception as fallback_err:
         logger.error(f"[gateway] Fallback {FALLBACK_MODEL} also failed: {fallback_err}")
-        raise
+        raise fallback_err
