@@ -1,0 +1,90 @@
+{
+  "schema_version": "1.0",
+  "query_run_id": "run-rag-insufficient-009-kavaratti",
+  "session_id": "sess-user-109",
+  "generated_at": "2026-09-06T10:30:00Z",
+  "decision_status": "degraded",
+  "summary": {
+    "headline": "UNKNOWN — We could not verify this from the available official sources.",
+    "verdict": "UNKNOWN",
+    "confidence_band": "unknown",
+    "confidence_reason": "No retrieved statutory text covers traditional country craft night lagoon longline exemption without transponder.",
+    "action": "Consult the Directorate of Fisheries, Lakshadweep Administration (Kavaratti) before proceeding."
+  },
+  "claims": [
+    {
+      "id": "claim-unverified-01",
+      "text": "We could not verify this from the available official sources.",
+      "kind": "regulation",
+      "evidence_ids": [],
+      "citation_ids": []
+    }
+  ],
+  "map": {
+    "viewport": {
+      "center": [72.64, 10.56],
+      "zoom": 11
+    },
+    "layers": [
+      {
+        "id": "layer-user-loc",
+        "type": "user_location",
+        "label": "Kavaratti Lagoon Berth",
+        "visible_by_default": true,
+        "feature_collection": {
+          "type": "FeatureCollection",
+          "features": [
+            {
+              "type": "Feature",
+              "id": "feat-user-kavaratti",
+              "properties": {
+                "layer_id": "layer-user-loc",
+                "title": "Kavaratti Jetty",
+                "severity": "info"
+              },
+              "geometry": {
+                "type": "Point",
+                "coordinates": [72.64, 10.56]
+              }
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "evidence_panel": {
+    "rule_trace": [],
+    "data_freshness": [
+      {
+        "domain": "fisheries_regulation",
+        "source_name": "Lakshadweep Fisheries Corpus / Coastal Security Directory",
+        "observed_at": "2026-09-01T00:00:00Z",
+        "retrieved_at": "2026-09-06T10:25:00Z",
+        "age_minutes": 5,
+        "status": "fresh"
+      }
+    ],
+    "missing_inputs": [
+      {
+        "domain": "coastal_security_regulation",
+        "parameter": "lagoon_night_ais_transponder_exemption",
+        "impact": "Statutory rule not found in index; AI generation suppressed to prevent hallucinated compliance."
+      }
+    ]
+  },
+  "citations": [],
+  "notices": [
+    {
+      "id": "not-unverified-01",
+      "type": "warning",
+      "message": "UNVERIFIED REGULATORY CLAIM: VARUNA does not synthesize ungrounded legal permissions. Please verify with local authorities."
+    }
+  ],
+  "degradation": {
+    "is_degraded": true,
+    "reason": "Retrieved documents do not meet the minimum semantic relevance threshold for the queried local customary exemption.",
+    "missing_domains": [
+      "lakshadweep_customary_lagoon_rules"
+    ]
+  }
+}

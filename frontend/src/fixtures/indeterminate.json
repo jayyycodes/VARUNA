@@ -1,0 +1,120 @@
+{
+  "schema_version": "1.0",
+  "query_run_id": "run-indet-007-paradip",
+  "session_id": "sess-user-107",
+  "generated_at": "2026-09-06T09:30:00Z",
+  "decision_status": "indeterminate",
+  "summary": {
+    "headline": "UNKNOWN — Critical safety inputs are missing. Marine risk cannot be evaluated.",
+    "verdict": "UNKNOWN",
+    "confidence_band": "unknown",
+    "confidence_reason": "No valid observations for surface wind, wave height, or thunderstorm radar within 100 NM.",
+    "action": "Do not depart. Contact Paradip Port Control on VHF Ch 16 for manual clearance."
+  },
+  "claims": [
+    {
+      "id": "claim-indet-001",
+      "text": "Critical marine sensor blackout in the North Odisha coastal sector.",
+      "kind": "observation",
+      "evidence_ids": ["ev-indet-missing-01"],
+      "citation_ids": ["src-paradip-port-01"]
+    }
+  ],
+  "map": {
+    "viewport": {
+      "center": [86.70, 20.25],
+      "zoom": 8
+    },
+    "layers": [
+      {
+        "id": "layer-user-loc",
+        "type": "user_location",
+        "label": "Paradip Port Anchor",
+        "visible_by_default": true,
+        "feature_collection": {
+          "type": "FeatureCollection",
+          "features": [
+            {
+              "type": "Feature",
+              "id": "feat-user-paradip",
+              "properties": {
+                "layer_id": "layer-user-loc",
+                "title": "Paradip Harbor",
+                "severity": "info"
+              },
+              "geometry": {
+                "type": "Point",
+                "coordinates": [86.68, 20.26]
+              }
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "evidence_panel": {
+    "rule_trace": [],
+    "data_freshness": [
+      {
+        "domain": "marine_wave",
+        "source_name": "INCOIS Paradip Buoy",
+        "observed_at": "2026-09-05T00:00:00Z",
+        "retrieved_at": "2026-09-06T09:00:00Z",
+        "age_minutes": 1800,
+        "status": "missing"
+      },
+      {
+        "domain": "atmospheric_wind",
+        "source_name": "IMD Paradip Coastal Station",
+        "observed_at": "2026-09-05T00:00:00Z",
+        "retrieved_at": "2026-09-06T09:00:00Z",
+        "age_minutes": 1800,
+        "status": "missing"
+      }
+    ],
+    "missing_inputs": [
+      {
+        "domain": "marine_wave",
+        "parameter": "significant_wave_height_m",
+        "impact": "Primary capsize risk rule cannot execute."
+      },
+      {
+        "domain": "atmospheric_wind",
+        "parameter": "sustained_wind_speed_kts",
+        "impact": "Squall and gale warning rules cannot execute."
+      },
+      {
+        "domain": "thunderstorm",
+        "parameter": "convective_storm_index",
+        "impact": "Lightning safety clearance impossible."
+      }
+    ]
+  },
+  "citations": [
+    {
+      "id": "src-paradip-port-01",
+      "title": "Paradip Port Authority Marine Operations Notice",
+      "publisher": "Paradip Port Trust",
+      "url": "https://paradipport.gov.in/notices.php",
+      "published_at": "2026-09-06T08:00:00Z",
+      "accessed_at": "2026-09-06T09:15:00Z",
+      "excerpt": "Telecommunication line maintenance in progress. Vessels to rely on direct VHF radio communication with Signal Station."
+    }
+  ],
+  "notices": [
+    {
+      "id": "not-indet-01",
+      "type": "warning",
+      "message": "INDETERMINATE STATE: System refuses to issue a SAFE verdict when primary life-safety sensor data is unavailable."
+    }
+  ],
+  "degradation": {
+    "is_degraded": true,
+    "reason": "Complete telemetry loss across wave, wind, and radar domains.",
+    "missing_domains": [
+      "marine_wave",
+      "atmospheric_wind",
+      "thunderstorm"
+    ]
+  }
+}

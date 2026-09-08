@@ -1,0 +1,297 @@
+/* ================================================================
+   VARUNA VerdictCard Styles — Frosted Obsidian Glass Card
+   ================================================================ */
+
+.verdict-card {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  z-index: var(--z-verdict-card);
+  width: 320px;
+  max-width: calc(100% - 32px);
+  padding: 16px 18px;
+  border-radius: 20px;
+  background: rgba(14, 20, 32, 0.72); /* Translucent frosted glass */
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-left: 4.5px solid var(--water-400);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  color: #FFFFFF;
+}
+
+/* Verdict-specific Left Border Signals */
+.verdict-card.verdict-card--safe,
+.verdict-card[data-verdict="SAFE"] {
+  border-left-color: var(--verdict-safe);
+}
+
+.verdict-card.verdict-card--caution,
+.verdict-card[data-verdict="CAUTION"] {
+  border-left-color: var(--verdict-caution);
+}
+
+.verdict-card.verdict-card--unsafe,
+.verdict-card[data-verdict="UNSAFE"] {
+  border-left-color: var(--verdict-unsafe);
+}
+
+.verdict-card.verdict-card--unknown,
+.verdict-card[data-verdict="UNKNOWN"] {
+  border-left-color: var(--verdict-unknown);
+  border-left-style: dashed;
+}
+
+/* Hero Verdict Header */
+.verdict-card__hero-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+  gap: 8px;
+}
+
+.verdict-card__hero-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.verdict-hero-icon {
+  font-size: 16px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.verdict-hero-icon--safe {
+  color: var(--verdict-safe);
+  filter: drop-shadow(0 0 6px rgba(34, 197, 94, 0.6));
+}
+
+.verdict-hero-icon--caution {
+  color: var(--verdict-caution);
+  filter: drop-shadow(0 0 6px rgba(245, 158, 11, 0.6));
+}
+
+.verdict-hero-icon--unsafe {
+  color: var(--verdict-unsafe);
+  filter: drop-shadow(0 0 6px rgba(239, 68, 68, 0.6));
+}
+
+.verdict-hero-icon--unknown {
+  color: var(--verdict-unknown);
+}
+
+.verdict-card__hero-verdict {
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  margin: 0;
+  color: #FFFFFF;
+}
+
+.verdict-card__hero-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.verdict-card__degraded-tag {
+  background: rgba(245, 158, 11, 0.2);
+  color: var(--verdict-caution);
+  padding: 2px 6px;
+  border-radius: var(--radius-pill);
+  font-size: 8.5px;
+  font-weight: 700;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+}
+
+.verdict-card__confidence-pill {
+  color: var(--water-300);
+  font-size: 9.5px;
+}
+.verdict-card__confidence-pill .confidence-value {
+  color: #FFFFFF;
+  font-weight: 700;
+}
+
+/* Headline Subtitle */
+.verdict-card__headline-sub {
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 11.5px;
+  line-height: 1.35;
+  font-weight: 500;
+  margin: 0 0 8px 0;
+}
+
+/* Directive Action Box (Frosted Glass Container) */
+.verdict-card__action-box {
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-radius: var(--radius-card-tertiary);
+  padding: 8px 10px;
+  margin-bottom: 8px;
+}
+
+.verdict-card__action-label {
+  color: var(--water-300);
+  font-size: 8.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  margin-bottom: 2px;
+}
+
+.verdict-card__action {
+  color: #FFFFFF;
+  font-size: 11.5px;
+  line-height: 1.35;
+  margin: 0;
+  font-weight: 500;
+}
+
+/* Confidence Reason */
+.verdict-card__confidence-reason {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 10px;
+  margin-bottom: 8px;
+  line-height: 1.35;
+}
+.verdict-card__reason-bullet {
+  color: rgba(255, 255, 255, 0.9);
+  margin-right: 2px;
+  display: inline-flex;
+  vertical-align: middle;
+}
+
+/* Key Factors / Reasons Section */
+.verdict-card__reasons-section {
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  padding-top: 8px;
+  margin-top: 6px;
+}
+
+.verdict-card__reasons-label {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 8.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  margin-bottom: 6px;
+}
+
+.verdict-card__reasons-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.verdict-card__reason-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  padding: 6px 8px;
+  border-radius: var(--radius-card-tertiary);
+  color: #FFFFFF;
+  text-align: left;
+  cursor: pointer;
+  transition: all 120ms ease;
+  font-family: inherit;
+  width: 100%;
+}
+
+.verdict-card__reason-chip:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: translateX(2px);
+}
+
+.verdict-card__reason-chip:focus-visible {
+  outline: 2px solid var(--water-400);
+  outline-offset: 1px;
+}
+
+.verdict-card__reason-kind {
+  font-size: 8px;
+  font-weight: 700;
+  background: #202A38;
+  color: var(--water-200);
+  padding: 1px 5px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.verdict-card__reason-text {
+  flex: 1;
+  color: var(--water-100);
+  font-size: 10.5px;
+  line-height: 1.25;
+}
+
+.verdict-card__reason-arrow {
+  color: var(--water-400);
+  font-size: 11px;
+  transition: transform 120ms ease;
+}
+
+.verdict-card__reason-chip:hover .verdict-card__reason-arrow {
+  color: #FFFFFF;
+  transform: translateX(2px);
+}
+
+/* Loading & Error */
+.verdict-card--loading {
+  border-left-color: var(--water-400);
+}
+
+.verdict-card__loading-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.verdict-card__pulse-spinner {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid rgba(143, 163, 175, 0.3);
+  border-top-color: #FFFFFF;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.verdict-card__status-text {
+  color: var(--water-300);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.verdict-card__skeleton-bar {
+  height: 4px;
+  background: linear-gradient(90deg, rgba(74, 100, 120, 0.2), var(--water-400), rgba(74, 100, 120, 0.2));
+  background-size: 200% 100%;
+  border-radius: 2px;
+  margin-top: 14px;
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}

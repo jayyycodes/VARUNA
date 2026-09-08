@@ -1,0 +1,157 @@
+/* ================================================================
+   Fleet Operations View Styles — Dual-Tone Theme (Elevated White Table)
+   ================================================================ */
+
+.fleet-ops-view {
+  flex: 1;
+  height: 100%;
+  overflow-y: auto;
+  padding: 28px 36px 40px 36px;
+  background: transparent;
+  color: var(--text-light-primary);
+}
+
+.fleet-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 28px;
+  gap: 20px;
+}
+
+.fleet-badge {
+  color: var(--pfz-mid);
+  letter-spacing: 0.08em;
+  margin-bottom: 6px;
+  font-weight: 700;
+}
+
+.fleet-title {
+  font-family: var(--font-display);
+  font-size: 1.6rem;
+  font-weight: 800;
+  margin: 0 0 6px 0;
+  color: var(--text-light-primary);
+  letter-spacing: -0.02em;
+}
+
+.fleet-subtitle {
+  margin: 0;
+  color: var(--text-light-secondary);
+  font-size: 13px;
+}
+
+.fleet-metrics-strip {
+  display: flex;
+  gap: 20px;
+  padding: 10px 18px;
+  border-radius: 20px;
+  background: #FFFFFF;
+  border: 1px solid var(--border-light-subtle);
+  box-shadow: var(--shadow-light-card);
+}
+
+.metric-box {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.metric-label {
+  color: var(--text-light-muted);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.metric-num {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text-light-primary);
+}
+
+.text-teal {
+  color: var(--pfz-mid);
+}
+
+.text-safe {
+  color: var(--verdict-safe);
+}
+
+/* Table */
+.fleet-table-wrap {
+  border-radius: 20px;
+  background: #FFFFFF;
+  border: 1px solid var(--border-light-subtle);
+  box-shadow: var(--shadow-light-card);
+  overflow: hidden;
+}
+
+.fleet-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.fleet-table th {
+  background: #F8FAFC;
+  padding: 14px 18px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-light-muted);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.fleet-table td {
+  padding: 14px 18px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  vertical-align: middle;
+  color: var(--text-light-secondary);
+  font-size: 12.5px;
+}
+
+.fleet-table tr:last-child td {
+  border-bottom: none;
+}
+
+.fleet-table tr:hover {
+  background: #F8FAFC;
+}
+
+.vessel-id {
+  color: var(--text-light-primary);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.vessel-code {
+  color: var(--text-light-muted);
+  font-size: 10.5px;
+}
+
+.compliance-pill {
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  font-size: 10.5px;
+  font-weight: 700;
+  display: inline-block;
+}
+
+.compliance--safe {
+  background: var(--verdict-safe-bg);
+  color: var(--verdict-safe);
+  border: 1px solid rgba(22, 163, 74, 0.3);
+}
+
+.compliance--caution {
+  background: var(--verdict-caution-bg);
+  color: var(--verdict-caution);
+  border: 1px solid rgba(217, 119, 6, 0.3);
+}
+
+.compliance--unsafe {
+  background: var(--verdict-unsafe);
+  color: #FFFFFF;
+}

@@ -1,0 +1,37 @@
+{
+  "schema_version": "0.9-broken",
+  "query_run_id": "run-invalid-010",
+  "decision_status": "unrecognized_status",
+  "summary": {
+    "headline": "MALFORMED FIXTURE FOR TEST",
+    "verdict": "MAYBE_SAFE",
+    "confidence_band": "ultra_high",
+    "confidence_reason": "Broken",
+    "action": "Do something"
+  },
+  "claims": [],
+  "map": {
+    "viewport": {
+      "center": ["invalid_lon", "invalid_lat"],
+      "zoom": 999
+    },
+    "layers": [
+      {
+        "id": "bad-layer",
+        "type": "unregistered_layer_type",
+        "label": "Bad Layer",
+        "visible_by_default": true,
+        "feature_collection": {
+          "type": "BrokenCollection",
+          "features": []
+        }
+      }
+    ]
+  },
+  "evidence_panel": {
+    "rule_trace": [],
+    "data_freshness": [],
+    "missing_inputs": []
+  },
+  "citations": []
+}

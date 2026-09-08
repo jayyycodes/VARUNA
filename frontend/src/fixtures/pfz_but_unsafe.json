@@ -1,0 +1,226 @@
+{
+  "schema_version": "1.0",
+  "query_run_id": "run-pfz-unsafe-004-ratnagiri",
+  "session_id": "sess-user-104",
+  "generated_at": "2026-09-06T08:00:00Z",
+  "decision_status": "complete",
+  "summary": {
+    "headline": "UNSAFE — High productivity PFZ active, but dangerous squall conditions prohibit departure.",
+    "verdict": "UNSAFE",
+    "confidence_band": "high",
+    "confidence_reason": "High chlorophyll front confirmed, but IMD coastal squall warning active with 34 kt winds.",
+    "action": "DO NOT DEPART. Favorable fish aggregations do not mitigate life-safety risk."
+  },
+  "claims": [
+    {
+      "id": "claim-pfz-obs-01",
+      "text": "High fish aggregation potential (Chlorophyll 0.85 mg/m³, SST 28.0°C) 15 NM offshore.",
+      "kind": "observation",
+      "evidence_ids": ["ev-pfz-01"],
+      "citation_ids": ["src-incois-pfz-02"]
+    },
+    {
+      "id": "claim-squall-risk-01",
+      "text": "Severe squall alert with 34 knot gusts and 3.6 m breaking waves along the transit route.",
+      "kind": "risk_rule",
+      "evidence_ids": ["ev-squall-wind-01", "ev-squall-wave-01"],
+      "citation_ids": ["src-imd-squall-01"]
+    }
+  ],
+  "map": {
+    "viewport": {
+      "center": [73.15, 17.05],
+      "zoom": 9
+    },
+    "layers": [
+      {
+        "id": "layer-user-loc",
+        "type": "user_location",
+        "label": "Mirya Port",
+        "visible_by_default": true,
+        "feature_collection": {
+          "type": "FeatureCollection",
+          "features": [
+            {
+              "type": "Feature",
+              "id": "feat-user-ratnagiri-02",
+              "properties": {
+                "layer_id": "layer-user-loc",
+                "title": "Ratnagiri Jetty",
+                "severity": "unsafe"
+              },
+              "geometry": {
+                "type": "Point",
+                "coordinates": [73.28, 16.99]
+              }
+            }
+          ]
+        }
+      },
+      {
+        "id": "layer-pfz-zone",
+        "type": "pfz",
+        "label": "PFZ High Chlorophyll Boundary (Productive)",
+        "visible_by_default": true,
+        "feature_collection": {
+          "type": "FeatureCollection",
+          "features": [
+            {
+              "type": "Feature",
+              "id": "feat-pfz-productive-01",
+              "properties": {
+                "layer_id": "layer-pfz-zone",
+                "title": "Rich Pelagic Aggregation Zone (Teal Overlay)",
+                "productivity": "high",
+                "sst": "28.0°C",
+                "chlorophyll": "0.85 mg/m³",
+                "depth": "45m"
+              },
+              "geometry": {
+                "type": "Polygon",
+                "coordinates": [
+                  [
+                    [72.95, 17.00],
+                    [73.18, 17.18],
+                    [73.20, 16.90],
+                    [72.98, 16.85],
+                    [72.95, 17.00]
+                  ]
+                ]
+              }
+            }
+          ]
+        }
+      },
+      {
+        "id": "layer-hazard-squall",
+        "type": "hazard_zone",
+        "label": "Severe Squall & High Wave Danger Corridor",
+        "visible_by_default": true,
+        "feature_collection": {
+          "type": "FeatureCollection",
+          "features": [
+            {
+              "type": "Feature",
+              "id": "feat-hazard-squall-01",
+              "properties": {
+                "layer_id": "layer-hazard-squall",
+                "title": "34-knot Squall Warning Corridor",
+                "severity": "unsafe",
+                "gusts": "34 kts",
+                "waves": "3.6m"
+              },
+              "geometry": {
+                "type": "Polygon",
+                "coordinates": [
+                  [
+                    [72.85, 16.70],
+                    [73.35, 16.70],
+                    [73.35, 17.30],
+                    [72.85, 17.30],
+                    [72.85, 16.70]
+                  ]
+                ]
+              }
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "evidence_panel": {
+    "rule_trace": [
+      {
+        "id": "ev-squall-wind-01",
+        "rule_id": "RULE-WIND-01",
+        "rule_name": "Sustained Coastal Wind Speed",
+        "domain": "atmospheric_wind",
+        "measured_value": 34,
+        "threshold_value": 25,
+        "comparator": "<=",
+        "unit": "knots",
+        "passed": false,
+        "severity": "unsafe",
+        "threshold_version": "v1.0-imd-coastal",
+        "explanation": "Wind speed of 34 knots violates the 25 knot safe threshold."
+      },
+      {
+        "id": "ev-squall-wave-01",
+        "rule_id": "RULE-WAVE-01",
+        "rule_name": "Small Craft Significant Wave Limit",
+        "domain": "marine_wave",
+        "measured_value": 3.6,
+        "threshold_value": 2.5,
+        "comparator": "<=",
+        "unit": "m",
+        "passed": false,
+        "severity": "unsafe",
+        "threshold_version": "v1.2-incois-2025",
+        "explanation": "Wave height 3.6 m exceeds safety limit of 2.5 m."
+      },
+      {
+        "id": "ev-pfz-01",
+        "rule_id": "RULE-PFZ-PROD",
+        "rule_name": "PFZ Productivity Verification",
+        "domain": "ocean_productivity",
+        "measured_value": "0.85 mg/m³",
+        "threshold_value": "0.40 mg/m³",
+        "comparator": ">=",
+        "unit": "mg/m³",
+        "passed": true,
+        "severity": "info",
+        "threshold_version": "v2.0-incois-pfz",
+        "explanation": "High thermal/chlorophyll gradient verified; however risk rules take precedence."
+      }
+    ],
+    "data_freshness": [
+      {
+        "domain": "marine_wave",
+        "source_name": "INCOIS SWAN Wave Model",
+        "observed_at": "2026-09-06T07:15:00Z",
+        "retrieved_at": "2026-09-06T07:45:00Z",
+        "valid_to": "2026-09-06T18:00:00Z",
+        "age_minutes": 25,
+        "status": "fresh"
+      },
+      {
+        "domain": "ocean_productivity",
+        "source_name": "Oceansat-3 / MODIS Chlorophyll Composite",
+        "observed_at": "2026-09-06T03:30:00Z",
+        "retrieved_at": "2026-09-06T07:45:00Z",
+        "valid_to": "2026-09-07T03:30:00Z",
+        "age_minutes": 255,
+        "status": "fresh"
+      }
+    ],
+    "missing_inputs": []
+  },
+  "citations": [
+    {
+      "id": "src-imd-squall-01",
+      "title": "IMD Squall Warning Bulletin for Maharashtra Coast",
+      "publisher": "IMD Regional Meteorological Centre, Mumbai",
+      "url": "https://imd.gov.in/squall_alerts.php",
+      "published_at": "2026-09-06T07:00:00Z",
+      "accessed_at": "2026-09-06T07:45:00Z",
+      "excerpt": "Severe squall lines observed moving east-northeastwards. Coastal craft advised to stay in harbour."
+    },
+    {
+      "id": "src-incois-pfz-02",
+      "title": "INCOIS PFZ Multilingual Advisory",
+      "publisher": "INCOIS PFZ Lab",
+      "url": "https://incois.gov.in/pfz_daily.jsp",
+      "published_at": "2026-09-06T04:00:00Z",
+      "accessed_at": "2026-09-06T07:45:00Z",
+      "excerpt": "Productive PFZ patch identified off Ratnagiri (15 NM WNW). Note: Always consult marine safety bulletin prior to departure."
+    }
+  ],
+  "notices": [
+    {
+      "id": "not-pfz-override",
+      "type": "danger",
+      "message": "PFZ PRODUCTIVITY NOTICE: High fish potential does not override active squall warning. Departure is prohibited."
+    }
+  ],
+  "degradation": null
+}

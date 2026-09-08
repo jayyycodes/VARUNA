@@ -1,0 +1,145 @@
+{
+  "schema_version": "1.0",
+  "query_run_id": "run-geofence-005-malvan",
+  "session_id": "sess-user-105",
+  "generated_at": "2026-09-06T08:30:00Z",
+  "decision_status": "complete",
+  "summary": {
+    "headline": "UNSAFE — Target coordinates lie inside a legally restricted Marine Sanctuary.",
+    "verdict": "UNSAFE",
+    "confidence_band": "high",
+    "confidence_reason": "WGS84 point inside Malvan Marine Sanctuary Core Geofence (Wildlife Protection Act 1972).",
+    "action": "DO NOT FISH in this sector. Reroute at least 2.5 NM west of the sanctuary boundary."
+  },
+  "claims": [
+    {
+      "id": "claim-geo-001",
+      "text": "Target area is inside the Malvan Marine Sanctuary No-Take Core Zone.",
+      "kind": "geofence",
+      "evidence_ids": ["ev-geo-01"],
+      "citation_ids": ["src-mpa-malvan-01"]
+    },
+    {
+      "id": "claim-geo-reg-001",
+      "text": "Mechanized and motorized commercial fishing within core sanctuary boundaries is prohibited under Section 35(6) of the Wildlife Protection Act.",
+      "kind": "regulation",
+      "evidence_ids": ["ev-geo-01"],
+      "citation_ids": ["src-mpa-malvan-01"]
+    }
+  ],
+  "map": {
+    "viewport": {
+      "center": [73.46, 16.05],
+      "zoom": 11
+    },
+    "layers": [
+      {
+        "id": "layer-user-loc",
+        "type": "user_location",
+        "label": "Target Query Location",
+        "visible_by_default": true,
+        "feature_collection": {
+          "type": "FeatureCollection",
+          "features": [
+            {
+              "type": "Feature",
+              "id": "feat-user-loc-geo",
+              "properties": {
+                "layer_id": "layer-user-loc",
+                "title": "Proposed Fishing Waypoint",
+                "severity": "unsafe"
+              },
+              "geometry": {
+                "type": "Point",
+                "coordinates": [73.47, 16.06]
+              }
+            }
+          ]
+        }
+      },
+      {
+        "id": "layer-geofence-core",
+        "type": "geofence",
+        "label": "Malvan Marine Sanctuary Core Boundary (Restricted)",
+        "visible_by_default": true,
+        "feature_collection": {
+          "type": "FeatureCollection",
+          "features": [
+            {
+              "type": "Feature",
+              "id": "feat-mpa-core-01",
+              "properties": {
+                "layer_id": "layer-geofence-core",
+                "title": "Malvan Marine Sanctuary Core Zone (29.12 sq km)",
+                "severity": "unsafe",
+                "restriction_level": "No-Take / Total Exclusion",
+                "legal_act": "Wildlife Protection Act, 1972"
+              },
+              "geometry": {
+                "type": "Polygon",
+                "coordinates": [
+                  [
+                    [73.44, 16.02],
+                    [73.50, 16.02],
+                    [73.51, 16.09],
+                    [73.44, 16.09],
+                    [73.44, 16.02]
+                  ]
+                ]
+              }
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "evidence_panel": {
+    "rule_trace": [
+      {
+        "id": "ev-geo-01",
+        "rule_id": "RULE-GEOFENCE-MPA",
+        "rule_name": "Marine Protected Area (MPA) Geofence Check",
+        "domain": "geofence_regulatory",
+        "measured_value": "Inside Core Polygon (Distance to border: -1.2 km)",
+        "threshold_value": "Outside Boundary (>0.0 km)",
+        "comparator": "outside",
+        "unit": "km",
+        "passed": false,
+        "severity": "unsafe",
+        "threshold_version": "v2024-wii-mpa-gazette",
+        "explanation": "Target coordinates [73.47, 16.06] are enclosed within the notified Malvan Marine Sanctuary polygon."
+      }
+    ],
+    "data_freshness": [
+      {
+        "domain": "geofence_regulatory",
+        "source_name": "Wildlife Institute of India / Maharashtra Forest Dept Gazette",
+        "observed_at": "2026-01-01T00:00:00Z",
+        "retrieved_at": "2026-09-06T08:00:00Z",
+        "valid_to": "2026-12-31T23:59:59Z",
+        "age_minutes": 30,
+        "status": "fresh"
+      }
+    ],
+    "missing_inputs": []
+  },
+  "citations": [
+    {
+      "id": "src-mpa-malvan-01",
+      "title": "Maharashtra Gazette Notification No. WLP/1087/CR-200/F-1",
+      "publisher": "Government of Maharashtra, Revenue & Forest Department",
+      "url": "https://mahaforest.gov.in/malvan_sanctuary.pdf",
+      "published_at": "1987-04-13T00:00:00Z",
+      "accessed_at": "2026-09-06T08:00:00Z",
+      "excerpt": "Entry of commercial fishing vessels and extraction of marine organisms within the designated 29.12 sq km sanctuary area is strictly prohibited under the Wildlife (Protection) Act, 1972."
+    }
+  ],
+  "notices": [
+    {
+      "id": "not-geo-warning",
+      "type": "danger",
+      "message": "REGULATORY VIOLATION WARNING: Operating inside notified MPA carries vessel seizure and fines under the Wildlife Protection Act."
+    }
+  ],
+  "degradation": null
+}

@@ -56,10 +56,24 @@ planner = PlannerAgent()
 # ── Request / Response Schemas ────────────────────────────────────────
 
 class ChatRequest(BaseModel):
-    """User query payload."""
-    query: str = Field(..., description="Natural-language question about marine conditions")
+    """User query payload (accepts either 'query' or 'text')."""
+    query: str | None = Field(None, description="Natural-language question about marine conditions")
+    text: str | None = Field(None, description="Alias for query")
     conversation_id: str | None = Field(None, description="Session ID for multi-turn context")
     user_id: str | None = Field(None, description="User identifier")
+    location: dict | None = Field(None, description="Optional lat/lon coordinates")
+    time_window: dict | None = Field(None, description="Optional time window")
+    locale: str | None = Field("en-IN", description="Response language locale")
+    session_id: str | None = Field(None, description="Alias for conversation_id")
+
+    def get_query_text(self) -> str:
+        q = (self.query or self.text or "").strip()
+        if not q:
+            return "Check current marine safety conditions"
+        return q
+
+    def get_session_id(self) -> str:
+        return self.conversation_id or self.session_id or str(uuid.uuid4())
 
 
 class ChatResponse(BaseModel):
@@ -78,28 +92,18 @@ class ChatResponse(BaseModel):
     status: str
 
 
-# ── Endpoints ────────────────────────────────────────────────────────
+# ── Core Query Handler ───────────────────────────────────────────────
 
-@app.post("/chat", response_model=ChatResponse)
-async def chat(req: ChatRequest):
-    """
-    Process a natural-language marine query through the ORCA agent pipeline.
-
-    The query flows through:
-    1. Intent classification (LLM)
-    2. Parallel agent dispatch (Weather + Marine + Geofencing, or RAG)
-    3. Deterministic risk assessment
-    4. Response synthesis (LLM)
-
-    Returns text + map data + evidence trail + risk verdict.
-    """
-    cid = req.conversation_id or str(uuid.uuid4())
+async def process_query_pipeline(req: ChatRequest) -> ChatResponse:
+    """Helper to dispatch queries to LangGraph planner."""
+    cid = req.get_session_id()
     uid = req.user_id or "anonymous"
+    q = req.get_query_text()
 
-    logger.info(f"[api] POST /chat — query={req.query!r}  cid={cid[:8]}…  uid={uid}")
+    logger.info(f"[api] Processing query={q!r}  cid={cid[:8]}…  uid={uid}")
 
     result = await planner.handle_query(
-        query=req.query,
+        query=q,
         conversation_id=cid,
         user_id=uid,
     )
@@ -107,11 +111,33 @@ async def chat(req: ChatRequest):
     return ChatResponse(**result)
 
 
+# ── Endpoints ────────────────────────────────────────────────────────
+
+@app.post("/chat", response_model=ChatResponse)
+async def chat(req: ChatRequest):
+    """Primary chat endpoint connecting directly to LangGraph planner."""
+    return await process_query_pipeline(req)
+
+
+@app.post("/v1/query", response_model=ChatResponse)
+async def v1_query(req: ChatRequest):
+    """V1 REST query endpoint alias."""
+    return await process_query_pipeline(req)
+
+
+@app.post("/v1/chat", response_model=ChatResponse)
+async def v1_chat(req: ChatRequest):
+    """V1 Chat endpoint alias."""
+    return await process_query_pipeline(req)
+
+
 @app.get("/health")
+@app.get("/v1/health")
 async def health():
-    """Service health check — used by Docker, load balancers, and CI."""
+    """Service health check — used by Frontend, Docker, load balancers, and CI."""
     return {
         "status": "ok",
         "service": "varuna-orca",
         "version": "0.1.0",
+        "planner_ready": True,
     }

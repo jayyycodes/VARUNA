@@ -1,0 +1,169 @@
+{
+  "schema_version": "1.0",
+  "query_run_id": "run-rag-008-mandapam",
+  "session_id": "sess-user-108",
+  "generated_at": "2026-09-06T10:00:00Z",
+  "decision_status": "complete",
+  "summary": {
+    "headline": "SAFE — Operating with 40 mm mesh gillnets is permitted in Tamil Nadu coastal waters outside monsoon ban.",
+    "verdict": "SAFE",
+    "confidence_band": "high",
+    "confidence_reason": "Verified against Tamil Nadu Marine Fishing Regulation Rules (Rule 8) and current gazette notifications.",
+    "action": "Ensure net mesh size is verified by fisheries inspector before leaving Mandapam jetty."
+  },
+  "claims": [
+    {
+      "id": "claim-rag-reg-01",
+      "text": "Under the Tamil Nadu Marine Fishing Regulation Rules, minimum legal stretched mesh size for sardine gillnets is 28 mm, and for mackerel gillnets is 40 mm.",
+      "kind": "regulation",
+      "evidence_ids": ["ev-rag-reg-01"],
+      "citation_ids": ["src-tnmfra-1983"]
+    },
+    {
+      "id": "claim-rag-reg-02",
+      "text": "Mechanized pair trawling and purse seining remain strictly banned within 12 NM territorial waters.",
+      "kind": "regulation",
+      "evidence_ids": ["ev-rag-reg-02"],
+      "citation_ids": ["src-tn-ban-order"]
+    }
+  ],
+  "map": {
+    "viewport": {
+      "center": [79.12, 9.28],
+      "zoom": 10
+    },
+    "layers": [
+      {
+        "id": "layer-user-loc",
+        "type": "user_location",
+        "label": "Mandapam Fishing Port",
+        "visible_by_default": true,
+        "feature_collection": {
+          "type": "FeatureCollection",
+          "features": [
+            {
+              "type": "Feature",
+              "id": "feat-user-mandapam",
+              "properties": {
+                "layer_id": "layer-user-loc",
+                "title": "Mandapam Jetty, Palk Bay",
+                "severity": "safe"
+              },
+              "geometry": {
+                "type": "Point",
+                "coordinates": [79.13, 9.28]
+              }
+            }
+          ]
+        }
+      },
+      {
+        "id": "layer-advisory-palk",
+        "type": "advisory_area",
+        "label": "Traditional Artisanal Fishing Zone (TNMFR Rule 8)",
+        "visible_by_default": true,
+        "feature_collection": {
+          "type": "FeatureCollection",
+          "features": [
+            {
+              "type": "Feature",
+              "id": "feat-art-zone-01",
+              "properties": {
+                "layer_id": "layer-advisory-palk",
+                "title": "5 NM Artisanal Vessel Reserved Corridor",
+                "severity": "safe",
+                "regulation": "TNMFR Act 1983"
+              },
+              "geometry": {
+                "type": "Polygon",
+                "coordinates": [
+                  [
+                    [79.05, 9.20],
+                    [79.25, 9.20],
+                    [79.28, 9.35],
+                    [79.05, 9.35],
+                    [79.05, 9.20]
+                  ]
+                ]
+              }
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "evidence_panel": {
+    "rule_trace": [
+      {
+        "id": "ev-rag-reg-01",
+        "rule_id": "RULE-RAG-REG-MESH",
+        "rule_name": "Minimum Legal Mesh Size Check",
+        "domain": "fisheries_regulation",
+        "measured_value": "40 mm stretched mesh",
+        "threshold_value": ">= 28 mm (Sardine) / >= 40 mm (Mackerel)",
+        "comparator": ">=",
+        "unit": "mm",
+        "passed": true,
+        "severity": "safe",
+        "threshold_version": "v1983-tn-gazette-sch-1",
+        "explanation": "Reported 40 mm mesh size complies with Schedule 1 gear specification guidelines."
+      },
+      {
+        "id": "ev-rag-reg-02",
+        "rule_id": "RULE-RAG-TRAWL-BAN",
+        "rule_name": "Prohibited Gear Type Verification",
+        "domain": "fisheries_regulation",
+        "measured_value": "Gillnet (Permitted Gear)",
+        "threshold_value": "Non-destructive Gear List",
+        "comparator": "in",
+        "unit": "gear_type",
+        "passed": true,
+        "severity": "safe",
+        "threshold_version": "v2020-tn-fisheries-amendment",
+        "explanation": "Target gear is not subject to pairwise purse-seine ban orders."
+      }
+    ],
+    "data_freshness": [
+      {
+        "domain": "fisheries_regulation",
+        "source_name": "Tamil Nadu Fisheries Legal Corpus (RAG Indexed)",
+        "observed_at": "2026-08-01T00:00:00Z",
+        "retrieved_at": "2026-09-06T09:55:00Z",
+        "valid_to": "2027-08-01T00:00:00Z",
+        "age_minutes": 5,
+        "status": "fresh"
+      }
+    ],
+    "missing_inputs": []
+  },
+  "citations": [
+    {
+      "id": "src-tnmfra-1983",
+      "title": "The Tamil Nadu Marine Fishing Regulation Rules, 1983 — Rule 8 (Gear Mesh Sizes)",
+      "publisher": "Department of Fisheries and Fishermen Welfare, Government of Tamil Nadu",
+      "url": "https://fisheries.tn.gov.in/laws/tnmfra_rules_1983.pdf",
+      "published_at": "1983-11-15T00:00:00Z",
+      "accessed_at": "2026-09-06T09:55:00Z",
+      "excerpt": "No person shall use or operate any gill net with a mesh size less than 28 mm for sardines and 40 mm for mackerel in the territorial waters of the State.",
+      "source_language": "en-IN"
+    },
+    {
+      "id": "src-tn-ban-order",
+      "title": "G.O. (Ms) No. 44 — Ban on Purse Seine and Destructive Fishing Gears",
+      "publisher": "Animal Husbandry, Dairying and Fisheries (FS-3) Department, Tamil Nadu",
+      "url": "https://fisheries.tn.gov.in/go_orders/go44_2020.pdf",
+      "published_at": "2020-03-26T00:00:00Z",
+      "accessed_at": "2026-09-06T09:55:00Z",
+      "excerpt": "ஜோடி இழுவை மற்றும் சுருக்குமடி வலைகளைப் பயன்படுத்தி மீன்பிடிக்க தமிழ்நாடு கடல் பகுதியில் முழு தடை விதிக்கப்படுகிறது (Complete prohibition on pair trawling and purse seining).",
+      "source_language": "ta-IN"
+    }
+  ],
+  "notices": [
+    {
+      "id": "not-rag-01",
+      "type": "info",
+      "message": "Regulatory advisory grounded in official statutory gazettes. Always carry vessel registration certificate (Form II)."
+    }
+  ],
+  "degradation": null
+}

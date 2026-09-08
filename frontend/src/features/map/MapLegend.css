@@ -1,0 +1,151 @@
+/* ================================================================
+   Map Legend Styles
+   Source: VARUNA_DESIGN_SYSTEM.md §4.2
+   ================================================================ */
+
+.map-legend {
+  position: absolute;
+  bottom: 16px;
+  left: 16px;
+  z-index: var(--z-map-controls);
+  max-width: 300px;
+  border-radius: 16px;
+  background: rgba(11, 14, 20, 0.94);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+  color: #FFFFFF;
+}
+
+.map-legend__header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  background: transparent;
+  border: none;
+  color: #FFFFFF;
+  cursor: pointer;
+  font-family: var(--font-display);
+  text-align: left;
+}
+
+.map-legend__icon {
+  color: #94A3B8;
+  display: flex;
+  align-items: center;
+}
+
+.map-legend__title {
+  flex: 1;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: #E2E8F0;
+  font-size: 10.5px;
+}
+
+.map-legend__chevron {
+  font-size: 10px;
+  color: #94A3B8;
+}
+
+.map-legend__body {
+  padding: 0 12px 10px 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.map-legend__layer-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.map-legend__layer-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.map-legend__checkbox {
+  accent-color: var(--pfz-mid);
+  cursor: pointer;
+}
+
+.map-legend__swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.swatch--pfz {
+  background: var(--pfz-high);
+  border: 1px solid #14B8A6;
+}
+
+.swatch--hazard {
+  background: var(--verdict-unsafe);
+  border: 1px dashed #EF4444;
+}
+
+.swatch--geofence {
+  background: transparent;
+  border: 2px dashed #EF4444;
+}
+
+.swatch--user {
+  background: #FFFFFF;
+  border: 2px solid #38BDF8;
+  border-radius: 50%;
+}
+
+.swatch--default {
+  background: #94A3B8;
+}
+
+.map-legend__layer-label {
+  color: #CBD5E1;
+  font-size: 11px;
+}
+
+.map-legend__note {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 10px;
+  color: #94A3B8;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.swatch--pfz-sample {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  background: var(--pfz-high);
+  border-radius: 2px;
+  margin-right: 4px;
+}
+
+.swatch--hazard-sample {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  background: var(--verdict-unsafe);
+  border-radius: 2px;
+  margin-right: 4px;
+}
+
+@media (max-width: 767px) {
+  .map-legend {
+    bottom: 80px; /* Above mobile bottom sheet grabber */
+    left: 12px;
+    max-width: 260px;
+  }
+}

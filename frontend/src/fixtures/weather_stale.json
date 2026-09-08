@@ -1,0 +1,158 @@
+{
+  "schema_version": "1.0",
+  "query_run_id": "run-stale-006-veraval",
+  "session_id": "sess-user-106",
+  "generated_at": "2026-09-06T09:00:00Z",
+  "decision_status": "degraded",
+  "summary": {
+    "headline": "UNKNOWN — Surface weather telemetry is stale (6 hours old). Departure safety cannot be guaranteed.",
+    "verdict": "UNKNOWN",
+    "confidence_band": "low",
+    "confidence_reason": "IMD Veraval synoptic feed last updated 360 min ago; radar link down.",
+    "action": "Do not depart based on stale telemetry. Contact Veraval Fisheries Port Office or check live VHF Ch 16."
+  },
+  "claims": [
+    {
+      "id": "claim-stale-001",
+      "text": "Last recorded wave height was 1.4 m at 03:00 UTC (360 minutes ago); current state is unobserved.",
+      "kind": "observation",
+      "evidence_ids": ["ev-stale-wave-01"],
+      "citation_ids": ["src-imd-veraval-old"]
+    },
+    {
+      "id": "claim-stale-002",
+      "text": "Telemetry transmission degraded across Saurashtra coastal radar stations.",
+      "kind": "forecast",
+      "evidence_ids": ["ev-stale-status-01"],
+      "citation_ids": ["src-imd-telemetry-status"]
+    }
+  ],
+  "map": {
+    "viewport": {
+      "center": [70.36, 20.90],
+      "zoom": 9
+    },
+    "layers": [
+      {
+        "id": "layer-user-loc",
+        "type": "user_location",
+        "label": "Veraval Harbor",
+        "visible_by_default": true,
+        "feature_collection": {
+          "type": "FeatureCollection",
+          "features": [
+            {
+              "type": "Feature",
+              "id": "feat-user-veraval",
+              "properties": {
+                "layer_id": "layer-user-loc",
+                "title": "Veraval Port Terminal",
+                "severity": "info"
+              },
+              "geometry": {
+                "type": "Point",
+                "coordinates": [70.37, 20.91]
+              }
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "evidence_panel": {
+    "rule_trace": [
+      {
+        "id": "ev-stale-wave-01",
+        "rule_id": "RULE-DATA-FRESHNESS",
+        "rule_name": "Marine Telemetry Freshness Gate",
+        "domain": "marine_wave",
+        "measured_value": "360 min age",
+        "threshold_value": "120 min max age",
+        "comparator": "<=",
+        "unit": "minutes",
+        "passed": false,
+        "severity": "info",
+        "threshold_version": "v1.0-varuna-quality-gate",
+        "explanation": "Data age of 360 minutes exceeds 120-minute maximum staleness window for real-time safety clearance."
+      },
+      {
+        "id": "ev-stale-status-01",
+        "rule_id": "RULE-DEGRADED-FALLBACK",
+        "rule_name": "Telemetry Health Assessment",
+        "domain": "system_telemetry",
+        "measured_value": "Stale Source Link",
+        "threshold_value": "Operational Link",
+        "comparator": "==",
+        "unit": "status",
+        "passed": false,
+        "severity": "caution",
+        "threshold_version": "v1.0-varuna-health",
+        "explanation": "Downstream sensor relay offline; system enters degraded mode."
+      }
+    ],
+    "data_freshness": [
+      {
+        "domain": "marine_wave",
+        "source_name": "INCOIS Coastal Buoy CB02",
+        "observed_at": "2026-09-06T03:00:00Z",
+        "retrieved_at": "2026-09-06T03:15:00Z",
+        "valid_to": "2026-09-06T05:00:00Z",
+        "age_minutes": 360,
+        "status": "stale"
+      },
+      {
+        "domain": "atmospheric_wind",
+        "source_name": "IMD Veraval AWS",
+        "observed_at": "2026-09-06T03:00:00Z",
+        "retrieved_at": "2026-09-06T03:10:00Z",
+        "valid_to": "2026-09-06T06:00:00Z",
+        "age_minutes": 360,
+        "status": "stale"
+      }
+    ],
+    "missing_inputs": [
+      {
+        "domain": "atmospheric_radar",
+        "parameter": "doppler_reflectivity_dbz",
+        "impact": "Inability to detect incoming convective thunderstorm cells within 50 km.",
+        "fallback_used": "Historical climatology (insufficient for live safety guarantee)"
+      }
+    ]
+  },
+  "citations": [
+    {
+      "id": "src-imd-veraval-old",
+      "title": "IMD Regional Weather Summary — Veraval Station (Archived)",
+      "publisher": "India Meteorological Department, Ahmedabad",
+      "url": "https://mausam.imd.gov.in/ahmedabad/mcdata/veraval.pdf",
+      "published_at": "2026-09-06T03:00:00Z",
+      "accessed_at": "2026-09-06T03:15:00Z",
+      "excerpt": "Veraval coastal station observed NW winds 10 knots at 03:00 UTC. Next scheduled transmission delayed."
+    },
+    {
+      "id": "src-imd-telemetry-status",
+      "title": "INCOIS Sensor Telemetry Network Status Bulletin",
+      "publisher": "INCOIS Data Center",
+      "url": "https://incois.gov.in/portal/status.jsp",
+      "published_at": "2026-09-06T08:30:00Z",
+      "accessed_at": "2026-09-06T08:55:00Z",
+      "excerpt": "CB02 Gujarat buoy reporting intermittent uplink packet loss since 03:30 UTC."
+    }
+  ],
+  "notices": [
+    {
+      "id": "not-stale-01",
+      "type": "warning",
+      "message": "DATA DEGRADATION: Surface marine observations are over 6 hours old. Verdict cannot be certified as SAFE."
+    }
+  ],
+  "degradation": {
+    "is_degraded": true,
+    "reason": "Coastal sensor uplink packet loss resulting in stale (>6h) marine forecast data.",
+    "missing_domains": [
+      "marine_wave_realtime",
+      "doppler_radar"
+    ],
+    "fallback_applied": "Climatological baseline substituted; verdict clamped to UNKNOWN."
+  }
+}

@@ -1,0 +1,97 @@
+/* ================================================================
+   Map Canvas Styles
+   Source: VARUNA_DESIGN_SYSTEM.md §4.2
+   ================================================================ */
+
+.map-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background: #0B1E2D; /* Match --water-900 */
+  overflow: hidden;
+  z-index: var(--z-map);
+}
+
+.leaflet-map-root,
+.leaflet-container {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  background: #0B1E2D !important;
+}
+
+/* Custom Dark Popup styling */
+.leaflet-popup-content-wrapper {
+  background: rgba(11, 30, 45, 0.95) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+  color: var(--foam-50) !important;
+  border-radius: var(--radius-card-secondary) !important;
+  border: 1px solid var(--water-600) !important;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6) !important;
+  padding: 6px !important;
+}
+
+.leaflet-popup-tip {
+  background: rgba(11, 30, 45, 0.95) !important;
+  border: 1px solid var(--water-600) !important;
+}
+
+.leaflet-container a.leaflet-popup-close-button {
+  color: var(--water-300) !important;
+  padding: 8px 12px 0 0 !important;
+}
+
+.map-popup-content {
+  padding: 4px;
+}
+
+.map-popup-content h4 {
+  margin: 4px 0 8px 0;
+  color: var(--foam-50);
+}
+
+.pfz-badge {
+  background: rgba(53, 184, 166, 0.25);
+  color: var(--pfz-high);
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.hazard-badge {
+  color: #FFFFFF;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.geo-badge {
+  background: rgba(209, 67, 67, 0.25);
+  color: #FF8080;
+  border: 1px solid rgba(209, 67, 67, 0.5);
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.advisory-badge {
+  background: rgba(143, 163, 175, 0.2);
+  color: var(--water-200);
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 9px;
+}
+
+.popup-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  color: var(--water-200);
+  margin-top: 6px;
+}

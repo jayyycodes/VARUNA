@@ -1,0 +1,178 @@
+{
+  "schema_version": "1.0",
+  "query_run_id": "run-unsafe-003-vizag",
+  "session_id": "sess-user-103",
+  "generated_at": "2026-09-06T07:00:00Z",
+  "decision_status": "complete",
+  "summary": {
+    "headline": "UNSAFE — Severe Cyclonic Storm Warning in Bay of Bengal. DO NOT DEPART.",
+    "verdict": "UNSAFE",
+    "confidence_band": "high",
+    "confidence_reason": "IMD Red Stage Warning + INCOIS Wave Height 5.2 m confirmed by Doppler radar and coastal buoys.",
+    "action": "DO NOT DEPART. Secure all craft at designated cyclone moorings immediately."
+  },
+  "claims": [
+    {
+      "id": "claim-cyclone-001",
+      "text": "Severe Cyclonic Storm active with sustained winds of 48 knots gusting to 65 knots.",
+      "kind": "risk_rule",
+      "evidence_ids": ["ev-cyclone-wind-01"],
+      "citation_ids": ["src-imd-cyclone-01"]
+    },
+    {
+      "id": "claim-cyclone-002",
+      "text": "Phenomenal sea state with significant wave height 5.2 m and storm surge potential of 1.1 m.",
+      "kind": "risk_rule",
+      "evidence_ids": ["ev-cyclone-wave-01"],
+      "citation_ids": ["src-incois-vizag-01"]
+    }
+  ],
+  "map": {
+    "viewport": {
+      "center": [83.30, 17.68],
+      "zoom": 8
+    },
+    "layers": [
+      {
+        "id": "layer-user-loc",
+        "type": "user_location",
+        "label": "Visakhapatnam Fishing Harbour",
+        "visible_by_default": true,
+        "feature_collection": {
+          "type": "FeatureCollection",
+          "features": [
+            {
+              "type": "Feature",
+              "id": "feat-user-vizag",
+              "properties": {
+                "layer_id": "layer-user-loc",
+                "title": "Visakhapatnam Outer Harbour",
+                "severity": "unsafe"
+              },
+              "geometry": {
+                "type": "Point",
+                "coordinates": [83.30, 17.69]
+              }
+            }
+          ]
+        }
+      },
+      {
+        "id": "layer-hazard-cyclone",
+        "type": "hazard_zone",
+        "label": "Cyclone Danger Zone (Red Warning)",
+        "visible_by_default": true,
+        "feature_collection": {
+          "type": "FeatureCollection",
+          "features": [
+            {
+              "type": "Feature",
+              "id": "feat-hazard-cyclone-01",
+              "properties": {
+                "layer_id": "layer-hazard-cyclone",
+                "title": "Severe Cyclonic Storm Danger Sector",
+                "severity": "unsafe",
+                "wind_gusts": "65 kts",
+                "sea_condition": "Phenomenal",
+                "valid_to": "2026-09-07T18:00:00Z"
+              },
+              "geometry": {
+                "type": "Polygon",
+                "coordinates": [
+                  [
+                    [82.80, 17.20],
+                    [84.20, 17.20],
+                    [84.50, 18.30],
+                    [83.10, 18.30],
+                    [82.80, 17.20]
+                  ]
+                ]
+              }
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "evidence_panel": {
+    "rule_trace": [
+      {
+        "id": "ev-cyclone-wind-01",
+        "rule_id": "RULE-CYCLONE-01",
+        "rule_name": "Active Tropical Cyclone / Gale Warning",
+        "domain": "atmospheric_cyclone",
+        "measured_value": "48 kts (Gale Force 10)",
+        "threshold_value": "25 kts",
+        "comparator": "<=",
+        "unit": "knots",
+        "passed": false,
+        "severity": "unsafe",
+        "threshold_version": "v1.0-imd-cyclone-sop",
+        "explanation": "Active severe cyclonic storm with sustained winds of 48 kts triggers mandatory zero-departure condition."
+      },
+      {
+        "id": "ev-cyclone-wave-01",
+        "rule_id": "RULE-WAVE-01",
+        "rule_name": "Small Craft Significant Wave Limit",
+        "domain": "marine_wave",
+        "measured_value": 5.2,
+        "threshold_value": 2.5,
+        "comparator": "<=",
+        "unit": "m",
+        "passed": false,
+        "severity": "unsafe",
+        "threshold_version": "v1.2-incois-2025",
+        "explanation": "5.2 m waves create extreme risk of vessel capsizing and structure damage."
+      }
+    ],
+    "data_freshness": [
+      {
+        "domain": "atmospheric_cyclone",
+        "source_name": "IMD Cyclone Warning Division, New Delhi",
+        "observed_at": "2026-09-06T06:30:00Z",
+        "retrieved_at": "2026-09-06T06:55:00Z",
+        "valid_to": "2026-09-07T06:00:00Z",
+        "age_minutes": 15,
+        "status": "fresh"
+      },
+      {
+        "domain": "marine_wave",
+        "source_name": "INCOIS Coastal Moored Buoy BD08",
+        "observed_at": "2026-09-06T06:40:00Z",
+        "retrieved_at": "2026-09-06T06:55:00Z",
+        "valid_to": "2026-09-06T12:00:00Z",
+        "age_minutes": 15,
+        "status": "fresh"
+      }
+    ],
+    "missing_inputs": []
+  },
+  "citations": [
+    {
+      "id": "src-imd-cyclone-01",
+      "title": "IMD Special Tropical Weather Outlook Bulletin #14",
+      "publisher": "Cyclone Warning Division, IMD",
+      "url": "https://rsmcnewdelhi.imd.gov.in/bulletins.php",
+      "published_at": "2026-09-06T06:00:00Z",
+      "accessed_at": "2026-09-06T06:55:00Z",
+      "excerpt": "Total suspension of fishing operations over Westcentral and North Bay of Bengal. Fishermen out at sea are advised to return to coast immediately."
+    },
+    {
+      "id": "src-incois-vizag-01",
+      "title": "INCOIS Extreme Wave Alert — Andhra Pradesh Coast",
+      "publisher": "INCOIS Operational Oceanography Centre",
+      "url": "https://incois.gov.in/portal/osf/ap_extreme.jsp",
+      "published_at": "2026-09-06T06:15:00Z",
+      "accessed_at": "2026-09-06T06:55:00Z",
+      "excerpt": "High wave alert: Maximum wave height may reach 7.5 meters during cyclone landfall approach."
+    }
+  ],
+  "notices": [
+    {
+      "id": "not-unsafe-01",
+      "type": "danger",
+      "message": "PORT WARNING SIGNAL NO. 8 HOISTED. All fishing operations strictly prohibited by District Administration."
+    }
+  ],
+  "degradation": null
+}

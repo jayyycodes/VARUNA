@@ -1,0 +1,186 @@
+{
+  "schema_version": "1.0",
+  "query_run_id": "run-safe-001-ratnagiri",
+  "session_id": "sess-user-101",
+  "generated_at": "2026-09-06T05:30:00Z",
+  "decision_status": "complete",
+  "summary": {
+    "headline": "SAFE — Coastal waters favorable for artisanal and motorized craft.",
+    "verdict": "SAFE",
+    "confidence_band": "high",
+    "confidence_reason": "All 4 primary safety domains (wave, wind, lightning, geofence) current within 30 minutes.",
+    "action": "Proceed with planned departure. Monitor routine VHF Ch 16 broadcast at 14:00."
+  },
+  "claims": [
+    {
+      "id": "claim-safe-wave-001",
+      "text": "Significant wave height is 1.2 m, well within the 2.5 m small-craft safe limit.",
+      "kind": "risk_rule",
+      "evidence_ids": ["ev-wave-001"],
+      "citation_ids": ["src-incois-osf-01"]
+    },
+    {
+      "id": "claim-safe-wind-001",
+      "text": "Sustained wind speed is 12 knots from WNW with gusts under 16 knots.",
+      "kind": "observation",
+      "evidence_ids": ["ev-wind-001"],
+      "citation_ids": ["src-imd-synop-01"]
+    },
+    {
+      "id": "claim-safe-pfz-001",
+      "text": "Productive Potential Fishing Zone (PFZ) advisory active 12 NM off Mirya Bay.",
+      "kind": "recommendation",
+      "evidence_ids": ["ev-pfz-001"],
+      "citation_ids": ["src-incois-pfz-01"]
+    }
+  ],
+  "map": {
+    "viewport": {
+      "center": [73.28, 16.99],
+      "zoom": 9
+    },
+    "layers": [
+      {
+        "id": "layer-user-loc",
+        "type": "user_location",
+        "label": "Current Vessel / Port Location",
+        "visible_by_default": true,
+        "feature_collection": {
+          "type": "FeatureCollection",
+          "features": [
+            {
+              "type": "Feature",
+              "id": "feat-user-ratnagiri",
+              "properties": {
+                "layer_id": "layer-user-loc",
+                "title": "Mirya Bay Jetty, Ratnagiri",
+                "severity": "safe"
+              },
+              "geometry": {
+                "type": "Point",
+                "coordinates": [73.28, 16.99]
+              }
+            }
+          ]
+        }
+      },
+      {
+        "id": "layer-pfz-mirya",
+        "type": "pfz",
+        "label": "PFZ Advisory — High Chlorophyll Front",
+        "visible_by_default": true,
+        "feature_collection": {
+          "type": "FeatureCollection",
+          "features": [
+            {
+              "type": "Feature",
+              "id": "feat-pfz-mirya-01",
+              "properties": {
+                "layer_id": "layer-pfz-mirya",
+                "title": "High Productivity Tuna/Mackerel Front",
+                "productivity": "high",
+                "sst": "28.1°C",
+                "chlorophyll": "0.78 mg/m³",
+                "depth": "35-50m",
+                "valid_to": "2026-09-07T12:00:00Z"
+              },
+              "geometry": {
+                "type": "Polygon",
+                "coordinates": [
+                  [
+                    [73.12, 17.05],
+                    [73.22, 17.10],
+                    [73.25, 17.02],
+                    [73.15, 16.95],
+                    [73.12, 17.05]
+                  ]
+                ]
+              }
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "evidence_panel": {
+    "rule_trace": [
+      {
+        "id": "ev-wave-001",
+        "rule_id": "RULE-WAVE-01",
+        "rule_name": "Small Craft Significant Wave Limit",
+        "domain": "marine_wave",
+        "measured_value": 1.2,
+        "threshold_value": 2.5,
+        "comparator": "<=",
+        "unit": "m",
+        "passed": true,
+        "severity": "safe",
+        "threshold_version": "v1.2-incois-2025",
+        "explanation": "Observed wave height of 1.2 m is safely below the maximum allowable threshold of 2.5 m."
+      },
+      {
+        "id": "ev-wind-001",
+        "rule_id": "RULE-WIND-01",
+        "rule_name": "Sustained Coastal Wind Speed",
+        "domain": "atmospheric_wind",
+        "measured_value": 12,
+        "threshold_value": 25,
+        "comparator": "<=",
+        "unit": "knots",
+        "passed": true,
+        "severity": "safe",
+        "threshold_version": "v1.0-imd-coastal",
+        "explanation": "Sustained winds of 12 knots do not pose squall or capsizing hazard for motorized craft."
+      }
+    ],
+    "data_freshness": [
+      {
+        "domain": "marine_wave",
+        "source_name": "INCOIS High Resolution Wave Model (SWAN)",
+        "observed_at": "2026-09-06T05:00:00Z",
+        "retrieved_at": "2026-09-06T05:15:00Z",
+        "valid_to": "2026-09-06T18:00:00Z",
+        "age_minutes": 30,
+        "status": "fresh"
+      },
+      {
+        "domain": "atmospheric_wind",
+        "source_name": "IMD Coastal Synoptic Station Ratnagiri",
+        "observed_at": "2026-09-06T05:00:00Z",
+        "retrieved_at": "2026-09-06T05:20:00Z",
+        "valid_to": "2026-09-06T11:00:00Z",
+        "age_minutes": 30,
+        "status": "fresh"
+      }
+    ],
+    "missing_inputs": []
+  },
+  "citations": [
+    {
+      "id": "src-incois-osf-01",
+      "title": "INCOIS Ocean State Forecast — Maharashtra Coast",
+      "publisher": "Indian National Centre for Ocean Information Services",
+      "url": "https://incois.gov.in/portal/osf/maharashtra.jsp",
+      "published_at": "2026-09-06T04:00:00Z",
+      "accessed_at": "2026-09-06T05:15:00Z",
+      "excerpt": "Sea condition off Maharashtra coast remains slight to moderate with wave heights between 1.0 to 1.4 meters."
+    },
+    {
+      "id": "src-incois-pfz-01",
+      "title": "INCOIS Integrated Potential Fishing Zone Advisory",
+      "publisher": "INCOIS Remote Sensing Applications Division",
+      "url": "https://incois.gov.in/portal/pfz.jsp",
+      "published_at": "2026-09-06T02:30:00Z",
+      "accessed_at": "2026-09-06T05:15:00Z",
+      "excerpt": "PFZ Line Sector: 12-16 NM WNW of Mirya Light, Depth 42 m. Target species: Carangids and Sardines."
+    }
+  ],
+  "notices": [
+    {
+      "id": "not-safe-01",
+      "type": "info",
+      "message": "Routine coastal conditions. Standard life-jacket and VHF Ch 16 listening watch advised."
+    }
+  ],
+  "degradation": null
+}

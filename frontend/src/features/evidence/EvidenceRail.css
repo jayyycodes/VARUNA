@@ -1,0 +1,70 @@
+/* ================================================================
+   Evidence Rail Styles — Dual-Tone Theme (Crisp Elevated White Rail)
+   ================================================================ */
+
+.evidence-rail {
+  width: 360px;
+  min-width: 360px;
+  height: 100%;
+  background: #FFFFFF;
+  border: 1px solid var(--border-light-subtle);
+  border-radius: 24px;
+  box-shadow: var(--shadow-light-elevated);
+  display: flex;
+  flex-direction: column;
+  color: var(--text-light-primary);
+  z-index: var(--z-evidence-sheet);
+  transition: width 240ms cubic-bezier(0.16, 1, 0.3, 1), min-width 240ms cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
+}
+
+.evidence-rail--collapsed {
+  width: 50px;
+  min-width: 50px;
+}
+
+.evidence-rail__header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border-light-subtle);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #FFFFFF;
+  flex-shrink: 0;
+}
+
+.evidence-rail__title {
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text-light-primary);
+  margin: 0;
+  white-space: nowrap;
+}
+
+.evidence-rail--collapsed .evidence-rail__title {
+  display: none;
+}
+
+.evidence-rail__toggle-btn {
+  background: #F1F4EE;
+  border: 1px solid var(--border-light-subtle);
+  color: var(--text-light-secondary);
+  border-radius: var(--radius-pill);
+  padding: 4px 10px;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 150ms ease;
+}
+
+.evidence-rail__toggle-btn:hover {
+  background: #E5E9E0;
+  color: var(--text-light-primary);
+}
+
+.evidence-rail__content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}

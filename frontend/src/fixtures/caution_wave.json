@@ -1,0 +1,184 @@
+{
+  "schema_version": "1.0",
+  "query_run_id": "run-caution-002-kochi",
+  "session_id": "sess-user-102",
+  "generated_at": "2026-09-06T06:15:00Z",
+  "decision_status": "complete",
+  "summary": {
+    "headline": "CAUTION — Wave swell exceeds safe threshold for small craft; delay departure.",
+    "verdict": "CAUTION",
+    "confidence_band": "medium",
+    "confidence_reason": "Wave forecast is current; coastal lightning feed is unavailable.",
+    "action": "Check the next INCOIS bulletin at 11:30 before leaving. Restrict operations within 5 NM."
+  },
+  "claims": [
+    {
+      "id": "claim-caut-wave-001",
+      "text": "Forecast wave height is 2.8 m, exceeding the 2.5 m small-craft safety threshold.",
+      "kind": "risk_rule",
+      "evidence_ids": ["ev-caut-wave-001"],
+      "citation_ids": ["src-incois-kochi-01"]
+    },
+    {
+      "id": "claim-caut-wind-001",
+      "text": "Sustained winds 18 knots with intermittent 22 knot gusts off Kochi harbor entrance.",
+      "kind": "observation",
+      "evidence_ids": ["ev-caut-wind-001"],
+      "citation_ids": ["src-imd-kochi-01"]
+    }
+  ],
+  "map": {
+    "viewport": {
+      "center": [76.22, 9.93],
+      "zoom": 9
+    },
+    "layers": [
+      {
+        "id": "layer-user-loc",
+        "type": "user_location",
+        "label": "Kochi B Cochin Harbor",
+        "visible_by_default": true,
+        "feature_collection": {
+          "type": "FeatureCollection",
+          "features": [
+            {
+              "type": "Feature",
+              "id": "feat-user-kochi",
+              "properties": {
+                "layer_id": "layer-user-loc",
+                "title": "Cochin Fisheries Harbour",
+                "severity": "caution"
+              },
+              "geometry": {
+                "type": "Point",
+                "coordinates": [76.26, 9.94]
+              }
+            }
+          ]
+        }
+      },
+      {
+        "id": "layer-hazard-swell",
+        "type": "hazard_zone",
+        "label": "High Swell Wave Alert Zone (>2.5m)",
+        "visible_by_default": true,
+        "feature_collection": {
+          "type": "FeatureCollection",
+          "features": [
+            {
+              "type": "Feature",
+              "id": "feat-hazard-kochi-01",
+              "properties": {
+                "layer_id": "layer-hazard-swell",
+                "title": "Kallakkadal / High Swell Zone",
+                "severity": "caution",
+                "swell_height": "2.8m",
+                "period": "14s",
+                "valid_to": "2026-09-06T18:00:00Z"
+              },
+              "geometry": {
+                "type": "Polygon",
+                "coordinates": [
+                  [
+                    [75.95, 9.75],
+                    [76.20, 9.75],
+                    [76.22, 10.15],
+                    [75.95, 10.15],
+                    [75.95, 9.75]
+                  ]
+                ]
+              }
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "evidence_panel": {
+    "rule_trace": [
+      {
+        "id": "ev-caut-wave-001",
+        "rule_id": "RULE-WAVE-01",
+        "rule_name": "Small Craft Significant Wave Limit",
+        "domain": "marine_wave",
+        "measured_value": 2.8,
+        "threshold_value": 2.5,
+        "comparator": "<=",
+        "unit": "m",
+        "passed": false,
+        "severity": "caution",
+        "threshold_version": "v1.2-incois-2025",
+        "explanation": "Measured significant wave height of 2.8 m exceeds safe small-craft limit of 2.5 m by 0.3 m."
+      },
+      {
+        "id": "ev-caut-wind-001",
+        "rule_id": "RULE-WIND-01",
+        "rule_name": "Sustained Coastal Wind Speed",
+        "domain": "atmospheric_wind",
+        "measured_value": 18,
+        "threshold_value": 25,
+        "comparator": "<=",
+        "unit": "knots",
+        "passed": true,
+        "severity": "safe",
+        "threshold_version": "v1.0-imd-coastal",
+        "explanation": "Winds at 18 knots are below the 25 knot critical squall threshold."
+      }
+    ],
+    "data_freshness": [
+      {
+        "domain": "marine_wave",
+        "source_name": "INCOIS High Wave Warning System",
+        "observed_at": "2026-09-06T05:45:00Z",
+        "retrieved_at": "2026-09-06T06:05:00Z",
+        "valid_to": "2026-09-06T18:00:00Z",
+        "age_minutes": 30,
+        "status": "fresh"
+      },
+      {
+        "domain": "atmospheric_wind",
+        "source_name": "IMD Weather Station Cochin Airport / Harbor",
+        "observed_at": "2026-09-06T05:30:00Z",
+        "retrieved_at": "2026-09-06T06:00:00Z",
+        "valid_to": "2026-09-06T12:00:00Z",
+        "age_minutes": 45,
+        "status": "fresh"
+      }
+    ],
+    "missing_inputs": [
+      {
+        "domain": "lightning",
+        "parameter": "coastal_cld_ground_strike_density",
+        "impact": "Confidence reduced from High to Medium; visual thunderstorm monitoring required."
+      }
+    ]
+  },
+  "citations": [
+    {
+      "id": "src-incois-kochi-01",
+      "title": "INCOIS High Wave Alert Bulletin — Kerala South Coast",
+      "publisher": "INCOIS Coastal Alert Division",
+      "url": "https://incois.gov.in/portal/osf/kerala_highwave.jsp",
+      "published_at": "2026-09-06T05:00:00Z",
+      "accessed_at": "2026-09-06T06:05:00Z",
+      "excerpt": "High waves in the range of 2.6 - 3.0 meters are forecasted during 05:30 hours on 06-09-2026 to 23:30 hours off Kerala coast."
+    },
+    {
+      "id": "src-imd-kochi-01",
+      "title": "IMD Fishermen Warning Bulletin — South Arabian Sea",
+      "publisher": "India Meteorological Department, Thiruvananthapuram",
+      "url": "https://mausam.imd.gov.in/thiruvananthapuram/marine.php",
+      "published_at": "2026-09-06T05:30:00Z",
+      "accessed_at": "2026-09-06T06:00:00Z",
+      "excerpt": "Squally weather with wind speed reaching 40-45 kmph gusting to 55 kmph is likely to prevail along and off Kerala coast."
+    }
+  ],
+  "notices": [
+    {
+      "id": "not-caut-01",
+      "type": "warning",
+      "message": "High swell alert active along Kerala coast. Small motorized craft are advised to stay within 5 NM of shore."
+    }
+  ],
+  "degradation": null
+}

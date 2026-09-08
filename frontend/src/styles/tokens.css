@@ -1,0 +1,92 @@
+/*
+ * VARUNA Design System — CSS Custom Properties
+ * Dual-Tone System (Obsidian Left Command Pod + Sophisticated Warm Cream Workspace)
+ */
+
+:root {
+  /* --- Dual-Tone System --- */
+  /* 1. Left Command Pod (Dark Obsidian / Charcoal) */
+  --canvas-dark:          #0B0E14;
+  --sidebar-pod:          #0A0D12;    /* Skinny icon rail */
+  --sidebar-subpanel:     #12161F;    /* Scenario pod */
+  --sidebar-card:         #171C26;    /* Dark scenario card */
+  --sidebar-card-hover:   #1E2532;    /* Card hover */
+  --sidebar-card-active:  #252E3E;    /* Card active */
+  
+  /* 2. Right Workspace (Warm Light Canvas + Crisp Elevated Cards) */
+  --canvas-light:         #EFF1EA;    /* Warm cream off-white background */
+  --surface-white:        #FFFFFF;    /* Pure elevated cards */
+  --surface-subtle-gray:  #F7F8F5;    /* Sub-containers inside white cards */
+  --surface-border-light: rgba(0, 0, 0, 0.08);
+
+  /* Vivid Accents (Inspired by reference) */
+  --accent-lime:          #D8FA36;    /* Punchy lime yellow */
+  --accent-lime-text:     #1E2908;
+  --accent-coral:         #F87171;    /* High risk pill */
+  --accent-warm:          #FBBF24;    /* Caution pill */
+  --accent-lavender:      #DDD6FE;    /* Soft lavender card accent */
+
+  /* Text on Dark Pod */
+  --text-dark-primary:    #FFFFFF;
+  --text-dark-secondary:  #94A3B8;
+  --text-dark-muted:      #64748B;
+
+  /* Text on Light Workspace */
+  --text-light-primary:   #0F172A;    /* Deep slate black */
+  --text-light-secondary: #334155;    /* Slate */
+  --text-light-muted:     #64748B;    /* Muted gray */
+  --text-light-subtle:    #94A3B8;
+
+  /* --- Borders --- */
+  --border-dark-subtle:   rgba(255, 255, 255, 0.08);
+  --border-dark-medium:   rgba(255, 255, 255, 0.16);
+  --border-light-subtle:  rgba(0, 0, 0, 0.08);
+  --border-light-medium:  rgba(0, 0, 0, 0.14);
+
+  /* --- Shadows --- */
+  --shadow-light-card:    0 10px 30px rgba(0, 0, 0, 0.04), 0 1px 3px rgba(0, 0, 0, 0.03);
+  --shadow-light-elevated:0 20px 40px rgba(0, 0, 0, 0.07), 0 2px 6px rgba(0, 0, 0, 0.04);
+  --shadow-dark-card:     0 16px 40px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+
+  /* --- Verdict Safety System --- */
+  --verdict-safe:         #16A34A; /* Vibrant safe green */
+  --verdict-caution:      #D97706; /* Vibrant amber */
+  --verdict-unsafe:       #DC2626; /* High-alert red */
+  --verdict-unknown:      #64748B; /* Unresolved slate */
+
+  --verdict-safe-bg:      rgba(22, 163, 74, 0.12);
+  --verdict-caution-bg:   rgba(217, 119, 6, 0.12);
+  --verdict-unsafe-bg:    rgba(220, 38, 38, 0.12);
+  --verdict-unknown-bg:   rgba(100, 116, 139, 0.10);
+
+  /* --- PFZ scale --- */
+  --pfz-low:              #0F5C6E;
+  --pfz-mid:              #0D9488;
+  --pfz-high:             #14B8A6;
+
+  /* --- Typography --- */
+  --font-display:         'Sora', -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-body:            'Manrope', -apple-system, 'Segoe UI', Roboto, sans-serif;
+
+  --text-sm:              0.8125rem;   /* 13px */
+  --text-xs:              0.75rem;     /* 12px */
+
+  /* --- Radii --- */
+  --radius-card-primary:  24px;
+  --radius-card-secondary:16px;
+  --radius-card-tertiary: 12px;
+  --radius-pill:          999px;
+
+  /* --- Glass Material Defaults --- */
+  --glass-bg:             rgba(14, 20, 32, 0.72);
+  --glass-blur:           blur(16px) saturate(180%);
+  --glass-border:         rgba(255, 255, 255, 0.18);
+
+  /* --- Z-index --- */
+  --z-map:                1;
+  --z-legend:             1100;
+  --z-map-controls:       1100;
+  --z-verdict-card:       1200;
+  --z-evidence-sheet:     1200;
+  --z-sidebar:            1300;
+}
