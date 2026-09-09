@@ -18,6 +18,7 @@ Graph:
                               └─ regulation  → dispatch_rag                       → synthesize → END
 """
 
+import asyncio
 import json
 import logging
 import uuid
@@ -186,39 +187,64 @@ async def dispatch_data_agents(state: PlannerState) -> dict:
     """
     Call Weather + Marine + Geofencing agents in parallel.
 
-    Currently uses mocks — swap with real agent calls once teammates deliver.
-    When real agents are ready, this becomes:
-        weather, marine, geo = await asyncio.gather(
-            weather_agent.get_forecast(lat, lon, d),
-            marine_agent.get_ocean_state(lat, lon, d),
-            geofencing_agent.check_geofence(lat, lon),
-        )
+    Weather is now LIVE (Cbum's WeatherAgent — Open-Meteo).
+    Marine is still mocked (until Jaish delivers).
+    Geofencing attempts LIVE (Vedant's PostGIS agent), falls back to mock.
     """
     qid = state["query_run_id"]
     lat = state["location"]["lat"]
     lon = state["location"]["lon"]
     d = state["date"]
 
-    # Weather and Marine still use mocks (until Cbum & Jaish deliver)
-    weather = mock_weather(qid, lat, lon, d)
+    async def _get_weather() -> AgentEnvelope:
+        """Call Cbum's LIVE WeatherAgent; fall back to mock only on import/crash."""
+        try:
+            from agents.weather.weather_agent import WeatherAgent
+            result = await WeatherAgent().get_forecast(lat=lat, lon=lon, date=d, query_run_id=qid)
+            # 'degraded' is still real live data with a fallback payload — do NOT replace with mock.
+            # Only fall back to mock on a hard 'error' status (shouldn't happen; WeatherAgent
+            # returns degraded instead, but guard anyway).
+            if result.status == "error":
+                logger.warning(
+                    f"[planner] Live Weather returned error ({result.error_message}) — using mock fallback"
+                )
+                return mock_weather(qid, lat, lon, d)
+            logger.info(f"[planner] Live Weather OK ({result.status}) — {result.data.get('forecast_summary')}")
+            return result
+        except Exception as exc:
+            logger.warning(f"[planner] WeatherAgent import/call failed: {exc} — using mock fallback")
+            return mock_weather(qid, lat, lon, d)
+
+    async def _get_geofencing() -> AgentEnvelope:
+        """Call Vedant's LIVE GeofencingAgent (PostGIS); fall back to mock on any failure."""
+        try:
+            from agents.geofencing.agent import GeofencingAgent
+            from agents.geofencing.models import GeofencingRequest
+            result = await GeofencingAgent(db_pool=None).run(
+                GeofencingRequest(query_run_id=qid, lat=lat, lon=lon)
+            )
+            if result.status == "error":
+                logger.warning(
+                    f"[planner] Live Geofencing returned error ({result.error_message}) — using mock fallback"
+                )
+                return mock_geofencing(qid, lat, lon)
+            logger.info(
+                f"[planner] Live Geofencing OK — status: {result.data.get('status')}, "
+                f"nearest: {result.data.get('nearest_boundary_name')}"
+            )
+            return result
+        except Exception as exc:
+            logger.warning(f"[planner] GeofencingAgent import/call failed: {exc} — using mock fallback")
+            return mock_geofencing(qid, lat, lon)
+
+    # Dispatch Weather + Geofencing in parallel; Marine is still mocked (Jaish pending)
+    weather, geo = await asyncio.gather(_get_weather(), _get_geofencing())
     marine = mock_marine(qid, lat, lon, d)
 
-    # Call Vedant's LIVE Geofencing Agent (PostGIS)
-    try:
-        from agents.geofencing.agent import GeofencingAgent
-        from agents.geofencing.models import GeofencingRequest
-        real_geo = GeofencingAgent(db_pool=None)
-        geo = await real_geo.run(GeofencingRequest(query_run_id=qid, lat=lat, lon=lon))
-        if geo.status == "error":
-            logger.warning(f"[planner] Live Geofencing returned error ({geo.error_message}) — falling back to mock")
-            geo = mock_geofencing(qid, lat, lon)
-        else:
-            logger.info(f"[planner] Live Geofencing Agent OK — status: {geo.data.get('status')}, nearest: {geo.data.get('nearest_boundary_name')}")
-    except Exception as e:
-        logger.warning(f"[planner] Failed calling live Geofencing agent: {e} — using mock fallback")
-        geo = mock_geofencing(qid, lat, lon)
-
-    logger.info("[planner] Dispatched 3 data agents (Weather: mock, Marine: mock, Geofencing: LIVE) — all returned OK")
+    logger.info(
+        f"[planner] Dispatched 3 data agents — "
+        f"Weather: {weather.status} (LIVE), Marine: mock, Geofencing: {geo.status} (LIVE)"
+    )
 
     return {
         "weather_result": weather.model_dump(mode="json"),
@@ -398,12 +424,15 @@ def _build_evidence(state: PlannerState) -> list[dict]:
 
     for key in ("weather_result", "marine_result", "geofencing_result"):
         result = state.get(key, {})
-        if result and result.get("status") == "success":
+        # Include both 'success' and 'degraded' — degraded is real live data with
+        # a reduced confidence score and should be surfaced to the frontend as such.
+        if result and result.get("status") in ("success", "degraded"):
             evidence.append({
                 "agent": result.get("agent"),
                 "source": result.get("source"),
                 "confidence": result.get("confidence"),
                 "timestamp": result.get("timestamp"),
+                "status": result.get("status"),  # expose degraded status to frontend
             })
 
     # RAG citations
