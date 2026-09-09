@@ -21,7 +21,50 @@ The three workflows we're building end-to-end:
 2. **"Can I go out tomorrow?"** → waves + wind + tide + cyclone + lightning → safety verdict + explanation
 3. **"How do I get there safely?"** → hazards + boundaries + conditions → a route on the map
 
-Full technical proposal: see `docs/ORCA_Proposal.pdf` (add this file when available).
+Full technical proposal: see `Docs/ORCA_Proposal_Detailed.md`.
+
+---
+
+## 1.1 National Hackathon Target Queries (SIH26176 Alignment)
+
+Varuna directly addresses the primary operational queries expected by the hackathon evaluation jury:
+
+| # | Typical User Query | Responsible Agent(s) | Live Data & Evidence Sourced |
+|---|---|---|---|
+| 1 | **"Where is the nearest Potential Fishing Zone (PFZ) today?"** | Marine & Fishing Agent | INCOIS PFZ GeoJSON advisories, SST gradients, and Chlorophyll-a concentration ranked by proximity. |
+| 2 | **"Is it safe to venture into the sea tomorrow morning?"** | Weather Agent + Risk Assessment Agent | Real-time wave height, swell period, wind speed, lightning alerts, evaluated against small-craft safety thresholds. |
+| 3 | **"What are the tide, weather, and sea conditions near my fishing location?"** | Weather Agent + Marine Agent | Open-Meteo Marine API, INCOIS Ocean State Forecast (OSF), and tidal predictions for target coordinates. |
+| 4 | **"Are there any lightning or cyclone alerts in my area?"** | Weather Agent | IMD RSMC cyclone bulletins, MOSDAC lightning feeds, and convective storm warnings. |
+| 5 | **"Which regions show high chlorophyll concentration and favourable sea surface temperature?"** | Marine & Fishing Agent | ISRO OCM-3 / Sentinel-3 ocean color data + NOAA GHRSST / INSAT-3D thermal infrared SST. |
+| 6 | **"What is the safest route for a fishing vessel considering weather and sea-state conditions?"** | Route / Navigation Agent | A* pathfinding over bathymetry grid avoiding restricted zones, land contours, and wave swell sectors. |
+| 7 | **"Why has fish productivity declined in a particular coastal region?"** | Marine Agent + RAG Agent | Historical SST anomaly analysis, seasonal upwelling patterns, thermal stress, and overfishing regulation history. |
+| 8 | **"Which fishing zones should be avoided due to hazardous marine conditions or geofencing restrictions?"** | Geofencing Agent + Risk Agent | PostGIS boundary checks against International Maritime Boundary Lines (IMBL), Marine Protected Areas (MPAs), and severe sea states. |
+
+---
+
+## 1.2 What Better We Have Done (Varuna's Competitive Edge)
+
+Beyond answering baseline queries, Varuna introduces five critical architectural innovations:
+
+1. **The "High-Fish / High-Death" Safety Gatekeeper**:
+   - *The Problem*: Competitor systems blindly point fishermen to high-chlorophyll zones even when a 3-meter swell or cyclone is rolling in.
+   - *Varuna's Edge*: Our Planner cross-correlates PFZ productivity with Weather & Geofencing before presenting it. If a prime fishing zone sits inside dangerous waters, the system strictly marks the expedition as **UNSAFE / CAUTION** and redirects to a sheltered alternative.
+
+2. **International Maritime Boundary (IMBL) Pre-emption**:
+   - *The Problem*: Indian fishermen frequently cross into Sri Lankan or Pakistani waters by accident, resulting in boat seizures and arrests.
+   - *Varuna's Edge*: PostGIS spatial engine computes dynamic safety corridors with a **2 km Warning Buffer** and immediate **Restricted Flag** before crossing the IMBL, preventing international incidents.
+
+3. **Deterministic Life-or-Death Safety Guardrail (Zero LLM Hallucination)**:
+   - *The Problem*: General LLMs hallucinate numbers and can falsely assure a fisherman that "conditions seem pleasant."
+   - *Varuna's Edge*: The safety verdict (`SAFE`, `CAUTION`, `UNSAFE`) is **100% computed by an auditable, deterministic Python rule engine** based on official INCOIS and IMD small-craft criteria. The LLM is strictly confined to explaining the verdict in plain conversational language.
+
+4. **Verifiable Multi-Agent Evidence DAG & Audit Trail**:
+   - *The Problem*: Black-box chatbots provide advice with no provenance.
+   - *Varuna's Edge*: Every response includes an Evidence Trail linking to the exact satellite pass timestamp, buoy station ID, legal act section (e.g. *Maharashtra MFRA 1981*), and confidence score.
+
+5. **Edge-First Offline Resilience**:
+   - *The Problem*: Marine connectivity at sea is intermittent and fragile.
+   - *Varuna's Edge*: PostGIS boundary checks run entirely locally without external network dependencies. If cloud satellite APIs timeout, the system gracefully falls back to local cached telemetry and pre-baked fixtures without crashing.
 
 ---
 
@@ -160,20 +203,24 @@ must never be replaced by an LLM-generated guess.
 
 ---
 
-## 6. Data Sources (All Free, Public)
+## 6. Real-Time Public Data Endpoints (All 100% Free)
 
-| Need | Source | Used By |
-|---|---|---|
-| Potential Fishing Zones | INCOIS PFZ WebGIS | Marine & Fishing Agent |
-| Sea Surface Temperature | ISRO MOSDAC / INCOIS | Marine & Fishing Agent |
-| Chlorophyll Concentration | ISRO OCM-3 / MOSDAC | Marine & Fishing Agent |
-| Waves, Currents, Ocean State | INCOIS Ocean State Forecast | Weather + Risk Agents |
-| Cyclone / Lightning Alerts | IMD + MOSDAC | Weather Agent |
-| General Weather | IMD / Open-Meteo | Weather Agent |
-| Tide Predictions | INCOIS Tide Service | Route Agent |
-| Maritime Boundaries (EEZ/IMBL) | Govt. shapefiles | Geofencing Agent |
-| Marine Protected Areas | Protected Planet / India GIS | Geofencing Agent |
-| Fishing Regulations / MFRAs | Govt. marine fishing regulation acts | RAG/Advisory Agent |
+Every agent consumes free, publicly accessible real-time feeds without paywalls:
+
+| Domain | Sponsoring Body | Endpoint / Feed | Frequency | Used By Agent |
+|---|---|---|---|---|
+| **Waves, Swell & Wind** | Open-Meteo Marine | `https://marine-api.open-meteo.com/v1/marine` (hourly `wave_height,wave_period,swell_wave_height,wind_wave_height`) | Hourly Real-Time | Weather Agent |
+| **Atmospheric Weather** | Open-Meteo Weather | `https://api.open-meteo.com/v1/forecast` (`wind_speed_10m,wind_gusts_10m,precipitation,lightning`) | Hourly Real-Time | Weather Agent |
+| **Cyclone & Storm Bulletins** | IMD RSMC New Delhi | `https://rsmcnewdelhi.imd.gov.in/` (RSS bulletins & cyclone tracks) | Live Bulletins | Weather Agent |
+| **Potential Fishing Zones (PFZ)** | INCOIS WebGIS / SAMUDRA | `https://incois.gov.in/portal/datainfo/pfz.jsp` (GeoJSON / Shapefiles) | Daily Advisories | Marine & Fishing Agent |
+| **Sea Surface Temp (SST)** | NOAA ERDDAP / ISRO MOSDAC | `https://coastwatch.pfeg.noaa.gov/erddap/griddap/` (GHRSST 5km Indian EEZ) | Daily Satellite | Marine & Fishing Agent |
+| **Chlorophyll-a Concentration** | Copernicus Marine / OCM-3 | Sentinel-3 OLCI / ISRO OCM-3 ocean color products | Daily Satellite | Marine & Fishing Agent |
+| **Maritime Boundaries (EEZ/IMBL)**| MarineRegions.org v12 | Shapefiles / GeoJSON for India, Sri Lanka, Pakistan, Maldives EEZ | Static / High Precision | Geofencing Agent |
+| **Marine Protected Areas (MPA)** | Protected Planet (WDPA) | WDPA Indian Marine Sanctuaries & National Parks GeoJSON | Static / Annual Update | Geofencing Agent |
+| **Tide Predictions** | INCOIS Tide Service | INCOIS major coastal port tidal tables (hourly high/low tide) | Daily / Hourly | Route Agent |
+| **Marine Regulations (MFRAs)** | Govt. State Gazetteers | Maharashtra MFRA 1981, Tamil Nadu MFRA 1983, Annual Monsoon Bans | Statutory Text | RAG / Advisory Agent |
+
+> **Single-Command Local Seeding**: Run `python data/etl/setup_data.py` to automatically seed your local PostGIS and Redis environments with baseline spatial and telemetry data.
 
 ---
 

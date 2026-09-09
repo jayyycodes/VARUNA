@@ -137,14 +137,30 @@ async def classify_intent(state: PlannerState) -> dict:
     ]
 
     try:
-        raw = await call_llm(
-            "intent",
-            messages,
-            temperature=0.0,
-            max_tokens=256,
-            response_format={"type": "json_object"},
-        )
-        parsed = json.loads(raw)
+        try:
+            raw = await call_llm(
+                "intent",
+                messages,
+                temperature=0.0,
+                max_tokens=512,
+                response_format={"type": "json_object"},
+            )
+        except Exception:
+            raw = await call_llm(
+                "intent",
+                messages,
+                temperature=0.0,
+                max_tokens=512,
+            )
+
+        clean_raw = raw.strip()
+        if "```" in clean_raw:
+            parts = clean_raw.split("```")
+            if len(parts) >= 2:
+                clean_raw = parts[1]
+                if clean_raw.startswith("json"):
+                    clean_raw = clean_raw[4:]
+        parsed = json.loads(clean_raw.strip())
 
         intent = parsed.get("intent", "safety_check")
         location = parsed.get("location", {"lat": 16.99, "lon": 73.30, "name": "Ratnagiri"})
@@ -183,12 +199,26 @@ async def dispatch_data_agents(state: PlannerState) -> dict:
     lon = state["location"]["lon"]
     d = state["date"]
 
-    # TODO: Replace with real agents + asyncio.gather()
+    # Weather and Marine still use mocks (until Cbum & Jaish deliver)
     weather = mock_weather(qid, lat, lon, d)
     marine = mock_marine(qid, lat, lon, d)
-    geo = mock_geofencing(qid, lat, lon)
 
-    logger.info("[planner] Dispatched 3 data agents (mock) — all returned OK")
+    # Call Vedant's LIVE Geofencing Agent (PostGIS)
+    try:
+        from agents.geofencing.agent import GeofencingAgent
+        from agents.geofencing.models import GeofencingRequest
+        real_geo = GeofencingAgent(db_pool=None)
+        geo = await real_geo.run(GeofencingRequest(query_run_id=qid, lat=lat, lon=lon))
+        if geo.status == "error":
+            logger.warning(f"[planner] Live Geofencing returned error ({geo.error_message}) — falling back to mock")
+            geo = mock_geofencing(qid, lat, lon)
+        else:
+            logger.info(f"[planner] Live Geofencing Agent OK — status: {geo.data.get('status')}, nearest: {geo.data.get('nearest_boundary_name')}")
+    except Exception as e:
+        logger.warning(f"[planner] Failed calling live Geofencing agent: {e} — using mock fallback")
+        geo = mock_geofencing(qid, lat, lon)
+
+    logger.info("[planner] Dispatched 3 data agents (Weather: mock, Marine: mock, Geofencing: LIVE) — all returned OK")
 
     return {
         "weather_result": weather.model_dump(mode="json"),

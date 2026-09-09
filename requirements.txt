@@ -14,3 +14,4 @@ pytest
 pytest-asyncio
 python-dotenv
 geopandas
+openai>=1.0.0
