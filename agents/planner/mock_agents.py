@@ -193,9 +193,19 @@ def mock_risk_verdict(
         reasons.append(f"Active cyclone alert: {cyclone}")
 
     # ── Geofencing ─────────────────────────────────────────────────
+    geo_status = geo.data.get("status")
+    restricted = geo.data.get("restricted_zone", False) or (geo_status == "restricted")
+    geo_warning = (geo_status == "warning")
+    boundary = geo.data.get("nearest_boundary_name") or "restricted maritime zone"
+
     if restricted:
         verdict = "UNSAFE"
-        reasons.append("Location is in a restricted maritime zone")
+        reasons.append(f"Location is inside restricted maritime zone ({boundary})")
+    elif geo_warning:
+        if verdict != "UNSAFE":
+            verdict = "CAUTION"
+        dist = geo.data.get("distance_km", 0)
+        reasons.append(f"Vessel is close ({dist:.1f}km) to maritime boundary ({boundary})")
 
     if not reasons:
         reasons.append("All conditions within safe thresholds")

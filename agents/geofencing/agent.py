@@ -52,14 +52,17 @@ class GeofencingAgent:
 
     def _run_check_sync(self, lat: float, lon: float):
         import psycopg2
-        # In a real setup, we'd use a connection pool provided by the framework.
-        # For testing, we make a quick connection.
+        host = os.getenv("POSTGRES_HOST", "127.0.0.1")
+        port = int(os.getenv("POSTGRES_PORT", "5433"))
+        db = os.getenv("POSTGRES_DB", "varuna")
+        user = os.getenv("POSTGRES_USER", "varuna")
+        password = os.getenv("POSTGRES_PASSWORD", "varuna_dev")
         conn = psycopg2.connect(
-            dbname="varuna", user="varuna", password="varuna_dev", host="localhost", port="5432"
+            dbname=db, user=user, password=password, host=host, port=port
         )
-        # check_geofence is now a sync function
         import asyncio
         loop = asyncio.new_event_loop()
         res = loop.run_until_complete(check_geofence(conn, lat, lon))
         conn.close()
         return res
+
