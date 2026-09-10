@@ -118,6 +118,87 @@ It is FINAL. State it clearly — do NOT soften, override, or reinterpret it.
 Write the response as plain text paragraphs. No markdown headers or bullet points."""
 
 
+# ── Verified Indian Coastal Ports Gazetteer ─────────────────────────────
+INDIAN_COASTAL_PORTS: dict[str, dict[str, Any]] = {
+    # Maharashtra / Konkan
+    "ratnagiri": {"lat": 16.99, "lon": 73.30, "name": "Ratnagiri, Maharashtra"},
+    "malvan": {"lat": 16.05, "lon": 73.47, "name": "Malvan, Sindhudurg, Maharashtra"},
+    "mumbai": {"lat": 18.94, "lon": 72.83, "name": "Mumbai, Maharashtra"},
+    "sassoon": {"lat": 18.91, "lon": 72.82, "name": "Sassoon Dock, Mumbai, Maharashtra"},
+    "bhaucha dhakka": {"lat": 18.96, "lon": 72.85, "name": "Ferry Wharf, Mumbai, Maharashtra"},
+    "alibaug": {"lat": 18.64, "lon": 72.87, "name": "Alibaug, Maharashtra"},
+    "dahanu": {"lat": 19.97, "lon": 72.73, "name": "Dahanu, Maharashtra"},
+    # Gujarat
+    "veraval": {"lat": 20.90, "lon": 70.37, "name": "Veraval, Gujarat"},
+    "porbandar": {"lat": 21.64, "lon": 69.60, "name": "Porbandar, Gujarat"},
+    "okha": {"lat": 22.47, "lon": 69.07, "name": "Okha, Gujarat"},
+    "mangrol": {"lat": 21.12, "lon": 70.12, "name": "Mangrol, Gujarat"},
+    "jakhau": {"lat": 23.23, "lon": 68.70, "name": "Jakhau, Kutch, Gujarat"},
+    # Goa & Karnataka
+    "mormugao": {"lat": 15.42, "lon": 73.80, "name": "Mormugao, Goa"},
+    "goa": {"lat": 15.42, "lon": 73.80, "name": "Goa Coastal Waters"},
+    "panaji": {"lat": 15.50, "lon": 73.83, "name": "Panaji, Goa"},
+    "karwar": {"lat": 14.81, "lon": 74.13, "name": "Karwar, Karnataka"},
+    "mangalore": {"lat": 12.87, "lon": 74.84, "name": "Mangalore, Karnataka"},
+    "malpe": {"lat": 13.35, "lon": 74.70, "name": "Malpe, Udupi, Karnataka"},
+    # Kerala
+    "kochi": {"lat": 9.93, "lon": 76.26, "name": "Kochi, Kerala"},
+    "cochin": {"lat": 9.93, "lon": 76.26, "name": "Cochin, Kerala"},
+    "munambam": {"lat": 10.18, "lon": 76.17, "name": "Munambam, Kerala"},
+    "kollam": {"lat": 8.88, "lon": 76.59, "name": "Kollam, Kerala"},
+    "vizhinjam": {"lat": 8.38, "lon": 76.99, "name": "Vizhinjam, Kerala"},
+    "beypore": {"lat": 11.16, "lon": 75.80, "name": "Beypore, Kozhikode, Kerala"},
+    # Tamil Nadu & Puducherry
+    "tuticorin": {"lat": 8.76, "lon": 78.13, "name": "Thoothukudi / Tuticorin, Tamil Nadu"},
+    "thoothukudi": {"lat": 8.76, "lon": 78.13, "name": "Thoothukudi, Tamil Nadu"},
+    "rameshwaram": {"lat": 9.28, "lon": 79.31, "name": "Rameshwaram, Tamil Nadu"},
+    "nagapattinam": {"lat": 10.77, "lon": 79.84, "name": "Nagapattinam, Tamil Nadu"},
+    "cuddalore": {"lat": 11.75, "lon": 79.77, "name": "Cuddalore, Tamil Nadu"},
+    "chennai": {"lat": 13.08, "lon": 80.27, "name": "Chennai (Kasimedu), Tamil Nadu"},
+    "kasimedu": {"lat": 13.12, "lon": 80.29, "name": "Kasimedu Fishing Harbour, Chennai"},
+    # Andhra Pradesh & Odisha & West Bengal
+    "visakhapatnam": {"lat": 17.69, "lon": 83.22, "name": "Visakhapatnam, Andhra Pradesh"},
+    "vizag": {"lat": 17.69, "lon": 83.22, "name": "Visakhapatnam, Andhra Pradesh"},
+    "kakinada": {"lat": 16.99, "lon": 82.25, "name": "Kakinada, Andhra Pradesh"},
+    "machilipatnam": {"lat": 16.18, "lon": 81.14, "name": "Machilipatnam, Andhra Pradesh"},
+    "paradeep": {"lat": 20.32, "lon": 86.61, "name": "Paradeep, Odisha"},
+    "dhamra": {"lat": 20.80, "lon": 86.97, "name": "Dhamra, Odisha"},
+    "digha": {"lat": 21.63, "lon": 87.52, "name": "Digha, West Bengal"},
+    "kakdwip": {"lat": 21.87, "lon": 88.18, "name": "Kakdwip, West Bengal"},
+}
+
+
+def resolve_port_location(query: str, extracted_loc: dict[str, Any] | None) -> dict[str, Any]:
+    """
+    Deterministically resolve coordinates from query text or extracted name
+    against the verified Indian Coastal Port Gazetteer, eliminating LLM coordinate hallucination.
+    """
+    normalized_q = query.lower()
+    extracted_name = (extracted_loc.get("name") or "").lower() if extracted_loc else ""
+
+    # Check extracted name first, then words in raw query
+    for port_key, port_info in INDIAN_COASTAL_PORTS.items():
+        if port_key in extracted_name or port_key in normalized_q:
+            return {
+                "lat": port_info["lat"],
+                "lon": port_info["lon"],
+                "name": port_info["name"],
+            }
+
+    # Fallback to LLM extraction if coordinates are within the Indian maritime bounding envelope
+    if extracted_loc and isinstance(extracted_loc.get("lat"), (int, float)) and isinstance(extracted_loc.get("lon"), (int, float)):
+        lat = float(extracted_loc["lat"])
+        lon = float(extracted_loc["lon"])
+        if 4.0 <= lat <= 26.0 and 65.0 <= lon <= 95.0:
+            return {
+                "lat": lat,
+                "lon": lon,
+                "name": extracted_loc.get("name") or f"Location ({lat:.2f}N, {lon:.2f}E)",
+            }
+
+    return {"lat": 16.99, "lon": 73.30, "name": "Ratnagiri, Maharashtra (default)"}
+
+
 # ═══════════════════════════════════════════════════════════════════════
 # Graph nodes
 # ═══════════════════════════════════════════════════════════════════════
@@ -164,7 +245,7 @@ async def classify_intent(state: PlannerState) -> dict:
         parsed = json.loads(clean_raw.strip())
 
         intent = parsed.get("intent", "safety_check")
-        location = parsed.get("location", {"lat": 16.99, "lon": 73.30, "name": "Ratnagiri"})
+        location = resolve_port_location(state["query"], parsed.get("location"))
         query_date = parsed.get("date", tomorrow_str)
 
         logger.info(
@@ -176,9 +257,10 @@ async def classify_intent(state: PlannerState) -> dict:
 
     except Exception as e:
         logger.error(f"[planner] Intent classification failed: {e} — using defaults")
+        location = resolve_port_location(state["query"], None)
         return {
             "intent": "safety_check",
-            "location": {"lat": 16.99, "lon": 73.30, "name": "Ratnagiri (default)"},
+            "location": location,
             "date": tomorrow_str,
         }
 
@@ -187,8 +269,8 @@ async def dispatch_data_agents(state: PlannerState) -> dict:
     """
     Call Weather + Marine + Geofencing agents in parallel.
 
-    Weather is now LIVE (Cbum's WeatherAgent — Open-Meteo).
-    Marine is still mocked (until Jaish delivers).
+    Weather is LIVE (Cbum's WeatherAgent — Open-Meteo).
+    Marine is LIVE (Jaish's MarineFishingAgent — NOAA ERDDAP + INCOIS WFS).
     Geofencing attempts LIVE (Vedant's PostGIS agent), falls back to mock.
     """
     qid = state["query_run_id"]
