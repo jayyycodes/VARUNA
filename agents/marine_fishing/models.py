@@ -10,6 +10,7 @@ Owner: Jaish
 from __future__ import annotations
 
 from enum import Enum
+from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 from shapely.geometry.base import BaseGeometry
@@ -130,3 +131,60 @@ class PFZSamplePoint(BaseModel):
     distance_along_part_km: float  # cumulative geodesic distance within its part
     is_endpoint: bool  # True if this is the original first/last vertex (not interpolated)
     source_uid: str | None = None  # UID of the originating PFZFeature, if available
+
+
+class ObservationOutcome(str, Enum):
+    """Outcome of a single-point environmental observation fetch."""
+
+    SUCCESS = "SUCCESS"
+    FILL_VALUE = "FILL_VALUE"
+    STALE_FALLBACK = "STALE_FALLBACK"
+    TRANSIENT_ERROR = "TRANSIENT_ERROR"
+    UNEXPECTED_ERROR = "UNEXPECTED_ERROR"
+
+
+class SSTObservation(BaseModel):
+    """
+    Raw SST observation at a single point from NOAA ACSPO L3S daily product.
+    """
+
+    outcome: ObservationOutcome
+    value_celsius: float | None = None
+    quality_level: int | None = None
+    gradient_magnitude_k_per_km: float | None = None
+    front_position: bool | None = None
+    requested_time: datetime
+    observation_time: datetime | None = None
+    grid_lat: float | None = None
+    grid_lon: float | None = None
+    source_dataset: str = "noaacwLEOACSPOSSTL3SnrtCDaily"
+    error_message: str | None = None
+
+
+class CHLObservation(BaseModel):
+    """
+    Raw chlorophyll observation at a single point from NOAA VIIRS DINEOF product.
+    """
+
+    outcome: ObservationOutcome
+    value_mg_m3: float | None = None
+    confidence_ceiling: float | None = None
+    requested_time: datetime
+    observation_time: datetime | None = None
+    grid_lat: float | None = None
+    grid_lon: float | None = None
+    source_dataset: str = "noaacwNPPN20VIIRSDINEOFDaily"
+    error_message: str | None = None
+
+
+class SampledEnvironmentalPoint(BaseModel):
+    """
+    A PFZSamplePoint joined with its SST and CHL observations.
+
+    Defined strictly via composition: encapsulates the sample_point
+    and both observations without duplicating any PFZSamplePoint fields.
+    """
+
+    sample_point: PFZSamplePoint
+    sst: SSTObservation
+    chl: CHLObservation
