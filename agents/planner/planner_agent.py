@@ -55,12 +55,14 @@ class PlannerState(TypedDict, total=False):
     # ── After intent classification ────────────────────────────────
     intent: str                         # safety_check | find_fishing_zone | route_request | regulation_question
     location: dict[str, Any]            # {"lat": float, "lon": float, "name": str}
+    destination: dict[str, Any] | None  # optional {"lat": float, "lon": float, "name": str} for routing
     date: str                           # ISO date YYYY-MM-DD
 
     # ── Agent results (serialized envelopes) ───────────────────────
     weather_result: dict[str, Any]
     marine_result: dict[str, Any]
     geofencing_result: dict[str, Any]
+    route_result: dict[str, Any]
     rag_result: dict[str, Any]
 
     # ── Risk assessment ────────────────────────────────────────────
@@ -112,8 +114,9 @@ It is FINAL. State it clearly — do NOT soften, override, or reinterpret it.
 3. Explain WHY the verdict was reached using the reasons provided.
 4. If PFZ fishing zones are available, recommend the top zones with distance and likely species.
 5. If geofencing data is available, mention boundary status and any warnings.
-6. Be concise and practical — your audience is working fishermen, not academics.
-7. End with one clear, actionable recommendation.
+6. If route navigation data is available, provide the recommended compass heading, nautical distance (NM), estimated travel time (hours), and fuel required (liters).
+7. Be concise and practical — your audience is working fishermen, not academics.
+8. End with one clear, actionable recommendation.
 
 Write the response as plain text paragraphs. No markdown headers or bullet points."""
 
@@ -199,12 +202,42 @@ def resolve_port_location(query: str, extracted_loc: dict[str, Any] | None) -> d
     return {"lat": 16.99, "lon": 73.30, "name": "Ratnagiri, Maharashtra (default)"}
 
 
+def extract_route_endpoints(query: str, parsed: dict | None = None) -> tuple[dict[str, Any], dict[str, Any] | None]:
+    """
+    Extracts departure and destination locations for routing.
+    Detects patterns like 'from PortA to PortB' or multiple ports in query.
+    """
+    q_lower = query.lower()
+    ports_found = [p for p in INDIAN_COASTAL_PORTS if p in q_lower]
+
+    if len(ports_found) >= 2:
+        # Check order of appearance in string
+        p1, p2 = ports_found[0], ports_found[1]
+        pos1 = q_lower.find(p1)
+        pos2 = q_lower.find(p2)
+        start_key = p1 if pos1 < pos2 else p2
+        dest_key = p2 if pos1 < pos2 else p1
+        start = INDIAN_COASTAL_PORTS[start_key]
+        dest = INDIAN_COASTAL_PORTS[dest_key]
+        return start, dest
+
+    # Check if destination explicitly parsed
+    if parsed and parsed.get("destination"):
+        raw_dest = parsed["destination"]
+        dest = resolve_port_location(raw_dest.get("name", ""), raw_dest)
+        start = resolve_port_location(query, parsed.get("location"))
+        return start, dest
+
+    start = resolve_port_location(query, parsed.get("location") if parsed else None)
+    return start, None
+
+
 # ═══════════════════════════════════════════════════════════════════════
 # Graph nodes
 # ═══════════════════════════════════════════════════════════════════════
 
 async def classify_intent(state: PlannerState) -> dict:
-    """Use LLM structured output to parse intent, location, and date."""
+    """Use LLM structured output to parse intent, location, destination, and date."""
     today_str = date.today().isoformat()
     tomorrow_str = (date.today() + timedelta(days=1)).isoformat()
 
@@ -245,22 +278,24 @@ async def classify_intent(state: PlannerState) -> dict:
         parsed = json.loads(clean_raw.strip())
 
         intent = parsed.get("intent", "safety_check")
-        location = resolve_port_location(state["query"], parsed.get("location"))
+        location, destination = extract_route_endpoints(state["query"], parsed)
         query_date = parsed.get("date", tomorrow_str)
 
         logger.info(
             f"[planner] Intent: {intent} | "
             f"Location: {location.get('name')} ({location.get('lat')}, {location.get('lon')}) | "
+            f"Destination: {destination.get('name') if destination else 'None'} | "
             f"Date: {query_date}"
         )
-        return {"intent": intent, "location": location, "date": query_date}
+        return {"intent": intent, "location": location, "destination": destination, "date": query_date}
 
     except Exception as e:
         logger.error(f"[planner] Intent classification failed: {e} — using defaults")
-        location = resolve_port_location(state["query"], None)
+        location, destination = extract_route_endpoints(state["query"], None)
         return {
             "intent": "safety_check",
             "location": location,
+            "destination": destination,
             "date": tomorrow_str,
         }
 
@@ -343,15 +378,61 @@ async def dispatch_data_agents(state: PlannerState) -> dict:
     # Dispatch Weather + Marine + Geofencing in parallel
     weather, marine, geo = await asyncio.gather(_get_weather(), _get_marine(), _get_geofencing())
 
+    # 4. Route Navigation Planning
+    route_result = None
+    start_lat = lat
+    start_lon = lon
+    dest_info = state.get("destination")
+    intent = state.get("intent", "")
+
+    dest_lat: float | None = None
+    dest_lon: float | None = None
+
+    if dest_info:
+        dest_lat = float(dest_info["lat"])
+        dest_lon = float(dest_info["lon"])
+    elif marine and hasattr(marine, "data") and marine.data.get("pfz_zones"):
+        top_zone = marine.data["pfz_zones"][0]
+        if "coordinates" in top_zone and isinstance(top_zone["coordinates"], (list, tuple)):
+            dest_lon, dest_lat = float(top_zone["coordinates"][0]), float(top_zone["coordinates"][1])
+        elif "latitude" in top_zone and "longitude" in top_zone:
+            dest_lat, dest_lon = float(top_zone["latitude"]), float(top_zone["longitude"])
+    elif intent == "route_request":
+        # Default transit 15 NM offshore from departure port
+        dest_lat = start_lat - 0.15
+        dest_lon = start_lon - 0.15
+
+    if dest_lat is not None and dest_lon is not None and (intent in ("route_request", "find_fishing_zone") or dest_info is not None):
+        try:
+            from agents.route.route_agent import RouteAgent
+            r_agent = RouteAgent()
+            r_env = await r_agent.plan_route(
+                start_lat=start_lat,
+                start_lon=start_lon,
+                dest_lat=dest_lat,
+                dest_lon=dest_lon,
+                query_run_id=qid,
+            )
+            route_result = r_env.model_dump(mode="json")
+            logger.info(
+                f"[planner] RouteAgent OK ({r_env.status}) — "
+                f"{route_result['data'].get('distance_nm')} NM | "
+                f"Heading: {route_result['data'].get('cardinal_direction')} ({route_result['data'].get('initial_bearing_degrees')}°)"
+            )
+        except Exception as exc:
+            logger.warning(f"[planner] RouteAgent call failed: {exc}")
+
     logger.info(
-        f"[planner] Dispatched 3 data agents — "
-        f"Weather: {weather.status} (LIVE), Marine: {marine.status} (LIVE), Geofencing: {geo.status} (LIVE)"
+        f"[planner] Dispatched data agents — "
+        f"Weather: {weather.status} (LIVE), Marine: {marine.status} (LIVE), "
+        f"Geofencing: {geo.status} (LIVE), Route: {'computed' if route_result else 'none'}"
     )
 
     return {
         "weather_result": weather.model_dump(mode="json"),
         "marine_result": marine.model_dump(mode="json"),
         "geofencing_result": geo.model_dump(mode="json"),
+        "route_result": route_result,
     }
 
 
@@ -409,9 +490,12 @@ async def synthesize_response(state: PlannerState) -> dict:
     # ── Build LLM context ─────────────────────────────────────────
     agent_context = {
         "intent": intent,
+        "departure_location": state.get("location"),
+        "destination_location": state.get("destination"),
         "weather": state.get("weather_result", {}),
         "marine_fishing": state.get("marine_result", {}),
         "geofencing": state.get("geofencing_result", {}),
+        "route_navigation": state.get("route_result", {}),
         "rag_advisory": state.get("rag_result", {}),
         "risk_verdict": verdict_data,
     }
@@ -529,6 +613,27 @@ def _build_map_data(state: PlannerState) -> dict:
             },
         })
 
+    # Destination location
+    dest = state.get("destination")
+    if dest and dest.get("lat") and dest.get("lon"):
+        features.append({
+            "type": "Feature",
+            "geometry": {
+                "type": "Point",
+                "coordinates": [dest.get("lon", 0), dest.get("lat", 0)],
+            },
+            "properties": {
+                "type": "destination_location",
+                "name": dest.get("name", "Destination"),
+                "icon": "flag",
+            },
+        })
+
+    # Route navigation LineString feature
+    route = state.get("route_result", {})
+    if route and route.get("data", {}).get("route_feature"):
+        features.append(route["data"]["route_feature"])
+
     return {"type": "FeatureCollection", "features": features}
 
 
@@ -536,18 +641,24 @@ def _build_evidence(state: PlannerState) -> list[dict]:
     """Compile an evidence trail from all agent envelopes."""
     evidence: list[dict] = []
 
-    for key in ("weather_result", "marine_result", "geofencing_result"):
+    for key in ("weather_result", "marine_result", "geofencing_result", "route_result"):
         result = state.get(key, {})
         # Include both 'success' and 'degraded' — degraded is real live data with
         # a reduced confidence score and should be surfaced to the frontend as such.
         if result and result.get("status") in ("success", "degraded"):
-            evidence.append({
+            ev_entry = {
                 "agent": result.get("agent"),
                 "source": result.get("source"),
                 "confidence": result.get("confidence"),
                 "timestamp": result.get("timestamp"),
                 "status": result.get("status"),  # expose degraded status to frontend
-            })
+            }
+            if result.get("agent") == "route":
+                r_data = result.get("data", {})
+                ev_entry["distance_nm"] = r_data.get("distance_nm")
+                ev_entry["estimated_time_hours"] = r_data.get("estimated_time_hours")
+                ev_entry["fuel_liters"] = r_data.get("fuel_estimate_liters")
+            evidence.append(ev_entry)
 
     # RAG citations
     rag = state.get("rag_result", {})
