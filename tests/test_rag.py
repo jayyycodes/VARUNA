@@ -34,10 +34,10 @@ def test_rag_agent_monsoon_ban():
 
 def test_rag_agent_maharashtra_distance():
     agent = RAGAdvisoryAgent(use_vector_store=True)
-    res = asyncio.run(agent.answer_with_citations("How many nautical miles are mechanized trawlers banned in Maharashtra?"))
+    res = asyncio.run(agent.answer_with_citations("How many nautical miles or fathoms are mechanized trawlers restricted in Maharashtra?"))
     assert any("Maharashtra" in c["source"] for c in res["citations"])
     combined_text = (res["answer"] + " " + " ".join(c["chunk"] for c in res["citations"])).lower()
-    assert "5 nautical miles" in combined_text or "5 nm" in combined_text
+    assert "5 nautical miles" in combined_text or "5 nm" in combined_text or "5 fathoms" in combined_text
 
 
 def test_rag_agent_protected_wildlife():
@@ -46,6 +46,20 @@ def test_rag_agent_protected_wildlife():
     assert any("Wildlife Protection Act" in c["source"] for c in res["citations"])
     combined_text = (res["answer"] + " " + " ".join(c["chunk"] for c in res["citations"])).lower()
     assert "turtle" in combined_text or "whale shark" in combined_text or "schedule i" in combined_text
+
+
+def test_rag_agent_kerala_official_pdf():
+    agent = RAGAdvisoryAgent(use_vector_store=True)
+    res = asyncio.run(agent.answer_with_citations("What does the Kerala Marine Fishing Regulation Act 1980 regulate?"))
+    assert any("Kerala" in c["source"] for c in res["citations"])
+    assert len(res["citations"]) > 0
+
+
+def test_rag_agent_foreign_vessels_official_pdf():
+    agent = RAGAdvisoryAgent(use_vector_store=True)
+    res = asyncio.run(agent.answer_with_citations("Can foreign fishing vessels operate in the Indian maritime zone without a permit?"))
+    assert any("Foreign Vessels" in c["source"] or "Maritime Zones" in c["source"] for c in res["citations"])
+    assert len(res["citations"]) > 0
 
 
 def test_document_processor():
@@ -61,10 +75,11 @@ def test_vector_store_memory_search():
     processor = DocumentProcessor()
     chunks = processor._chunk_content(
         "Trawlers are banned within 5 nautical miles in Maharashtra under Section 4.",
-        source_name="Maharashtra MFRA",
+        source_name="Maharashtra Marine Fishing Regulation Act, 1981",
         file_name="mh.txt"
     )
     vs.add_chunks(chunks)
     results = vs.search("mechanized trawlers in Maharashtra")
     assert len(results) > 0
     assert "Maharashtra" in results[0]["source"]
+

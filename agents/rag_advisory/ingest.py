@@ -27,20 +27,27 @@ logger = logging.getLogger("varuna.rag.ingest")
 
 
 def run_ingest(docs_dir: Path | None = None) -> int:
-    if docs_dir is None:
-        docs_dir = ROOT_DIR / "data" / "rag_documents"
+    target_dirs = [docs_dir] if docs_dir is not None else [
+        ROOT_DIR / "data" / "rag_documents",
+        ROOT_DIR / "data" / "rag_data",
+    ]
 
-    logger.info(f"Scanning documents in {docs_dir}...")
     processor = DocumentProcessor(chunk_size=350, overlap=50)
-    chunks = processor.process_directory(docs_dir)
+    all_chunks = []
 
-    if not chunks:
-        logger.warning(f"No valid documents found in {docs_dir}")
+    for d in target_dirs:
+        if d.exists():
+            logger.info(f"Scanning documents in {d}...")
+            chunks = processor.process_directory(d)
+            all_chunks.extend(chunks)
+
+    if not all_chunks:
+        logger.warning("No valid documents found in specified directories.")
         return 0
 
-    logger.info(f"Generated {len(chunks)} document chunks.")
+    logger.info(f"Generated {len(all_chunks)} document chunks.")
     vector_store = VectorStoreManager()
-    indexed_count = vector_store.add_chunks(chunks)
+    indexed_count = vector_store.add_chunks(all_chunks)
     logger.info(f"Successfully indexed {indexed_count} chunks into vector store.")
     return indexed_count
 

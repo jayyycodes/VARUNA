@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any
 
 from backend.gateway.ai_gateway import call_llm
-from agents.rag_advisory.document_processor import DocumentProcessor
+from agents.rag_advisory.document_processor import DocumentProcessor, DocumentChunk
 from agents.rag_advisory.vector_store import VectorStoreManager
 
 logger = logging.getLogger("varuna.rag")
@@ -79,15 +79,36 @@ class RAGAdvisoryAgent:
         if self.use_vector_store:
             try:
                 self.vector_store = VectorStoreManager()
-                # If vector store is empty, load sample docs from data/rag_documents
+                # If vector store is empty, seed statutory baseline and ingest official documents
                 if self.vector_store.count() == 0:
-                    docs_dir = Path(__file__).resolve().parent.parent.parent / "data" / "rag_documents"
-                    if docs_dir.exists():
-                        processor = DocumentProcessor()
-                        chunks = processor.process_directory(docs_dir)
-                        if chunks:
-                            self.vector_store.add_chunks(chunks)
-                            logger.info(f"Loaded {len(chunks)} regulatory chunks into RAG vector store.")
+                    base_data = Path(__file__).resolve().parent.parent.parent / "data"
+                    processor = DocumentProcessor()
+                    all_chunks: list[DocumentChunk] = []
+
+                    # 1. Seed baseline statutory corpus (Monsoon Ban, Wildlife Protection Act, etc.)
+                    for idx, c in enumerate(CORPUS, 1):
+                        all_chunks.append(
+                            DocumentChunk(
+                                chunk_id=f"statutory_corpus::c{idx}",
+                                source=c["source"],
+                                chunk=c["chunk"],
+                                section=c["source"],
+                                keywords=c.get("keywords", []),
+                                page_number=1,
+                                metadata={"type": "statutory_baseline"},
+                            )
+                        )
+
+                    # 2. Process all official documents from rag_documents and rag_data
+                    for folder_name in ["rag_documents", "rag_data"]:
+                        docs_dir = base_data / folder_name
+                        if docs_dir.exists():
+                            doc_chunks = processor.process_directory(docs_dir)
+                            all_chunks.extend(doc_chunks)
+
+                    if all_chunks:
+                        self.vector_store.add_chunks(all_chunks)
+                        logger.info(f"Loaded {len(all_chunks)} regulatory chunks into RAG vector store.")
             except Exception as e:
                 logger.warning(f"Could not initialize VectorStoreManager: {e}. Using statutory CORPUS.")
                 self.vector_store = None
