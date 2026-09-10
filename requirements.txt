@@ -15,3 +15,7 @@ pytest-asyncio
 python-dotenv
 geopandas
 openai>=1.0.0
+chromadb
+sentence-transformers
+pypdf
+langchain-text-splitters

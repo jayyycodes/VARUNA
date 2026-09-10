@@ -16,12 +16,17 @@ Usage:
     text = await call_llm("planner", [{"role": "user", "content": "..."}])
 """
 
+from __future__ import annotations
+
 import os
 import logging
 import time
 from typing import Any
 from dotenv import load_dotenv
-from openai import AsyncOpenAI
+try:
+    from openai import AsyncOpenAI
+except ImportError:
+    AsyncOpenAI = None
 
 load_dotenv()
 logger = logging.getLogger("varuna.gateway")
@@ -33,8 +38,8 @@ CEREBRAS_KEY = os.getenv("CEREBRAS_API_KEY", "")
 CEREBRAS_BASE = os.getenv("CEREBRAS_BASE_URL", "https://api.cerebras.ai/v1")
 
 # Initialize SDK clients
-groq_client = AsyncOpenAI(api_key=GROQ_KEY, base_url=GROQ_BASE) if GROQ_KEY else None
-cerebras_client = AsyncOpenAI(api_key=CEREBRAS_KEY, base_url=CEREBRAS_BASE) if CEREBRAS_KEY else None
+groq_client = AsyncOpenAI(api_key=GROQ_KEY, base_url=GROQ_BASE) if (GROQ_KEY and AsyncOpenAI) else None
+cerebras_client = AsyncOpenAI(api_key=CEREBRAS_KEY, base_url=CEREBRAS_BASE) if (CEREBRAS_KEY and AsyncOpenAI) else None
 
 # ── Model routing table ───────────────────────────────────────────────
 MODELS: dict[str, str] = {

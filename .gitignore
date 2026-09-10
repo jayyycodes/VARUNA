@@ -10,3 +10,5 @@ data/cache/*
 *.log
 .pytest_cache/
 data/shapefiles/
+data/vector_store/
+*.chroma
