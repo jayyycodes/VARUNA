@@ -89,10 +89,19 @@ async def test_route_crossing(agent):
         (7.5, 79.0)    # Inside Sri Lanka (Restricted)
     ]
     
-    statuses = []
-    for i, (lat, lon) in enumerate(route):
-        req = GeofencingRequest(query_run_id=f"test-8-{i}", lat=lat, lon=lon)
-        res = await agent.run(req)
-        statuses.append(res.data["status"])
-        
-    assert statuses == ["clear", "warning", "restricted"]
+    res = await agent.check_route(route)
+    
+    assert res["status"] == "warning"
+    assert res["breach_lat"] == 7.5
+    assert res["breach_lon"] == 78.705
+    assert res["distance_km"] <= 2.0
+
+@pytest.mark.asyncio
+async def test_sir_creek_flashpoint(agent):
+    # Test 9: Inside Sir Creek
+    req = GeofencingRequest(query_run_id="test-9", lat=23.7, lon=68.2)
+    res = await agent.run(req)
+    
+    assert res.status == "success"
+    assert res.data["status"] == "restricted"
+    assert "Sir Creek" in res.data["nearest_boundary_name"]
