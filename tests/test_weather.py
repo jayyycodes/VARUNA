@@ -80,6 +80,41 @@ class TestWeatherAgent(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(cached_envelope.query_run_id, "cache-run-2")
         self.assertEqual(cached_envelope.data["wind_speed_kmh"], envelope.data["wind_speed_kmh"])
 
+    def test_find_target_hour_index(self):
+        """Verify find_target_hour_index locates exact midday slice (T12:00) for requested date."""
+        from agents.weather.weather_agent import find_target_hour_index
+
+        times = [
+            "2026-09-10T00:00", "2026-09-10T06:00", "2026-09-10T12:00", "2026-09-10T18:00",
+            "2026-09-11T00:00", "2026-09-11T06:00", "2026-09-11T12:00", "2026-09-11T18:00",
+        ]
+
+        # Day 0 midday
+        idx_today = find_target_hour_index(times, "2026-09-10", "12:00")
+        self.assertEqual(idx_today, 2)
+
+        # Day 1 (tomorrow) midday
+        idx_tomorrow = find_target_hour_index(times, "2026-09-11", "12:00")
+        self.assertEqual(idx_tomorrow, 6)
+
+        # Non-matching date falls back to 0
+        idx_unknown = find_target_hour_index(times, "2026-09-15", "12:00")
+        self.assertEqual(idx_unknown, 0)
+
+    async def test_weather_agent_target_date_indexing_live(self):
+        """Verify live query for tomorrow's date returns valid forecast with proper date metadata."""
+        agent = WeatherAgent(redis_client=MagicMock())  # mock redis to avoid cache pollution
+        agent.redis.get.return_value = None
+
+        tomorrow_str = "2026-09-11"
+        envelope = await agent.get_forecast(16.99, 73.30, tomorrow_str, "target-date-test")
+
+        self.assertEqual(envelope.status, "success")
+        self.assertEqual(envelope.data["date"], tomorrow_str)
+        self.assertGreater(envelope.data["wave_height_m"], 0.0)
+        self.assertGreater(envelope.data["wind_speed_kmh"], 0.0)
+
 
 if __name__ == "__main__":
     unittest.main()
+

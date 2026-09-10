@@ -8,6 +8,7 @@ Normalizes all data into a standardized AgentEnvelope.
 
 import asyncio
 import logging
+import os
 from datetime import datetime, timezone
 from typing import Any
 
@@ -27,11 +28,64 @@ def degrees_to_cardinal(deg: float | None) -> str:
     return directions[idx]
 
 
+def find_target_hour_index(times: list[str] | None, target_date_str: str, preferred_hour: str = "12:00") -> int:
+    """Find index in hourly time array matching target date at preferred hour (default 12:00 midday).
+    Falls back to any hour on target_date, or index 0 if not found.
+    """
+    if not times:
+        return 0
+
+    # 1. Exact match for target_date + "T" + preferred_hour (e.g. "2026-09-11T12:00")
+    needle = f"{target_date_str}T{preferred_hour}"
+    for idx, t in enumerate(times):
+        if str(t).startswith(needle):
+            return idx
+
+    # 2. Match any hour for target_date_str (e.g. "2026-09-11")
+    for idx, t in enumerate(times):
+        if str(t).startswith(target_date_str):
+            return idx
+
+    # 3. Default fallback
+    return 0
+
+
+def _safe_get_index(lst: list | None, idx: int, default: float) -> float:
+    """Extract float from list at index with fallback to first valid element or default."""
+    if not lst or not isinstance(lst, list):
+        return default
+    if 0 <= idx < len(lst) and lst[idx] is not None:
+        try:
+            return float(lst[idx])
+        except (ValueError, TypeError):
+            pass
+    for item in lst:
+        if item is not None:
+            try:
+                return float(item)
+            except (ValueError, TypeError):
+                pass
+    return default
+
+
 class WeatherAgent:
     """Live Weather Intelligence Agent integrating Open-Meteo Marine & Forecast APIs."""
 
     def __init__(self, redis_client=None, timeout: float = 10.0):
-        self.redis = redis_client
+        if redis_client is not None:
+            self.redis = redis_client
+        else:
+            try:
+                import redis
+                redis_url = os.getenv("REDIS_URL", "redis://localhost:6379")
+                r = redis.from_url(redis_url, socket_connect_timeout=1.0)
+                r.ping()
+                self.redis = r
+                logger.info(f"[weather_agent] Auto-connected Redis cache at {redis_url}")
+            except Exception as e:
+                logger.debug(f"[weather_agent] Redis not connected ({e}); running without persistent cache.")
+                self.redis = None
+
         self.timeout = timeout
         self.marine_url = "https://marine-api.open-meteo.com/v1/marine"
         self.weather_url = "https://api.open-meteo.com/v1/forecast"
@@ -101,25 +155,20 @@ class WeatherAgent:
             marine_data = marine_json.get("hourly", {})
             weather_data = weather_json.get("hourly", {})
 
-            # Extract current/target values (fallback to safe defaults if empty/None)
-            wave_height_list = marine_data.get("wave_height") or [1.2]
-            wave_period_list = marine_data.get("wave_period") or [8.0]
-            wind_speed_list = weather_data.get("wind_speed_10m") or [18.0]
-            wind_dir_list = weather_data.get("wind_direction_10m") or [225.0]
-            temp_list = weather_data.get("temperature_2m") or [28.0]
-            humidity_list = weather_data.get("relative_humidity_2m") or [75.0]
-            rain_prob_list = weather_data.get("precipitation_probability") or [10.0]
-            gusts_list = weather_data.get("wind_gusts_10m") or [wind_speed_list[0] if wind_speed_list else 22.0]
+            # Determine the exact midday (T12:00) index for target date
+            m_idx = find_target_hour_index(marine_data.get("time"), date, "12:00")
+            w_idx = find_target_hour_index(weather_data.get("time"), date, "12:00")
 
-            wave_height = float(wave_height_list[0] if wave_height_list[0] is not None else 1.2)
-            wave_period = float(wave_period_list[0] if wave_period_list[0] is not None else 8.0)
-            wind_speed = float(wind_speed_list[0] if wind_speed_list[0] is not None else 18.0)
-            wind_deg = float(wind_dir_list[0] if wind_dir_list[0] is not None else 225.0)
+            # Extract target values matching the selected midday index
+            wave_height = _safe_get_index(marine_data.get("wave_height"), m_idx, 1.2)
+            wave_period = _safe_get_index(marine_data.get("wave_period"), m_idx, 8.0)
+            wind_speed = _safe_get_index(weather_data.get("wind_speed_10m"), w_idx, 18.0)
+            wind_deg = _safe_get_index(weather_data.get("wind_direction_10m"), w_idx, 225.0)
             wind_dir = degrees_to_cardinal(wind_deg)
-            temp = float(temp_list[0] if temp_list[0] is not None else 28.0)
-            humidity = float(humidity_list[0] if humidity_list[0] is not None else 75.0)
-            rain_prob = float(rain_prob_list[0] if rain_prob_list[0] is not None else 10.0)
-            wind_gusts = float(gusts_list[0] if gusts_list[0] is not None else wind_speed * 1.2)
+            temp = _safe_get_index(weather_data.get("temperature_2m"), w_idx, 28.0)
+            humidity = _safe_get_index(weather_data.get("relative_humidity_2m"), w_idx, 75.0)
+            rain_prob = _safe_get_index(weather_data.get("precipitation_probability"), w_idx, 10.0)
+            wind_gusts = _safe_get_index(weather_data.get("wind_gusts_10m"), w_idx, wind_speed * 1.2)
 
             lightning_risk = "low" if rain_prob < 40 else ("moderate" if rain_prob < 70 else "high")
             visibility_km = 10.0 if rain_prob < 60 else 6.0
