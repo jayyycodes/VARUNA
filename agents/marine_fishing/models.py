@@ -108,3 +108,25 @@ class PFZQueryResult(BaseModel):
 
     # Diagnostics
     attempts: int = 1
+
+
+class PFZSamplePoint(BaseModel):
+    """
+    A single geodesically-sampled point along a PFZ line feature.
+
+    Produced by :func:`geodesic_sampling.sample_pfz_feature`.  Each point
+    records its (lon, lat) position — matching the GeoJSON/shapely coordinate
+    convention — the MultiLineString part it belongs to, and its cumulative
+    geodesic distance within that part.
+
+    Downstream consumers (SST/chlorophyll lookup, productivity scoring) use
+    these points as the spatial query grid; this model does NOT carry any
+    oceanographic data itself.
+    """
+
+    lon: float  # longitude (x) — GeoJSON convention
+    lat: float  # latitude  (y) — GeoJSON convention
+    part_index: int  # which MultiLineString part this came from (0-based)
+    distance_along_part_km: float  # cumulative geodesic distance within its part
+    is_endpoint: bool  # True if this is the original first/last vertex (not interpolated)
+    source_uid: str | None = None  # UID of the originating PFZFeature, if available
