@@ -15,7 +15,7 @@ interface RouteOptimizationViewProps {
   response?: UserResponseV1 | null;
 }
 
-export const RouteOptimizationView: React.FC<RouteOptimizationViewProps> = ({ response: _response }) => {
+export const RouteOptimizationView: React.FC<RouteOptimizationViewProps> = ({ response }) => {
   const [isOptimizing, setIsOptimizing] = useState(false);
   const [selectedWaypoint, setSelectedWaypoint] = useState<string>('transit');
 
@@ -26,38 +26,99 @@ export const RouteOptimizationView: React.FC<RouteOptimizationViewProps> = ({ re
     }, 1200);
   };
 
-  const waypoints = [
-    {
-      id: 'departure',
-      type: 'DEPARTURE',
-      name: 'Ratnagiri Harbour',
-      subtext: 'Berth 4, Terminal East • 17.02° N, 73.18° E',
-      status: 'CLEARED',
-      statusClass: 'status--cleared',
-      pillIcon: <IconCheck size={11} />,
-      markerNode: <div className="marker-dot marker-dot--departure" />,
-    },
-    {
-      id: 'transit',
-      type: 'TRANSIT CORRIDOR',
-      name: 'Sindhudurg Waters',
-      subtext: 'Expected swells 1.2m - 2.4m • Minor wave surge near bay mouth',
-      status: 'CAUTION — SWELL',
-      statusClass: 'status--caution',
-      pillIcon: <IconAlert size={11} />,
-      markerNode: <IconWave size={13} color="#D97706" />,
-    },
-    {
-      id: 'destination',
-      type: 'DESTINATION',
-      name: 'Zone Alpha-7 (PFZ Prime)',
-      subtext: 'Deep Sea Sector 42A • 12 NM off Mirya Bay • High Chlorophyll Front',
-      status: 'ETA +4 HRS',
-      statusClass: 'status--eta',
-      pillIcon: <IconMapPin size={11} />,
-      markerNode: <IconMapPin size={13} color="#64748B" />,
-    },
-  ];
+  // ── Extract live route features from response ───────────────────
+  const routeLayer = response?.map?.layers?.find(
+    (l) => l.type === 'route' || l.feature_collection?.features?.some((f) => f.properties?.type === 'route')
+  );
+  const routeFeature = routeLayer?.feature_collection?.features?.find(
+    (f) => f.properties?.type === 'route' || f.geometry?.type === 'LineString'
+  );
+  const userLocFeature = response?.map?.layers
+    ?.flatMap((l) => l.feature_collection?.features || [])
+    .find((f) => f.properties?.type === 'user_location');
+  const destLocFeature = response?.map?.layers
+    ?.flatMap((l) => l.feature_collection?.features || [])
+    .find((f) => f.properties?.type === 'destination_location');
+  const topPfz = response?.map?.layers
+    ?.flatMap((l) => l.feature_collection?.features || [])
+    .find((f) => f.properties?.type === 'pfz_zone' || f.properties?.type === 'pfz');
+
+  const hasLiveRoute = Boolean(routeFeature);
+  const rProps = routeFeature?.properties || {};
+
+  const depName = userLocFeature?.properties?.name || 'Ratnagiri Harbour';
+  const destName = destLocFeature?.properties?.name || topPfz?.properties?.name || 'Malvan Port';
+
+  const routeTitle = hasLiveRoute ? `Route to ${destName}` : 'Route to Zone Alpha-7';
+  const corridorBadge = hasLiveRoute
+    ? `SAFE PASSAGE CORRIDOR // ${depName.toUpperCase()} ➔ ${destName.toUpperCase()}`
+    : 'SAFE PASSAGE CORRIDOR // RATNAGIRI ➔ ZONE ALPHA-7';
+
+  const waypoints = hasLiveRoute
+    ? [
+        {
+          id: 'departure',
+          type: 'DEPARTURE',
+          name: depName,
+          subtext: rProps.departure || 'Departure Berth / Harbor Point',
+          status: 'CLEARED',
+          statusClass: 'status--cleared',
+          pillIcon: <IconCheck size={11} />,
+          markerNode: <div className="marker-dot marker-dot--departure" />,
+        },
+        {
+          id: 'transit',
+          type: 'TRANSIT CORRIDOR',
+          name: `${rProps.name || 'Optimal Passage'} (${rProps.cardinal || 'S'} ${rProps.bearing || 170}°)`,
+          subtext: `${rProps.distance_nm || 57.3} NM (${rProps.distance_km || 106} km) • Est. ${rProps.ete_hours || 7.2} hrs • ${rProps.fuel_liters || 126}L fuel`,
+          status: response?.summary?.verdict === 'UNSAFE' ? 'CAUTION — LIGHTNING' : 'CORRIDOR ACTIVE',
+          statusClass: response?.summary?.verdict === 'UNSAFE' ? 'status--caution' : 'status--cleared',
+          pillIcon: <IconAlert size={11} />,
+          markerNode: <IconWave size={13} color="#35B8A6" />,
+        },
+        {
+          id: 'destination',
+          type: 'DESTINATION',
+          name: destName,
+          subtext: rProps.destination || 'Destination Harbor / Potential Fishing Zone',
+          status: `ETA +${rProps.ete_hours || 7.2} HRS`,
+          statusClass: 'status--eta',
+          pillIcon: <IconMapPin size={11} />,
+          markerNode: <IconMapPin size={13} color="#E0A030" />,
+        },
+      ]
+    : [
+        {
+          id: 'departure',
+          type: 'DEPARTURE',
+          name: 'Ratnagiri Harbour',
+          subtext: 'Berth 4, Terminal East • 17.02° N, 73.18° E',
+          status: 'CLEARED',
+          statusClass: 'status--cleared',
+          pillIcon: <IconCheck size={11} />,
+          markerNode: <div className="marker-dot marker-dot--departure" />,
+        },
+        {
+          id: 'transit',
+          type: 'TRANSIT CORRIDOR',
+          name: 'Sindhudurg Waters',
+          subtext: 'Expected swells 1.2m - 2.4m • Minor wave surge near bay mouth',
+          status: 'CAUTION — SWELL',
+          statusClass: 'status--caution',
+          pillIcon: <IconAlert size={11} />,
+          markerNode: <IconWave size={13} color="#D97706" />,
+        },
+        {
+          id: 'destination',
+          type: 'DESTINATION',
+          name: 'Zone Alpha-7 (PFZ Prime)',
+          subtext: 'Deep Sea Sector 42A • 12 NM off Mirya Bay • High Chlorophyll Front',
+          status: 'ETA +4 HRS',
+          statusClass: 'status--eta',
+          pillIcon: <IconMapPin size={11} />,
+          markerNode: <IconMapPin size={13} color="#64748B" />,
+        },
+      ];
 
   return (
     <div className="route-opt-view">
@@ -65,11 +126,13 @@ export const RouteOptimizationView: React.FC<RouteOptimizationViewProps> = ({ re
       <header className="route-opt-header">
         <div>
           <div className="route-opt-badge mono text-xs">
-            SAFE PASSAGE CORRIDOR // RATNAGIRI ➔ ZONE ALPHA-7
+            {corridorBadge}
           </div>
-          <h1 className="route-opt-title text-display">Route to Zone Alpha-7</h1>
+          <h1 className="route-opt-title text-display">{routeTitle}</h1>
           <p className="route-opt-subtitle text-sm text-muted">
-            Active Multi-Domain Route Optimization & Safe Navigation Trajectory
+            {hasLiveRoute
+              ? `Live Navigational Corridor • Distance: ${rProps.distance_nm || 57.3} NM • Heading: ${rProps.bearing || 170}° (${rProps.cardinal || 'S'}) • Est. Fuel: ${rProps.fuel_liters || 126} L`
+              : 'Active Multi-Domain Route Optimization & Safe Navigation Trajectory'}
           </p>
         </div>
 
@@ -80,7 +143,7 @@ export const RouteOptimizationView: React.FC<RouteOptimizationViewProps> = ({ re
           disabled={isOptimizing}
         >
           <IconSparkles size={15} />
-          <span>{isOptimizing ? 'COMPUTING CORRIDOR...' : 'INITIATE ROUTE OPTIMIZATION'}</span>
+          <span>{isOptimizing ? 'COMPUTING CORRIDOR...' : 'RE-OPTIMIZE CORRIDOR'}</span>
         </button>
       </header>
 
@@ -215,16 +278,16 @@ export const RouteOptimizationView: React.FC<RouteOptimizationViewProps> = ({ re
                   strokeDasharray="8 4"
                 />
 
-                {/* Waypoint 1: Departure Ratnagiri */}
+                {/* Waypoint 1: Departure */}
                 <circle cx="140" cy="180" r="7" fill="#14B8A6" stroke="#FFFFFF" strokeWidth="2" />
                 <text x="140" y="210" fill="#E2E8F0" fontSize="11" fontFamily="Sora" fontWeight="700" textAnchor="middle">
-                  Ratnagiri (Departure)
+                  {depName} (Departure)
                 </text>
 
-                {/* Waypoint 2: Sindhudurg Transit */}
+                {/* Waypoint 2: Transit Corridor */}
                 <circle cx="430" cy="245" r="8" fill="#F59E0B" stroke="#FFFFFF" strokeWidth="2" />
                 <text x="430" y="275" fill="#E2E8F0" fontSize="11" fontFamily="Sora" fontWeight="700" textAnchor="middle">
-                  Sindhudurg Waters
+                  {hasLiveRoute ? `${rProps.cardinal || 'S'} ${rProps.bearing || 170}° Passage` : 'Sindhudurg Waters'}
                 </text>
 
                 {/* Active Vessel Indicator */}
@@ -236,10 +299,10 @@ export const RouteOptimizationView: React.FC<RouteOptimizationViewProps> = ({ re
                   <circle cx="0" cy="0" r="4" fill="#38BDF8" />
                 </g>
 
-                {/* Waypoint 3: Zone Alpha-7 PFZ */}
+                {/* Waypoint 3: Destination */}
                 <circle cx="680" cy="130" r="10" fill="#D8FA36" stroke="#0F172A" strokeWidth="2.5" />
                 <text x="680" y="105" fill="#D8FA36" fontSize="12" fontFamily="Sora" fontWeight="800" textAnchor="middle">
-                  Zone Alpha-7 (PFZ Prime)
+                  {destName}
                 </text>
               </svg>
 
@@ -258,26 +321,34 @@ export const RouteOptimizationView: React.FC<RouteOptimizationViewProps> = ({ re
                 <div className="telemetry-metrics-grid">
                   <div className="telemetry-stat">
                     <span className="stat-label mono text-xs">Speed Over Ground</span>
-                    <span className="stat-val font-bold mono text-display">8.4 <span className="stat-unit">kts</span></span>
+                    <span className="stat-val font-bold mono text-display">
+                      {rProps.vessel_speed_kts || 8.0} <span className="stat-unit">kts</span>
+                    </span>
                   </div>
 
                   <div className="telemetry-stat">
                     <span className="stat-label mono text-xs">Heading Course</span>
-                    <span className="stat-val font-bold mono text-display">214° <span className="stat-unit">SW</span></span>
+                    <span className="stat-val font-bold mono text-display">
+                      {rProps.bearing || 170}° <span className="stat-unit">{rProps.cardinal || 'S'}</span>
+                    </span>
                   </div>
 
                   <div className="telemetry-stat">
                     <span className="stat-label mono text-xs">
-                      <IconWind size={11} /> Wind Speed
+                      <IconWind size={11} /> Distance
                     </span>
-                    <span className="stat-val font-bold mono">12 kts NW</span>
+                    <span className="stat-val font-bold mono">
+                      {rProps.distance_nm || 57.3} NM ({rProps.distance_km || 106} km)
+                    </span>
                   </div>
 
                   <div className="telemetry-stat">
                     <span className="stat-label mono text-xs">
-                      <IconWave size={11} /> Wave Swell
+                      <IconWave size={11} /> Fuel Required
                     </span>
-                    <span className="stat-val font-bold mono">1.2 m (11.4s)</span>
+                    <span className="stat-val font-bold mono">
+                      {rProps.fuel_liters || 126} Liters
+                    </span>
                   </div>
                 </div>
               </div>

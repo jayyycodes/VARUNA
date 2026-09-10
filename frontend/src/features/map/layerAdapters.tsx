@@ -42,9 +42,10 @@ export const LayerRenderer: React.FC<LayerRendererProps> = ({ layer, visible, on
       {feature_collection.features.map((feature: GeoJsonFeature) => {
         const { id, geometry, properties } = feature;
         if (!geometry) return null;
+        const featureType = properties?.type || type;
 
         // 1. User Location (Neutral dot - white/slate, no verdict color)
-        if (type === 'user_location' && geometry.type === 'Point') {
+        if ((featureType === 'user_location' || type === 'user_location') && geometry.type === 'Point') {
           const center = toLeafletLatLng(geometry.coordinates as [number, number]);
           return (
             <React.Fragment key={id}>
@@ -75,7 +76,45 @@ export const LayerRenderer: React.FC<LayerRendererProps> = ({ layer, visible, on
               >
                 <Tooltip direction="top" offset={[0, -8]} opacity={0.95}>
                   <div className="mono text-xs">
-                    <strong>{properties.title || 'Target Location'}</strong>
+                    <strong>{properties.name || properties.title || 'Departure / Location'}</strong>
+                  </div>
+                </Tooltip>
+              </CircleMarker>
+            </React.Fragment>
+          );
+        }
+
+        // 1b. Destination Location (Flag / Target dot - cyan/amber)
+        if (featureType === 'destination_location' && geometry.type === 'Point') {
+          const center = toLeafletLatLng(geometry.coordinates as [number, number]);
+          return (
+            <React.Fragment key={id}>
+              <CircleMarker
+                center={center}
+                radius={12}
+                pathOptions={{
+                  color: '#E0A030',
+                  fillColor: '#E0A030',
+                  fillOpacity: 0.35,
+                  weight: 1.5,
+                }}
+              />
+              <CircleMarker
+                center={center}
+                radius={6}
+                pathOptions={{
+                  color: '#F59E0B',
+                  fillColor: '#FBBF24',
+                  fillOpacity: 1.0,
+                  weight: 2,
+                }}
+                eventHandlers={{
+                  click: () => onSelectFeature?.(id),
+                }}
+              >
+                <Tooltip direction="top" offset={[0, -8]} opacity={0.95}>
+                  <div className="mono text-xs">
+                    <strong>🏁 {properties.name || 'Destination Port / Zone'}</strong>
                   </div>
                 </Tooltip>
               </CircleMarker>
@@ -84,14 +123,48 @@ export const LayerRenderer: React.FC<LayerRendererProps> = ({ layer, visible, on
         }
 
         // 2. Potential Fishing Zone (PFZ) — TEAL SCALE ONLY (#0F5C6E -> #35B8A6)
-        if (type === 'pfz') {
-          const productivity = properties.productivity || 'high';
+        if (featureType === 'pfz' || featureType === 'pfz_zone' || type === 'pfz') {
+          const productivity = properties.productivity || (properties.productivity_score > 0.7 ? 'high' : properties.productivity_score > 0.4 ? 'mid' : 'low');
           const tealColor =
             productivity === 'low'
               ? '#0F5C6E'
               : productivity === 'mid'
               ? '#1E8A8A'
               : '#35B8A6';
+
+          if (geometry.type === 'Point') {
+            const center = toLeafletLatLng(geometry.coordinates as [number, number]);
+            return (
+              <CircleMarker
+                key={id}
+                center={center}
+                radius={8}
+                pathOptions={{
+                  color: tealColor,
+                  fillColor: tealColor,
+                  fillOpacity: 0.75,
+                  weight: 2,
+                }}
+                eventHandlers={{
+                  click: () => onSelectFeature?.(id),
+                }}
+              >
+                <Popup className="varuna-map-popup">
+                  <div className="map-popup-content">
+                    <span className="pfz-badge mono text-xs">PFZ TEAL LAYER</span>
+                    <h4 className="text-sm font-bold">{properties.name || properties.title || 'Potential Fishing Zone'}</h4>
+                    <div className="popup-grid mono text-xs">
+                      {properties.productivity_score && <div>Score: {properties.productivity_score}</div>}
+                      {properties.chlorophyll && <div>Chlorophyll: {properties.chlorophyll}</div>}
+                      {properties.sst && <div>SST: {properties.sst}°C</div>}
+                      {properties.distance_km && <div>Distance: {properties.distance_km} km</div>}
+                      {properties.species && <div>Species: {Array.isArray(properties.species) ? properties.species.join(', ') : properties.species}</div>}
+                    </div>
+                  </div>
+                </Popup>
+              </CircleMarker>
+            );
+          }
 
           if (geometry.type === 'Polygon') {
             const positions = toLeafletPolygon(geometry.coordinates as number[][][]);
@@ -200,7 +273,7 @@ export const LayerRenderer: React.FC<LayerRendererProps> = ({ layer, visible, on
         }
 
         // 5. Route / Transit corridor
-        if (type === 'route') {
+        if (featureType === 'route' || type === 'route' || geometry.type === 'LineString') {
           if (geometry.type === 'LineString') {
             const positions = toLeafletLineString(geometry.coordinates as number[][]);
             return (
@@ -209,10 +282,27 @@ export const LayerRenderer: React.FC<LayerRendererProps> = ({ layer, visible, on
                 positions={positions}
                 pathOptions={{
                   color: '#35B8A6',
-                  weight: 3,
-                  dashArray: '6, 6',
+                  weight: 4,
+                  dashArray: '8, 6',
                 }}
-              />
+                eventHandlers={{
+                  click: () => onSelectFeature?.(id),
+                }}
+              >
+                <Popup className="varuna-map-popup">
+                  <div className="map-popup-content">
+                    <span className="pfz-badge mono text-xs">TRANSIT CORRIDOR</span>
+                    <h4 className="text-sm font-bold">{properties.name || 'Optimal Navigational Passage'}</h4>
+                    <div className="popup-grid mono text-xs">
+                      {properties.distance_nm && <div>Distance: {properties.distance_nm} NM ({properties.distance_km} km)</div>}
+                      {properties.ete_hours && <div>Est. Time: {properties.ete_hours} hrs @ {properties.vessel_speed_kts || 8} kts</div>}
+                      {properties.fuel_liters && <div>Est. Fuel: {properties.fuel_liters} L</div>}
+                      {properties.bearing && <div>Heading: {properties.cardinal} ({properties.bearing}°)</div>}
+                      {properties.hazards_avoided && <div>Avoided: {Array.isArray(properties.hazards_avoided) ? properties.hazards_avoided.join(', ') : properties.hazards_avoided}</div>}
+                    </div>
+                  </div>
+                </Popup>
+              </Polyline>
             );
           }
         }
