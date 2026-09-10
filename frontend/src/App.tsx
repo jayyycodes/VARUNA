@@ -43,6 +43,8 @@ function App() {
 
   // Search input state in top bar
   const [topSearch, setTopSearch] = useState<string>('');
+  // Bug 6 fix: preserve the last-submitted query so users can see what result is active.
+  const [activeQuery, setActiveQuery] = useState<string | null>(null);
 
   // Load initial demo scenario on mount
   useEffect(() => {
@@ -80,12 +82,14 @@ function App() {
       const result = await apiClient.submitQuery({ text: queryText.trim() });
       setResponse(result.response);
       setActiveScenarioId(null); // Custom query
+      // Bug 6 fix: preserve submitted query for breadcrumb context instead of wiping it
+      setActiveQuery(queryText.trim());
     } catch (err: any) {
       console.error('Query execution error:', err);
       setError(err.message || 'Error processing maritime safety query.');
     } finally {
       setLoading(false);
-      setTopSearch('');
+      setTopSearch(''); // Clear input but activeQuery keeps the submitted text
     }
   };
 
@@ -142,10 +146,20 @@ function App() {
               {activeView === 'alerts' && 'Active Marine Alerts'}
               {activeView === 'fleet' && 'Fleet Operations'}
             </h1>
-            <div className="dashboard-topbar__location-pill mono text-xs">
-              <IconMapPin size={13} color="#64748B" />
-              <span>Arabian Sea & Bay of Bengal • Today ({new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })})</span>
-            </div>
+            {/* Bug 6 fix: show active query as breadcrumb so user retains context after submit */}
+            {activeQuery && !activeScenarioId ? (
+              <div className="dashboard-topbar__location-pill mono text-xs" style={{ gap: 6 }}>
+                <IconSearch size={11} color="#64748B" />
+                <span style={{ color: '#94A3B8', maxWidth: 280, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {activeQuery}
+                </span>
+              </div>
+            ) : (
+              <div className="dashboard-topbar__location-pill mono text-xs">
+                <IconMapPin size={13} color="#64748B" />
+                <span>Arabian Sea & Bay of Bengal • Today ({new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })})</span>
+              </div>
+            )}
           </div>
 
           <div className="dashboard-topbar__right">

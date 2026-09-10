@@ -93,6 +93,53 @@ export const LayerRenderer: React.FC<LayerRendererProps> = ({ layer, visible, on
               ? '#1E8A8A'
               : '#35B8A6';
 
+          // Bug 1 fix: backend returns Point geometry for individual fishing spot candidates;
+          // previously these were silently dropped. Render as CircleMarker.
+          if (geometry.type === 'Point') {
+            const center = toLeafletLatLng(geometry.coordinates as [number, number]);
+            return (
+              <React.Fragment key={id}>
+                {/* Outer halo */}
+                <CircleMarker
+                  center={center}
+                  radius={10}
+                  pathOptions={{
+                    color: tealColor,
+                    fillColor: tealColor,
+                    fillOpacity: 0.2,
+                    weight: 1.5,
+                  }}
+                />
+                {/* Core PFZ dot */}
+                <CircleMarker
+                  center={center}
+                  radius={5}
+                  pathOptions={{
+                    color: tealColor,
+                    fillColor: tealColor,
+                    fillOpacity: 1.0,
+                    weight: 2,
+                  }}
+                  eventHandlers={{ click: () => onSelectFeature?.(id) }}
+                >
+                  <Popup className="varuna-map-popup">
+                    <div className="map-popup-content">
+                      <span className="pfz-badge mono text-xs">PFZ FISHING SPOT</span>
+                      <h4 className="text-sm font-bold">{properties.title || 'Potential Fishing Zone'}</h4>
+                      <div className="popup-grid mono text-xs">
+                        {properties.chlorophyll && <div>Chlorophyll: {properties.chlorophyll}</div>}
+                        {properties.sst && <div>SST: {properties.sst}</div>}
+                        {properties.depth && <div>Depth: {properties.depth}</div>}
+                        {properties.productivity_score && <div>Productivity: {properties.productivity_score}</div>}
+                        {properties.species && <div>Species: {properties.species}</div>}
+                      </div>
+                    </div>
+                  </Popup>
+                </CircleMarker>
+              </React.Fragment>
+            );
+          }
+
           if (geometry.type === 'Polygon') {
             const positions = toLeafletPolygon(geometry.coordinates as number[][][]);
             return (

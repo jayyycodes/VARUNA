@@ -6,6 +6,7 @@ import type {
   MapLayer,
   RuleTraceItem,
   DataFreshnessItem,
+  Citation,
 } from '../contracts/userResponse';
 
 export interface QueryRequest {
@@ -213,10 +214,14 @@ export class VarunaApiClient {
    * Adapts backend ChatResponse to canonical UserResponseV1
    */
   private adaptLiveResponseToUserContract(raw: LiveChatResponse): UserResponseV1 {
-    const rawVerdict = raw.risk_verdict?.verdict?.toUpperCase() || 'SAFE';
+    // Bug 5 fix: regulatory queries or absent risk_verdict should not default to SAFE
+    const isRegulatory = raw.intent === 'regulatory_query' || raw.intent === 'legal_query';
+    const hasVerdict = !!raw.risk_verdict?.verdict;
+
+    const rawVerdict = raw.risk_verdict?.verdict?.toUpperCase() || 'UNKNOWN';
     const verdict: Verdict = (['SAFE', 'CAUTION', 'UNSAFE', 'UNKNOWN'].includes(rawVerdict)
       ? rawVerdict
-      : 'SAFE') as Verdict;
+      : 'UNKNOWN') as Verdict;
 
     const reasonsList = raw.risk_verdict?.reasons || [
       'Atmospheric and oceanographic parameters meet standard operating safety limits.',
@@ -230,6 +235,22 @@ export class VarunaApiClient {
       citation_ids: [],
     }));
 
+    // Bug 3 fix: evaluate each rule individually against reasons text instead of
+    // inheriting the global verdict (which caused all rules to show BREACH when
+    // verdict=UNSAFE even if that specific threshold was fine).
+    const waveReason = reasonsList.find((r) =>
+      /wave|swell|height/i.test(r)
+    );
+    const windReason = reasonsList.find((r) =>
+      /wind|gust|squall/i.test(r)
+    );
+    const waveBreached = waveReason
+      ? /exceed|breach|unsafe|above|over/i.test(waveReason)
+      : false;
+    const windBreached = windReason
+      ? /exceed|breach|unsafe|above|over/i.test(windReason)
+      : false;
+
     const ruleTraces: RuleTraceItem[] = [
       {
         id: 'trace-live-1',
@@ -240,10 +261,10 @@ export class VarunaApiClient {
         threshold_value: '2.5',
         comparator: '<=',
         unit: 'm',
-        passed: verdict !== 'UNSAFE',
-        severity: verdict === 'UNSAFE' ? 'unsafe' : verdict === 'CAUTION' ? 'caution' : 'safe',
+        passed: !waveBreached,
+        severity: waveBreached ? (verdict === 'UNSAFE' ? 'unsafe' : 'caution') : 'safe',
         threshold_version: 'v2.1',
-        explanation: 'Wave swell is within certified envelope for artisanal and mechanized coastal craft.',
+        explanation: waveReason || 'Wave swell is within certified envelope for artisanal and mechanized coastal craft.',
       },
       {
         id: 'trace-live-2',
@@ -254,10 +275,10 @@ export class VarunaApiClient {
         threshold_value: '25',
         comparator: '<=',
         unit: 'knots',
-        passed: true,
-        severity: 'safe',
+        passed: !windBreached,
+        severity: windBreached ? 'caution' : 'safe',
         threshold_version: 'v2.1',
-        explanation: 'Sustained winds below IMD gale advisory limits.',
+        explanation: windReason || 'Sustained winds below IMD gale advisory limits.',
       },
     ];
 
@@ -280,6 +301,27 @@ export class VarunaApiClient {
       },
     ];
 
+    // Bug 2 fix: derive map center from first feature geometry instead of hardcoding Ratnagiri.
+    // Falls back to Ratnagiri coast if backend returns no map data.
+    let derivedCenter: [number, number] = [73.28, 16.99]; // [lon, lat] RFC 7946
+    if (raw.map_data?.features && raw.map_data.features.length > 0) {
+      const firstFeature = raw.map_data.features[0];
+      const geom = firstFeature?.geometry;
+      if (geom?.type === 'Point' && Array.isArray(geom.coordinates)) {
+        derivedCenter = [geom.coordinates[0], geom.coordinates[1]];
+      } else if (
+        (geom?.type === 'Polygon' || geom?.type === 'MultiPolygon') &&
+        Array.isArray(geom.coordinates)
+      ) {
+        // Use first vertex of first ring as approximate center
+        const firstRing =
+          geom.type === 'Polygon' ? geom.coordinates[0] : geom.coordinates[0][0];
+        if (Array.isArray(firstRing) && firstRing.length > 0) {
+          derivedCenter = [firstRing[0][0], firstRing[0][1]];
+        }
+      }
+    }
+
     const mapLayers: MapLayer[] = [];
     if (raw.map_data && raw.map_data.features) {
       mapLayers.push({
@@ -291,6 +333,34 @@ export class VarunaApiClient {
       });
     }
 
+    // Bug 4 fix: citations tab was always empty because citations: [] was hardcoded.
+    // Map raw.evidence entries from the rag_advisory agent into Citation objects.
+    const citations: Citation[] = (raw.evidence || [])
+      .filter((ev: any) => ev?.agent === 'rag_advisory' || ev?.source === 'rag_advisory')
+      .map((ev: any, idx: number) => ({
+        id: ev.id || `cite-live-${idx + 1}`,
+        title: ev.title || ev.document_title || ev.chunk_title || 'Marine Gazette Reference',
+        publisher: ev.publisher || ev.source_name || 'INCOIS / Ministry of Fisheries',
+        url: ev.url || ev.source_url || '#',
+        published_at: ev.published_at || ev.date || new Date(0).toISOString(),
+        accessed_at: new Date().toISOString(),
+        excerpt: ev.excerpt || ev.text || ev.content || ev.chunk || '',
+        source_language: ev.source_language || 'en-IN',
+      }));
+
+    // Bug 5 fix: regulatory queries should not show "Safe to proceed".
+    // When intent is regulatory or there is no risk verdict, show neutral advisory text.
+    let actionText: string;
+    if (isRegulatory || !hasVerdict) {
+      actionText = 'Review applicable statutory advisory guidelines and gazette regulations before deployment.';
+    } else if (verdict === 'SAFE') {
+      actionText = 'Safe to proceed with standard navigation precautions.';
+    } else if (verdict === 'CAUTION') {
+      actionText = 'Exercise caution — monitor VHF Channel 16 and IMD bulletins.';
+    } else {
+      actionText = 'Do not proceed — conditions exceed operational safety thresholds.';
+    }
+
     return {
       schema_version: '1.0',
       query_run_id: raw.query_run_id || `run-${Date.now()}`,
@@ -298,15 +368,15 @@ export class VarunaApiClient {
       decision_status: raw.status === 'success' ? 'complete' : 'degraded',
       summary: {
         headline: raw.text || 'Marine conditions evaluated across active coastal stations.',
-        verdict,
+        verdict: isRegulatory && !hasVerdict ? 'UNKNOWN' : verdict,
         confidence_band: 'high',
         confidence_reason: 'All authoritative telemetry feeds synchronized with INCOIS/IMD stations.',
-        action: verdict === 'SAFE' ? 'Safe to proceed with standard navigation precautions.' : 'Exercise caution and monitor Channel 16.',
+        action: actionText,
       },
       claims,
       map: {
         viewport: {
-          center: [73.30, 16.99],
+          center: derivedCenter,
           zoom: 9,
         },
         layers: mapLayers,
@@ -316,7 +386,7 @@ export class VarunaApiClient {
         data_freshness: freshness,
         missing_inputs: [],
       },
-      citations: [],
+      citations,
       notices: [
         {
           id: 'notice-live-1',
