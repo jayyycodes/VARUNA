@@ -2,6 +2,8 @@ import os
 import sys
 from datetime import datetime, timezone
 import asyncio
+import psycopg2
+from psycopg2 import pool
 
 # Add the backend path so we can import AgentEnvelope
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
@@ -11,8 +13,16 @@ from .models import GeofencingRequest, GeofencingDataPayload
 from .queries import check_geofence
 
 class GeofencingAgent:
-    def __init__(self, db_pool):
-        self.db_pool = db_pool
+    def __init__(self, db_pool=None):
+        if db_pool:
+            self.db_pool = db_pool
+        else:
+            host = os.getenv("POSTGRES_HOST", "127.0.0.1")
+            port = int(os.getenv("POSTGRES_PORT", "5433"))
+            db = os.getenv("POSTGRES_DB", "varuna")
+            user = os.getenv("POSTGRES_USER", "varuna")
+            password = os.getenv("POSTGRES_PASSWORD", "varuna_dev")
+            self.db_pool = psycopg2.pool.SimpleConnectionPool(1, 10, dbname=db, user=user, password=password, host=host, port=port)
 
     async def run(self, request: GeofencingRequest) -> AgentEnvelope:
         try:
@@ -50,19 +60,33 @@ class GeofencingAgent:
                 error_message=str(e)
             )
 
-    def _run_check_sync(self, lat: float, lon: float):
-        import psycopg2
-        host = os.getenv("POSTGRES_HOST", "127.0.0.1")
-        port = int(os.getenv("POSTGRES_PORT", "5433"))
-        db = os.getenv("POSTGRES_DB", "varuna")
-        user = os.getenv("POSTGRES_USER", "varuna")
-        password = os.getenv("POSTGRES_PASSWORD", "varuna_dev")
-        conn = psycopg2.connect(
-            dbname=db, user=user, password=password, host=host, port=port
-        )
-        import asyncio
-        loop = asyncio.new_event_loop()
-        res = loop.run_until_complete(check_geofence(conn, lat, lon))
-        conn.close()
-        return res
+    async def check_route(self, waypoints: list[tuple[float, float]]) -> dict:
+        """
+        Validates a list of waypoints. Returns the first breach (warning/restricted) encountered.
+        """
+        try:
+            for lat, lon in waypoints:
+                status_val, boundary_name, distance = await asyncio.to_thread(
+                    self._run_check_sync, lat, lon
+                )
+                if status_val in ("restricted", "warning"):
+                    return {
+                        "status": status_val,
+                        "breach_lat": lat,
+                        "breach_lon": lon,
+                        "nearest_boundary_name": boundary_name,
+                        "distance_km": distance
+                    }
+            
+            return {"status": "clear"}
+            
+        except Exception as e:
+            return {"status": "error", "error_message": str(e)}
 
+    def _run_check_sync(self, lat: float, lon: float):
+        conn = self.db_pool.getconn()
+        try:
+            res = check_geofence(conn, lat, lon)
+            return res
+        finally:
+            self.db_pool.putconn(conn)

@@ -79,6 +79,18 @@ def bootstrap():
                     'MPA',
                     ST_GeomFromText('POLYGON((73.42 16.00, 73.52 16.00, 73.52 16.12, 73.42 16.12, 73.42 16.00))', 4326),
                     'Maharashtra Wildlife Dept (Reference Seed)'
+                ),
+                (
+                    'Sir Creek (Gujarat/Pakistan Border)',
+                    'IMBL',
+                    ST_GeomFromText('POLYGON((68.0 23.5, 68.5 23.5, 68.5 24.0, 68.0 24.0, 68.0 23.5))', 4326),
+                    'Mock Flashpoint (Reference Seed)'
+                ),
+                (
+                    'Palk Bay / Gulf of Mannar',
+                    'IMBL',
+                    ST_GeomFromText('POLYGON((78.8 9.0, 79.5 9.0, 79.5 10.0, 78.8 10.0, 78.8 9.0))', 4326),
+                    'Mock Flashpoint (Reference Seed)'
                 );
             """)
             conn.commit()

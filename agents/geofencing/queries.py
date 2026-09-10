@@ -4,7 +4,7 @@ from typing import Tuple, Optional
 # In a real setup, we would use asyncpg or psycopg2.
 # Using a dummy class for demonstration. We will assume a psycopg2/asyncpg connection is passed.
 
-async def get_nearest_zone(conn, lat: float, lon: float) -> Optional[dict]:
+def get_nearest_zone(conn, lat: float, lon: float) -> Optional[dict]:
     """
     Returns the nearest zone, distance, and whether it contains the point.
     Returns: { "name": str, "distance_km": float, "contains": bool }
@@ -25,12 +25,12 @@ async def get_nearest_zone(conn, lat: float, lon: float) -> Optional[dict]:
     if not row: return None
     return {"name": row[0], "distance_km": float(row[1]), "contains": bool(row[2])}
 
-async def check_geofence(conn, lat: float, lon: float, warning_threshold_km: float = 2.0) -> Tuple[str, str, float]:
+def check_geofence(conn, lat: float, lon: float, warning_threshold_km: float = 2.0) -> Tuple[str, str, float]:
     """
     Returns (status, nearest_boundary_name, distance_km)
     status: 'clear' | 'warning' | 'restricted'
     """
-    nearest = await get_nearest_zone(conn, lat, lon)
+    nearest = get_nearest_zone(conn, lat, lon)
     
     if not nearest:
         return "clear", "None", 9999.9
