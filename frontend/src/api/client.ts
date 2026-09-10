@@ -251,13 +251,17 @@ export class VarunaApiClient {
       ? /exceed|breach|unsafe|above|over/i.test(windReason)
       : false;
 
+    // Extract measured values from reason text (e.g. "wave height of 3.2m") if available
+    const waveMeasured = waveReason?.match(/\b(\d+\.?\d*)\s*m/i)?.[1] ?? '—';
+    const windMeasured = windReason?.match(/\b(\d+\.?\d*)\s*(?:km\/h|kts?|knots?)/i)?.[1] ?? '—';
+
     const ruleTraces: RuleTraceItem[] = [
       {
         id: 'trace-live-1',
         rule_id: 'RULE-WAVE-01',
         rule_name: 'Significant Wave Height Safety Threshold',
         domain: 'marine_hydrodynamics',
-        measured_value: '1.2',
+        measured_value: waveMeasured,
         threshold_value: '2.5',
         comparator: '<=',
         unit: 'm',
@@ -271,7 +275,7 @@ export class VarunaApiClient {
         rule_id: 'RULE-WIND-01',
         rule_name: 'IMD Coastal Wind Squall Threshold',
         domain: 'coastal_meteorology',
-        measured_value: '14',
+        measured_value: windMeasured,
         threshold_value: '25',
         comparator: '<=',
         unit: 'knots',
@@ -307,17 +311,18 @@ export class VarunaApiClient {
     if (raw.map_data?.features && raw.map_data.features.length > 0) {
       const firstFeature = raw.map_data.features[0];
       const geom = firstFeature?.geometry;
-      if (geom?.type === 'Point' && Array.isArray(geom.coordinates)) {
-        derivedCenter = [geom.coordinates[0], geom.coordinates[1]];
-      } else if (
-        (geom?.type === 'Polygon' || geom?.type === 'MultiPolygon') &&
-        Array.isArray(geom.coordinates)
-      ) {
-        // Use first vertex of first ring as approximate center
-        const firstRing =
-          geom.type === 'Polygon' ? geom.coordinates[0] : geom.coordinates[0][0];
-        if (Array.isArray(firstRing) && firstRing.length > 0) {
-          derivedCenter = [firstRing[0][0], firstRing[0][1]];
+      if (geom?.type === 'Point' && Array.isArray(geom.coordinates) && geom.coordinates.length >= 2) {
+        derivedCenter = [geom.coordinates[0] as number, geom.coordinates[1] as number];
+      } else if (geom?.type === 'Polygon' && Array.isArray(geom.coordinates) && geom.coordinates[0]?.length > 0) {
+        const firstVertex = geom.coordinates[0][0];
+        if (Array.isArray(firstVertex) && firstVertex.length >= 2) {
+          derivedCenter = [firstVertex[0] as number, firstVertex[1] as number];
+        }
+      } else if (geom?.type === 'MultiPolygon' && Array.isArray(geom.coordinates) &&
+        geom.coordinates[0]?.[0]?.length > 0) {
+        const firstVertex = geom.coordinates[0][0][0];
+        if (Array.isArray(firstVertex) && firstVertex.length >= 2) {
+          derivedCenter = [firstVertex[0] as number, firstVertex[1] as number];
         }
       }
     }

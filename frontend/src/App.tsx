@@ -58,6 +58,7 @@ function App() {
     setSelectedEvidenceId(null);
     setSelectedClaimId(null);
     setSelectedFeatureId(null);
+    setActiveQuery(null); // Clear live query breadcrumb when returning to a scenario
 
     try {
       const result = await apiClient.submitQuery({ text: '' }, fixtureId);
