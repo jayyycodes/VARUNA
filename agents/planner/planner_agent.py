@@ -237,13 +237,33 @@ async def dispatch_data_agents(state: PlannerState) -> dict:
             logger.warning(f"[planner] GeofencingAgent import/call failed: {exc} — using mock fallback")
             return mock_geofencing(qid, lat, lon)
 
-    # Dispatch Weather + Geofencing in parallel; Marine is still mocked (Jaish pending)
-    weather, geo = await asyncio.gather(_get_weather(), _get_geofencing())
-    marine = mock_marine(qid, lat, lon, d)
+    async def _get_marine() -> AgentEnvelope:
+        """Call Jaish's LIVE MarineFishingAgent; fall back to mock on any failure."""
+        try:
+            from agents.marine_fishing.marine_agent import MarineFishingAgent
+            result = await MarineFishingAgent().get_ocean_state(
+                lat=lat, lon=lon, date_str=d, query_run_id=qid
+            )
+            if result.status == "error":
+                logger.warning(
+                    f"[planner] Live Marine returned error ({result.error_message}) — using mock fallback"
+                )
+                return mock_marine(qid, lat, lon, d)
+            logger.info(
+                f"[planner] Live Marine OK ({result.status}) — "
+                f"{len(result.data.get('pfz_zones', []))} zones"
+            )
+            return result
+        except Exception as exc:
+            logger.warning(f"[planner] MarineFishingAgent import/call failed: {exc} — using mock fallback")
+            return mock_marine(qid, lat, lon, d)
+
+    # Dispatch Weather + Marine + Geofencing in parallel
+    weather, marine, geo = await asyncio.gather(_get_weather(), _get_marine(), _get_geofencing())
 
     logger.info(
         f"[planner] Dispatched 3 data agents — "
-        f"Weather: {weather.status} (LIVE), Marine: mock, Geofencing: {geo.status} (LIVE)"
+        f"Weather: {weather.status} (LIVE), Marine: {marine.status} (LIVE), Geofencing: {geo.status} (LIVE)"
     )
 
     return {
@@ -282,8 +302,12 @@ async def assess_risk(state: PlannerState) -> dict:
     marine = AgentEnvelope(**state["marine_result"])
     geo = AgentEnvelope(**state["geofencing_result"])
 
-    # TODO: Replace with Jaish's real RiskAgent.correlate()
-    verdict = mock_risk_verdict(qid, weather, marine, geo)
+    try:
+        from agents.risk.risk_agent import RiskAgent
+        verdict = RiskAgent().correlate(qid, weather, marine, geo)
+    except Exception as exc:
+        logger.warning(f"[planner] RiskAgent correlate failed: {exc} — using mock fallback")
+        verdict = mock_risk_verdict(qid, weather, marine, geo)
 
     logger.info(f"[planner] Risk verdict: {verdict.verdict} — {verdict.reasons}")
     return {"risk_verdict": verdict.model_dump(mode="json")}

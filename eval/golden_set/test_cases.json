@@ -1,0 +1,527 @@
+[
+  {
+    "id": "GS-01",
+    "region": "Ratnagiri, Maharashtra (Arabian Sea)",
+    "description": "Fair weather winter fishing with low swell and light breeze",
+    "inputs": {
+      "wave_height_m": 0.8,
+      "wind_speed_kmh": 14.0,
+      "lightning_risk": "none",
+      "cyclone_alert": null,
+      "geofencing_status": "clear",
+      "distance_km": 42.0,
+      "nearest_boundary_name": "Indian EEZ Outer Boundary"
+    },
+    "expected_verdict": "SAFE"
+  },
+  {
+    "id": "GS-02",
+    "region": "Veraval, Gujarat (Saurashtra Coast)",
+    "description": "Calm post-monsoon pelagic fishing zone",
+    "inputs": {
+      "wave_height_m": 1.1,
+      "wind_speed_kmh": 18.0,
+      "lightning_risk": "none",
+      "cyclone_alert": null,
+      "geofencing_status": "clear",
+      "distance_km": 55.0,
+      "nearest_boundary_name": "Indian EEZ Outer Boundary"
+    },
+    "expected_verdict": "SAFE"
+  },
+  {
+    "id": "GS-03",
+    "region": "Kochi, Kerala (Malabar Coast)",
+    "description": "Optimal upwelling season with calm sea state",
+    "inputs": {
+      "wave_height_m": 1.2,
+      "wind_speed_kmh": 16.5,
+      "lightning_risk": "low",
+      "cyclone_alert": null,
+      "geofencing_status": "clear",
+      "distance_km": 35.0,
+      "nearest_boundary_name": "Indian EEZ Outer Boundary"
+    },
+    "expected_verdict": "SAFE"
+  },
+  {
+    "id": "GS-04",
+    "region": "Visakhapatnam, Andhra Pradesh (Bay of Bengal)",
+    "description": "Clear autumn waters with light onshore breeze",
+    "inputs": {
+      "wave_height_m": 1.0,
+      "wind_speed_kmh": 12.0,
+      "lightning_risk": "none",
+      "cyclone_alert": null,
+      "geofencing_status": "clear",
+      "distance_km": 60.0,
+      "nearest_boundary_name": "Indian EEZ Outer Boundary"
+    },
+    "expected_verdict": "SAFE"
+  },
+  {
+    "id": "GS-05",
+    "region": "Mangalore, Karnataka (Canara Coast)",
+    "description": "Gentle swell and slight breeze, safe for traditional and motorized craft",
+    "inputs": {
+      "wave_height_m": 1.3,
+      "wind_speed_kmh": 20.0,
+      "lightning_risk": "none",
+      "cyclone_alert": null,
+      "geofencing_status": "clear",
+      "distance_km": 28.0,
+      "nearest_boundary_name": "Indian EEZ Outer Boundary"
+    },
+    "expected_verdict": "SAFE"
+  },
+  {
+    "id": "GS-06",
+    "region": "Ratnagiri, Maharashtra",
+    "description": "Southwest Monsoon rough sea state exceeding small-craft threshold",
+    "inputs": {
+      "wave_height_m": 3.1,
+      "wind_speed_kmh": 32.0,
+      "lightning_risk": "moderate",
+      "cyclone_alert": null,
+      "geofencing_status": "clear",
+      "distance_km": 25.0,
+      "nearest_boundary_name": "Indian EEZ Outer Boundary"
+    },
+    "expected_verdict": "UNSAFE"
+  },
+  {
+    "id": "GS-07",
+    "region": "Mumbai High, Maharashtra",
+    "description": "Severe swell over 3.8m during peak monsoon squall",
+    "inputs": {
+      "wave_height_m": 3.8,
+      "wind_speed_kmh": 38.0,
+      "lightning_risk": "none",
+      "cyclone_alert": null,
+      "geofencing_status": "clear",
+      "distance_km": 45.0,
+      "nearest_boundary_name": "Indian EEZ Outer Boundary"
+    },
+    "expected_verdict": "UNSAFE"
+  },
+  {
+    "id": "GS-08",
+    "region": "Goa Offshore",
+    "description": "Marginal monsoon swell requiring caution for small craft",
+    "inputs": {
+      "wave_height_m": 1.9,
+      "wind_speed_kmh": 22.0,
+      "lightning_risk": "none",
+      "cyclone_alert": null,
+      "geofencing_status": "clear",
+      "distance_km": 20.0,
+      "nearest_boundary_name": "Indian EEZ Outer Boundary"
+    },
+    "expected_verdict": "CAUTION"
+  },
+  {
+    "id": "GS-09",
+    "region": "Karwar, Karnataka",
+    "description": "Wave height right at caution boundary (2.1m)",
+    "inputs": {
+      "wave_height_m": 2.1,
+      "wind_speed_kmh": 24.0,
+      "lightning_risk": "none",
+      "cyclone_alert": null,
+      "geofencing_status": "clear",
+      "distance_km": 18.0,
+      "nearest_boundary_name": "Indian EEZ Outer Boundary"
+    },
+    "expected_verdict": "CAUTION"
+  },
+  {
+    "id": "GS-10",
+    "region": "Kochi Offshore, Kerala",
+    "description": "Wave height right at unsafe threshold (2.6m)",
+    "inputs": {
+      "wave_height_m": 2.6,
+      "wind_speed_kmh": 22.0,
+      "lightning_risk": "none",
+      "cyclone_alert": null,
+      "geofencing_status": "clear",
+      "distance_km": 30.0,
+      "nearest_boundary_name": "Indian EEZ Outer Boundary"
+    },
+    "expected_verdict": "UNSAFE"
+  },
+  {
+    "id": "GS-11",
+    "region": "Porbandar, Gujarat",
+    "description": "High wind squall exceeding 42 km/h (Beaufort 6)",
+    "inputs": {
+      "wave_height_m": 1.4,
+      "wind_speed_kmh": 46.0,
+      "lightning_risk": "none",
+      "cyclone_alert": null,
+      "geofencing_status": "clear",
+      "distance_km": 22.0,
+      "nearest_boundary_name": "Indian EEZ Outer Boundary"
+    },
+    "expected_verdict": "UNSAFE"
+  },
+  {
+    "id": "GS-12",
+    "region": "Okha, Gulf of Kutch",
+    "description": "Moderately strong seasonal breeze (28 km/h)",
+    "inputs": {
+      "wave_height_m": 1.1,
+      "wind_speed_kmh": 28.0,
+      "lightning_risk": "none",
+      "cyclone_alert": null,
+      "geofencing_status": "clear",
+      "distance_km": 15.0,
+      "nearest_boundary_name": "Indian EEZ Outer Boundary"
+    },
+    "expected_verdict": "CAUTION"
+  },
+  {
+    "id": "GS-13",
+    "region": "Digha, West Bengal",
+    "description": "Wind squall at 52 km/h with choppy waters",
+    "inputs": {
+      "wave_height_m": 2.2,
+      "wind_speed_kmh": 52.0,
+      "lightning_risk": "none",
+      "cyclone_alert": null,
+      "geofencing_status": "clear",
+      "distance_km": 30.0,
+      "nearest_boundary_name": "Indian EEZ Outer Boundary"
+    },
+    "expected_verdict": "UNSAFE"
+  },
+  {
+    "id": "GS-14",
+    "region": "Paradip, Odisha",
+    "description": "Pre-monsoon convective thunderstorm with severe lightning",
+    "inputs": {
+      "wave_height_m": 1.3,
+      "wind_speed_kmh": 22.0,
+      "lightning_risk": "severe",
+      "cyclone_alert": null,
+      "geofencing_status": "clear",
+      "distance_km": 25.0,
+      "nearest_boundary_name": "Indian EEZ Outer Boundary"
+    },
+    "expected_verdict": "UNSAFE"
+  },
+  {
+    "id": "GS-15",
+    "region": "Chennai Coast, Tamil Nadu",
+    "description": "Isolated convective clouds with moderate lightning probability",
+    "inputs": {
+      "wave_height_m": 1.1,
+      "wind_speed_kmh": 18.0,
+      "lightning_risk": "moderate",
+      "cyclone_alert": null,
+      "geofencing_status": "clear",
+      "distance_km": 20.0,
+      "nearest_boundary_name": "Indian EEZ Outer Boundary"
+    },
+    "expected_verdict": "CAUTION"
+  },
+  {
+    "id": "GS-16",
+    "region": "Kakinada, Andhra Pradesh",
+    "description": "High lightning activity detected by MOSDAC feeds",
+    "inputs": {
+      "wave_height_m": 1.2,
+      "wind_speed_kmh": 20.0,
+      "lightning_risk": "high",
+      "cyclone_alert": null,
+      "geofencing_status": "clear",
+      "distance_km": 35.0,
+      "nearest_boundary_name": "Indian EEZ Outer Boundary"
+    },
+    "expected_verdict": "UNSAFE"
+  },
+  {
+    "id": "GS-17",
+    "region": "Gopalpur, Odisha",
+    "description": "IMD RSMC Cyclone Warning issued (Severe Cyclonic Storm Dana)",
+    "inputs": {
+      "wave_height_m": 2.2,
+      "wind_speed_kmh": 35.0,
+      "lightning_risk": "moderate",
+      "cyclone_alert": "Warning: Severe Cyclonic Storm Dana",
+      "geofencing_status": "clear",
+      "distance_km": 40.0,
+      "nearest_boundary_name": "Indian EEZ Outer Boundary"
+    },
+    "expected_verdict": "UNSAFE"
+  },
+  {
+    "id": "GS-18",
+    "region": "Puri, Odisha",
+    "description": "Pre-genesis low pressure system under Cyclone Watch",
+    "inputs": {
+      "wave_height_m": 1.3,
+      "wind_speed_kmh": 22.0,
+      "lightning_risk": "low",
+      "cyclone_alert": "Watch: Deep Depression over Bay of Bengal",
+      "geofencing_status": "clear",
+      "distance_km": 30.0,
+      "nearest_boundary_name": "Indian EEZ Outer Boundary"
+    },
+    "expected_verdict": "CAUTION"
+  },
+  {
+    "id": "GS-19",
+    "region": "Veraval, Gujarat",
+    "description": "Very Severe Cyclonic Storm Biparjoy zero-departure order",
+    "inputs": {
+      "wave_height_m": 4.5,
+      "wind_speed_kmh": 85.0,
+      "lightning_risk": "severe",
+      "cyclone_alert": "Warning: VSCS Biparjoy Approaching Saurashtra",
+      "geofencing_status": "clear",
+      "distance_km": 15.0,
+      "nearest_boundary_name": "Indian EEZ Outer Boundary"
+    },
+    "expected_verdict": "UNSAFE"
+  },
+  {
+    "id": "GS-20",
+    "region": "Nagapattinam, Tamil Nadu",
+    "description": "Cyclone Alert bulletin issued for coastal districts",
+    "inputs": {
+      "wave_height_m": 1.9,
+      "wind_speed_kmh": 26.0,
+      "lightning_risk": "moderate",
+      "cyclone_alert": "Alert: Cyclonic Storm Gaja",
+      "geofencing_status": "clear",
+      "distance_km": 25.0,
+      "nearest_boundary_name": "Indian EEZ Outer Boundary"
+    },
+    "expected_verdict": "UNSAFE"
+  },
+  {
+    "id": "GS-21",
+    "region": "Rameswaram / Palk Strait, Tamil Nadu",
+    "description": "Vessel operating 1.2km from Sri Lanka IMBL (Within 2km warning buffer)",
+    "inputs": {
+      "wave_height_m": 0.9,
+      "wind_speed_kmh": 14.0,
+      "lightning_risk": "none",
+      "cyclone_alert": null,
+      "geofencing_status": "warning",
+      "distance_km": 1.2,
+      "nearest_boundary_name": "India - Sri Lanka IMBL"
+    },
+    "expected_verdict": "CAUTION"
+  },
+  {
+    "id": "GS-22",
+    "region": "Dhanushkodi, Tamil Nadu",
+    "description": "Vessel operating 0.6km from IMBL",
+    "inputs": {
+      "wave_height_m": 0.8,
+      "wind_speed_kmh": 12.0,
+      "lightning_risk": "none",
+      "cyclone_alert": null,
+      "geofencing_status": "warning",
+      "distance_km": 0.6,
+      "nearest_boundary_name": "India - Sri Lanka IMBL"
+    },
+    "expected_verdict": "CAUTION"
+  },
+  {
+    "id": "GS-23",
+    "region": "Gulf of Mannar Marine National Park",
+    "description": "Vessel inside Marine Protected Area core zone",
+    "inputs": {
+      "wave_height_m": 0.7,
+      "wind_speed_kmh": 11.0,
+      "lightning_risk": "none",
+      "cyclone_alert": null,
+      "geofencing_status": "restricted",
+      "distance_km": 0.0,
+      "nearest_boundary_name": "Gulf of Mannar Biosphere Reserve (MPA)"
+    },
+    "expected_verdict": "UNSAFE"
+  },
+  {
+    "id": "GS-24",
+    "region": "Kori Creek / Sir Creek, Gujarat",
+    "description": "Vessel crossed into foreign EEZ / restricted border sector",
+    "inputs": {
+      "wave_height_m": 0.9,
+      "wind_speed_kmh": 15.0,
+      "lightning_risk": "none",
+      "cyclone_alert": null,
+      "geofencing_status": "restricted",
+      "distance_km": 0.0,
+      "nearest_boundary_name": "India - Pakistan Maritime Boundary"
+    },
+    "expected_verdict": "UNSAFE"
+  },
+  {
+    "id": "GS-25",
+    "region": "Gahirmatha Marine Sanctuary, Odisha",
+    "description": "Vessel inside Olive Ridley turtle restricted nesting sanctuary",
+    "inputs": {
+      "wave_height_m": 1.0,
+      "wind_speed_kmh": 14.0,
+      "lightning_risk": "none",
+      "cyclone_alert": null,
+      "geofencing_status": "restricted",
+      "distance_km": 0.0,
+      "nearest_boundary_name": "Gahirmatha Marine Sanctuary (MPA)"
+    },
+    "expected_verdict": "UNSAFE"
+  },
+  {
+    "id": "GS-26",
+    "region": "Malpe, Karnataka",
+    "description": "Compound caution: moderate swell (1.7m) and moderate wind (27 km/h)",
+    "inputs": {
+      "wave_height_m": 1.7,
+      "wind_speed_kmh": 27.0,
+      "lightning_risk": "none",
+      "cyclone_alert": null,
+      "geofencing_status": "clear",
+      "distance_km": 30.0,
+      "nearest_boundary_name": "Indian EEZ Outer Boundary"
+    },
+    "expected_verdict": "CAUTION"
+  },
+  {
+    "id": "GS-27",
+    "region": "Kavaratti, Lakshadweep",
+    "description": "Lagoon waters with gentle breeze and negligible swell",
+    "inputs": {
+      "wave_height_m": 0.6,
+      "wind_speed_kmh": 10.0,
+      "lightning_risk": "none",
+      "cyclone_alert": null,
+      "geofencing_status": "clear",
+      "distance_km": 50.0,
+      "nearest_boundary_name": "Indian EEZ Outer Boundary"
+    },
+    "expected_verdict": "SAFE"
+  },
+  {
+    "id": "GS-28",
+    "region": "Port Blair, South Andaman",
+    "description": "Inter-island channel with moderate wave height (1.6m)",
+    "inputs": {
+      "wave_height_m": 1.6,
+      "wind_speed_kmh": 20.0,
+      "lightning_risk": "none",
+      "cyclone_alert": null,
+      "geofencing_status": "clear",
+      "distance_km": 40.0,
+      "nearest_boundary_name": "Indian EEZ Outer Boundary"
+    },
+    "expected_verdict": "CAUTION"
+  },
+  {
+    "id": "GS-29",
+    "region": "Diglipur, North Andaman",
+    "description": "Rough sea state (2.9m wave) off North Andaman coast",
+    "inputs": {
+      "wave_height_m": 2.9,
+      "wind_speed_kmh": 36.0,
+      "lightning_risk": "moderate",
+      "cyclone_alert": null,
+      "geofencing_status": "clear",
+      "distance_km": 35.0,
+      "nearest_boundary_name": "Indian EEZ Outer Boundary"
+    },
+    "expected_verdict": "UNSAFE"
+  },
+  {
+    "id": "GS-30",
+    "region": "Kanyakumari, Tamil Nadu (Cape Comorin)",
+    "description": "Tri-sea confluence with strong winds (44 km/h) and high swell (2.7m)",
+    "inputs": {
+      "wave_height_m": 2.7,
+      "wind_speed_kmh": 44.0,
+      "lightning_risk": "none",
+      "cyclone_alert": null,
+      "geofencing_status": "clear",
+      "distance_km": 25.0,
+      "nearest_boundary_name": "Indian EEZ Outer Boundary"
+    },
+    "expected_verdict": "UNSAFE"
+  },
+  {
+    "id": "GS-31",
+    "region": "Ratnagiri Offshore (The High-Fish / High-Death Gatekeeper Test)",
+    "description": "Extremely high chlorophyll PFZ but sea state is dangerous (2.8m waves)",
+    "inputs": {
+      "wave_height_m": 2.8,
+      "wind_speed_kmh": 30.0,
+      "lightning_risk": "none",
+      "cyclone_alert": null,
+      "geofencing_status": "clear",
+      "distance_km": 18.0,
+      "nearest_boundary_name": "Indian EEZ Outer Boundary"
+    },
+    "expected_verdict": "UNSAFE"
+  },
+  {
+    "id": "GS-32",
+    "region": "Veraval Offshore (High Fish / Restricted Geofence Conflict)",
+    "description": "Prime tuna fishing grounds inside Pakistani EEZ restriction",
+    "inputs": {
+      "wave_height_m": 1.0,
+      "wind_speed_kmh": 15.0,
+      "lightning_risk": "none",
+      "cyclone_alert": null,
+      "geofencing_status": "restricted",
+      "distance_km": 0.0,
+      "nearest_boundary_name": "Pakistan EEZ"
+    },
+    "expected_verdict": "UNSAFE"
+  },
+  {
+    "id": "GS-33",
+    "region": "Bhatkal, Karnataka",
+    "description": "Calm coastal bank during peak sardine season",
+    "inputs": {
+      "wave_height_m": 0.9,
+      "wind_speed_kmh": 12.0,
+      "lightning_risk": "none",
+      "cyclone_alert": null,
+      "geofencing_status": "clear",
+      "distance_km": 12.0,
+      "nearest_boundary_name": "Indian EEZ Outer Boundary"
+    },
+    "expected_verdict": "SAFE"
+  },
+  {
+    "id": "GS-34",
+    "region": "Machilipatnam, Andhra Pradesh",
+    "description": "Moderate wind (26 km/h) and moderate swell (1.6m)",
+    "inputs": {
+      "wave_height_m": 1.6,
+      "wind_speed_kmh": 26.0,
+      "lightning_risk": "none",
+      "cyclone_alert": null,
+      "geofencing_status": "clear",
+      "distance_km": 35.0,
+      "nearest_boundary_name": "Indian EEZ Outer Boundary"
+    },
+    "expected_verdict": "CAUTION"
+  },
+  {
+    "id": "GS-35",
+    "region": "Tuticorin, Tamil Nadu",
+    "description": "Approaching IMBL warning buffer (1.8 km distance)",
+    "inputs": {
+      "wave_height_m": 1.1,
+      "wind_speed_kmh": 16.0,
+      "lightning_risk": "none",
+      "cyclone_alert": null,
+      "geofencing_status": "warning",
+      "distance_km": 1.8,
+      "nearest_boundary_name": "India - Sri Lanka IMBL"
+    },
+    "expected_verdict": "CAUTION"
+  }
+]

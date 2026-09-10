@@ -1,0 +1,99 @@
+{
+  "type": "FeatureCollection",
+  "totalFeatures": 4,
+  "numberMatched": 4,
+  "numberReturned": 4,
+  "timeStamp": "2026-09-08T12:00:00.000Z",
+  "crs": {
+    "type": "name",
+    "properties": {
+      "name": "urn:ogc:def:crs:EPSG::4326"
+    }
+  },
+  "features": [
+    {
+      "type": "Feature",
+      "id": "pfzlines.fid--71a3e5b4_0001",
+      "geometry_name": "the_geom",
+      "geometry": {
+        "type": "MultiLineString",
+        "coordinates": [
+          [[72.35, 19.10], [72.48, 19.25], [72.55, 19.40], [72.60, 19.50]]
+        ]
+      },
+      "properties": {
+        "SECTORBOUN": 3,
+        "SECTORBO_1": 3,
+        "SECTORNAME": "Maharashtra",
+        "Julian_day": "251",
+        "Sno": "001",
+        "Year": 2026,
+        "UID": 2026251001.0,
+        "Length": 52.3
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "pfzlines.fid--71a3e5b4_0002",
+      "geometry_name": "the_geom",
+      "geometry": {
+        "type": "MultiLineString",
+        "coordinates": [
+          [[72.15, 18.70], [72.30, 18.85], [72.38, 19.00]]
+        ]
+      },
+      "properties": {
+        "SECTORBOUN": 3,
+        "SECTORBO_1": 3,
+        "SECTORNAME": "Maharashtra",
+        "Julian_day": "251",
+        "Sno": "002",
+        "Year": 2026,
+        "UID": 2026251002.0,
+        "Length": 38.7
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "pfzlines.fid--71a3e5b4_0003",
+      "geometry_name": "the_geom",
+      "geometry": {
+        "type": "MultiLineString",
+        "coordinates": [
+          [[74.05, 14.50], [74.15, 14.65], [74.10, 14.80]]
+        ]
+      },
+      "properties": {
+        "SECTORBOUN": 2,
+        "SECTORBO_1": 2,
+        "SECTORNAME": "Karnataka",
+        "Julian_day": "251",
+        "Sno": "003",
+        "Year": 2026,
+        "UID": 2026251003.0,
+        "Length": 34.2
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "pfzlines.fid--71a3e5b4_0004",
+      "geometry_name": "the_geom",
+      "geometry": {
+        "type": "MultiLineString",
+        "coordinates": [
+          [[69.50, 21.10], [69.65, 21.20], [69.80, 21.35]]
+        ]
+      },
+      "properties": {
+        "SECTORBOUN": 4,
+        "SECTORBO_1": 4,
+        "SECTORNAME": "Gujarat",
+        "Julian_day": "251",
+        "Sno": "004",
+        "Year": 2026,
+        "UID": 2026251004.0,
+        "Length": 41.5
+      }
+    }
+  ]
+}

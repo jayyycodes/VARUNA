@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ows:ExceptionReport xmlns:xs="http://www.w3.org/2001/XMLSchema"
+                     xmlns:ows="http://www.opengis.net/ows"
+                     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                     version="1.1.0"
+                     xsi:schemaLocation="http://www.opengis.net/ows http://schemas.opengis.net/ows/1.1.0/owsExceptionReport.xsd">
+  <ows:Exception exceptionCode="OperationNotSupported" locator="INVALID">
+    <ows:ExceptionText>Could not determine geoserver request from http request org.geoserver.platform.AdvancedDispatchFilter</ows:ExceptionText>
+  </ows:Exception>
+</ows:ExceptionReport>
