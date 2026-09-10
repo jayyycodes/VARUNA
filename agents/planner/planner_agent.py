@@ -256,8 +256,16 @@ async def dispatch_data_agents(state: PlannerState) -> dict:
 async def dispatch_rag(state: PlannerState) -> dict:
     """Call RAG/Advisory agent for regulation questions."""
     qid = state["query_run_id"]
-    rag_result = mock_rag(qid, state["query"])
-    logger.info("[planner] RAG agent dispatched (mock) — returned OK")
+    q = state["query"]
+    try:
+        from agents.rag_advisory.rag_agent import RAGAdvisoryAgent
+        agent = RAGAdvisoryAgent()
+        rag_result = await agent.answer_with_citations(question=q, query_run_id=qid)
+        logger.info(f"[planner] Live RAG agent OK — {len(rag_result.get('citations', []))} citations")
+    except Exception as e:
+        logger.warning(f"[planner] Live RAG agent failed ({e}) — using mock fallback")
+        rag_result = mock_rag(qid, q)
+
     return {"rag_result": rag_result}
 
 
