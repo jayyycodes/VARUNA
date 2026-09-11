@@ -29,6 +29,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 from agents.planner.planner_agent import PlannerAgent
+from backend.routes.alerts import router as alerts_router
 
 # ── Logging ──────────────────────────────────────────────────────────
 logging.basicConfig(
@@ -55,6 +56,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Register subrouters
+app.include_router(alerts_router)
 
 
 # ── Planner (singleton) ──────────────────────────────────────────────

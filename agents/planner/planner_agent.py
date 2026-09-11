@@ -51,6 +51,9 @@ class PlannerState(TypedDict, total=False):
     conversation_id: str
     user_id: str
     query_run_id: str
+    prior_location: dict[str, Any] | None
+    prior_destination: dict[str, Any] | None
+    detected_language: str
 
     # ── After intent classification ────────────────────────────────
     intent: str                         # safety_check | find_fishing_zone | route_request | regulation_question
@@ -202,10 +205,16 @@ def resolve_port_location(query: str, extracted_loc: dict[str, Any] | None) -> d
     return {"lat": 16.99, "lon": 73.30, "name": "Ratnagiri, Maharashtra (default)"}
 
 
-def extract_route_endpoints(query: str, parsed: dict | None = None) -> tuple[dict[str, Any], dict[str, Any] | None]:
+def extract_route_endpoints(
+    query: str,
+    parsed: dict | None = None,
+    prior_location: dict[str, Any] | None = None,
+    prior_destination: dict[str, Any] | None = None,
+) -> tuple[dict[str, Any], dict[str, Any] | None]:
     """
     Extracts departure and destination locations for routing.
     Detects patterns like 'from PortA to PortB' or multiple ports in query.
+    Falls back to prior session location for multi-turn queries.
     """
     q_lower = query.lower()
     ports_found = [p for p in INDIAN_COASTAL_PORTS if p in q_lower]
@@ -221,7 +230,19 @@ def extract_route_endpoints(query: str, parsed: dict | None = None) -> tuple[dic
         dest = INDIAN_COASTAL_PORTS[dest_key]
         return start, dest
 
-    # Check if destination explicitly parsed
+    # Single port in routing query with prior location context
+    if len(ports_found) == 1:
+        port = INDIAN_COASTAL_PORTS[ports_found[0]]
+        # If query asks "to <port>" or "route to <port>" and we have prior location
+        if prior_location and any(kw in q_lower for kw in ["to ", "reach ", "route "]):
+            return prior_location, port
+        return port, None
+
+    # No explicit port in query — check prior location for follow-up questions
+    if prior_location and any(kw in q_lower for kw in ["there", "here", "tomorrow", "this", "safe", "weather", "route"]):
+        return prior_location, prior_destination
+
+    # Check if destination explicitly parsed by LLM
     if parsed and parsed.get("destination"):
         raw_dest = parsed["destination"]
         dest = resolve_port_location(raw_dest.get("name", ""), raw_dest)
@@ -278,7 +299,12 @@ async def classify_intent(state: PlannerState) -> dict:
         parsed = json.loads(clean_raw.strip())
 
         intent = parsed.get("intent", "safety_check")
-        location, destination = extract_route_endpoints(state["query"], parsed)
+        location, destination = extract_route_endpoints(
+            state["query"],
+            parsed,
+            prior_location=state.get("prior_location"),
+            prior_destination=state.get("prior_destination"),
+        )
         query_date = parsed.get("date", tomorrow_str)
 
         logger.info(
@@ -291,7 +317,12 @@ async def classify_intent(state: PlannerState) -> dict:
 
     except Exception as e:
         logger.error(f"[planner] Intent classification failed: {e} — using defaults")
-        location, destination = extract_route_endpoints(state["query"], None)
+        location, destination = extract_route_endpoints(
+            state["query"],
+            None,
+            prior_location=state.get("prior_location"),
+            prior_destination=state.get("prior_destination"),
+        )
         return {
             "intent": "safety_check",
             "location": location,
@@ -629,10 +660,14 @@ def _build_map_data(state: PlannerState) -> dict:
             },
         })
 
-    # Route navigation LineString feature
+    # Route navigation LineString features (Safe Corridor + Direct Baseline)
     route = state.get("route_result", {})
-    if route and route.get("data", {}).get("route_feature"):
-        features.append(route["data"]["route_feature"])
+    if route:
+        r_data = route.get("data", {})
+        if r_data.get("route_feature"):
+            features.append(r_data["route_feature"])
+        if r_data.get("route_direct_feature"):
+            features.append(r_data["route_direct_feature"])
 
     return {"type": "FeatureCollection", "features": features}
 
@@ -658,6 +693,8 @@ def _build_evidence(state: PlannerState) -> list[dict]:
                 ev_entry["distance_nm"] = r_data.get("distance_nm")
                 ev_entry["estimated_time_hours"] = r_data.get("estimated_time_hours")
                 ev_entry["fuel_liters"] = r_data.get("fuel_estimate_liters")
+                if "comparison" in r_data:
+                    ev_entry["comparison"] = r_data["comparison"]
             evidence.append(ev_entry)
 
     # RAG citations
@@ -736,6 +773,7 @@ class PlannerAgent:
 
     def __init__(self):
         self.graph = _build_graph()
+        self.sessions: dict[str, dict[str, Any]] = {}
         logger.info("[planner] LangGraph compiled — ready to handle queries")
 
     async def handle_query(
@@ -749,7 +787,7 @@ class PlannerAgent:
 
         Args:
             query: Natural language question about marine conditions.
-            conversation_id: Session ID for multi-turn context (future).
+            conversation_id: Session ID for multi-turn context.
             user_id: User identifier.
 
         Returns:
@@ -757,17 +795,33 @@ class PlannerAgent:
             {query_run_id, intent, text, map_data, evidence, risk_verdict, status}
         """
         query_run_id = str(uuid.uuid4())
-        logger.info(f"[planner] New query: {query!r}  (run={query_run_id[:8]}…)")
+        cid = conversation_id or "default_session"
+
+        # 1. Retrieve prior session context for multi-turn continuity
+        prior_context = self.sessions.get(cid, {})
+        prior_loc = prior_context.get("location")
+        prior_dest = prior_context.get("destination")
+
+        # 2. Multilingual translation & language detection
+        from backend.gateway.multilingual import translate_in, translate_out
+        clean_query, detected_lang = await translate_in(query)
+
+        logger.info(
+            f"[planner] Query: {query!r} (lang={detected_lang}, en={clean_query!r}, run={query_run_id[:8]}…)"
+        )
 
         try:
             result = await self.graph.ainvoke({
-                "query": query,
-                "conversation_id": conversation_id,
+                "query": clean_query,
+                "conversation_id": cid,
                 "user_id": user_id,
                 "query_run_id": query_run_id,
+                "prior_location": prior_loc,
+                "prior_destination": prior_dest,
+                "detected_language": detected_lang,
             })
 
-            return result.get("response", {
+            resp = result.get("response", {
                 "query_run_id": query_run_id,
                 "intent": "error",
                 "text": "An unexpected error occurred while processing your query.",
@@ -776,6 +830,25 @@ class PlannerAgent:
                 "risk_verdict": None,
                 "status": "error",
             })
+
+            # 3. Save updated session state
+            final_loc = result.get("location") or prior_loc
+            final_dest = result.get("destination") or prior_dest
+            self.sessions[cid] = {
+                "location": final_loc,
+                "destination": final_dest,
+                "last_query": clean_query,
+                "last_intent": result.get("intent"),
+                "last_verdict": result.get("risk_verdict", {}).get("verdict"),
+                "route": result.get("route_result"),
+            }
+
+            # 4. Outbound localized translation if needed
+            if detected_lang != "en" and resp.get("text"):
+                resp["text"] = await translate_out(resp["text"], detected_lang)
+                resp["detected_language"] = detected_lang
+
+            return resp
 
         except Exception as e:
             logger.error(f"[planner] Pipeline failed: {e}", exc_info=True)
