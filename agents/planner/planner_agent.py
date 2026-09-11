@@ -21,6 +21,7 @@ Graph:
 import asyncio
 import json
 import logging
+import time
 import uuid
 from datetime import date, timedelta
 from typing import Any, TypedDict
@@ -343,68 +344,95 @@ async def dispatch_data_agents(state: PlannerState) -> dict:
     lat = state["location"]["lat"]
     lon = state["location"]["lon"]
     d = state["date"]
+    intent = state.get("intent", "safety_check")
 
     async def _get_weather() -> AgentEnvelope:
-        """Call Cbum's LIVE WeatherAgent; fall back to mock only on import/crash."""
+        """Call Cbum's LIVE WeatherAgent; fall back to mock on circuit break or crash."""
+        from backend.gateway.circuit_breaker import circuit_registry
+        from backend.gateway.observability import log_agent_trajectory
+        t0 = time.monotonic()
         try:
             from agents.weather.weather_agent import WeatherAgent
-            result = await WeatherAgent().get_forecast(lat=lat, lon=lon, date=d, query_run_id=qid)
-            # 'degraded' is still real live data with a fallback payload — do NOT replace with mock.
-            # Only fall back to mock on a hard 'error' status (shouldn't happen; WeatherAgent
-            # returns degraded instead, but guard anyway).
-            if result.status == "error":
-                logger.warning(
-                    f"[planner] Live Weather returned error ({result.error_message}) — using mock fallback"
-                )
-                return mock_weather(qid, lat, lon, d)
+            async def _fetch():
+                return await WeatherAgent().get_forecast(lat=lat, lon=lon, date=d, query_run_id=qid)
+
+            result = await circuit_registry.call(
+                "open_meteo_weather",
+                _fetch,
+                fallback_factory=lambda: mock_weather(qid, lat, lon, d),
+            )
+            ms = (time.monotonic() - t0) * 1000
+            log_agent_trajectory(qid, "weather", intent, result.status, ms, {"lat": lat, "lon": lon, "date": d}, result.data)
             logger.info(f"[planner] Live Weather OK ({result.status}) — {result.data.get('forecast_summary')}")
             return result
         except Exception as exc:
-            logger.warning(f"[planner] WeatherAgent import/call failed: {exc} — using mock fallback")
-            return mock_weather(qid, lat, lon, d)
+            logger.warning(f"[planner] WeatherAgent call failed: {exc} — using mock fallback")
+            res = mock_weather(qid, lat, lon, d)
+            log_agent_trajectory(qid, "weather", intent, "mock_fallback", (time.monotonic() - t0) * 1000, {"lat": lat, "lon": lon}, res.data, error=str(exc))
+            return res
 
     async def _get_geofencing() -> AgentEnvelope:
-        """Call Vedant's LIVE GeofencingAgent (PostGIS); fall back to mock on any failure."""
+        """Call Vedant's LIVE GeofencingAgent (PostGIS); fall back to mock on circuit break or crash."""
+        from backend.gateway.circuit_breaker import circuit_registry
+        from backend.gateway.observability import log_agent_trajectory
+        t0 = time.monotonic()
         try:
             from agents.geofencing.agent import GeofencingAgent
             from agents.geofencing.models import GeofencingRequest
-            result = await GeofencingAgent(db_pool=None).run(
-                GeofencingRequest(query_run_id=qid, lat=lat, lon=lon)
-            )
-            if result.status == "error":
-                logger.warning(
-                    f"[planner] Live Geofencing returned error ({result.error_message}) — using mock fallback"
+
+            async def _fetch():
+                return await GeofencingAgent(db_pool=None).run(
+                    GeofencingRequest(query_run_id=qid, lat=lat, lon=lon)
                 )
-                return mock_geofencing(qid, lat, lon)
+
+            result = await circuit_registry.call(
+                "geofencing_postgis",
+                _fetch,
+                fallback_factory=lambda: mock_geofencing(qid, lat, lon),
+            )
+            ms = (time.monotonic() - t0) * 1000
+            log_agent_trajectory(qid, "geofencing", intent, result.status, ms, {"lat": lat, "lon": lon}, result.data)
             logger.info(
                 f"[planner] Live Geofencing OK — status: {result.data.get('status')}, "
                 f"nearest: {result.data.get('nearest_boundary_name')}"
             )
             return result
         except Exception as exc:
-            logger.warning(f"[planner] GeofencingAgent import/call failed: {exc} — using mock fallback")
-            return mock_geofencing(qid, lat, lon)
+            logger.warning(f"[planner] GeofencingAgent call failed: {exc} — using mock fallback")
+            res = mock_geofencing(qid, lat, lon)
+            log_agent_trajectory(qid, "geofencing", intent, "mock_fallback", (time.monotonic() - t0) * 1000, {"lat": lat, "lon": lon}, res.data, error=str(exc))
+            return res
 
     async def _get_marine() -> AgentEnvelope:
-        """Call Jaish's LIVE MarineFishingAgent; fall back to mock on any failure."""
+        """Call Jaish's LIVE MarineFishingAgent; fall back to mock on circuit break or crash."""
+        from backend.gateway.circuit_breaker import circuit_registry
+        from backend.gateway.observability import log_agent_trajectory
+        t0 = time.monotonic()
         try:
             from agents.marine_fishing.marine_agent import MarineFishingAgent
-            result = await MarineFishingAgent().get_ocean_state(
-                lat=lat, lon=lon, date_str=d, query_run_id=qid
-            )
-            if result.status == "error":
-                logger.warning(
-                    f"[planner] Live Marine returned error ({result.error_message}) — using mock fallback"
+
+            async def _fetch():
+                return await MarineFishingAgent().get_ocean_state(
+                    lat=lat, lon=lon, date_str=d, query_run_id=qid
                 )
-                return mock_marine(qid, lat, lon, d)
+
+            result = await circuit_registry.call(
+                "incois_wfs",
+                _fetch,
+                fallback_factory=lambda: mock_marine(qid, lat, lon, d),
+            )
+            ms = (time.monotonic() - t0) * 1000
+            log_agent_trajectory(qid, "marine", intent, result.status, ms, {"lat": lat, "lon": lon, "date": d}, result.data)
             logger.info(
                 f"[planner] Live Marine OK ({result.status}) — "
                 f"{len(result.data.get('pfz_zones', []))} zones"
             )
             return result
         except Exception as exc:
-            logger.warning(f"[planner] MarineFishingAgent import/call failed: {exc} — using mock fallback")
-            return mock_marine(qid, lat, lon, d)
+            logger.warning(f"[planner] MarineFishingAgent call failed: {exc} — using mock fallback")
+            res = mock_marine(qid, lat, lon, d)
+            log_agent_trajectory(qid, "marine", intent, "mock_fallback", (time.monotonic() - t0) * 1000, {"lat": lat, "lon": lon}, res.data, error=str(exc))
+            return res
 
     # Dispatch Weather + Marine + Geofencing in parallel
     weather, marine, geo = await asyncio.gather(_get_weather(), _get_marine(), _get_geofencing())
@@ -436,6 +464,8 @@ async def dispatch_data_agents(state: PlannerState) -> dict:
     if dest_lat is not None and dest_lon is not None and (intent in ("route_request", "find_fishing_zone") or dest_info is not None):
         try:
             from agents.route.route_agent import RouteAgent
+            from backend.gateway.observability import log_agent_trajectory
+            t0_r = time.monotonic()
             r_agent = RouteAgent()
             r_env = await r_agent.plan_route(
                 start_lat=start_lat,
@@ -445,6 +475,8 @@ async def dispatch_data_agents(state: PlannerState) -> dict:
                 query_run_id=qid,
             )
             route_result = r_env.model_dump(mode="json")
+            ms_r = (time.monotonic() - t0_r) * 1000
+            log_agent_trajectory(qid, "route", intent, r_env.status, ms_r, {"start": [start_lat, start_lon], "dest": [dest_lat, dest_lon]}, route_result["data"])
             logger.info(
                 f"[planner] RouteAgent OK ({r_env.status}) — "
                 f"{route_result['data'].get('distance_nm')} NM | "
@@ -471,14 +503,19 @@ async def dispatch_rag(state: PlannerState) -> dict:
     """Call RAG/Advisory agent for regulation questions."""
     qid = state["query_run_id"]
     q = state["query"]
+    from backend.gateway.observability import log_agent_trajectory
+    t0_rag = time.monotonic()
     try:
         from agents.rag_advisory.rag_agent import RAGAdvisoryAgent
         agent = RAGAdvisoryAgent()
         rag_result = await agent.answer_with_citations(question=q, query_run_id=qid)
+        ms_rag = (time.monotonic() - t0_rag) * 1000
+        log_agent_trajectory(qid, "rag_advisory", state.get("intent", ""), "success", ms_rag, {"query": q}, rag_result)
         logger.info(f"[planner] Live RAG agent OK — {len(rag_result.get('citations', []))} citations")
     except Exception as e:
         logger.warning(f"[planner] Live RAG agent failed ({e}) — using mock fallback")
         rag_result = mock_rag(qid, q)
+        log_agent_trajectory(qid, "rag_advisory", state.get("intent", ""), "mock_fallback", (time.monotonic() - t0_rag) * 1000, {"query": q}, rag_result, error=str(e))
 
     return {"rag_result": rag_result}
 

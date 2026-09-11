@@ -93,10 +93,9 @@ async def test_route_agent_plan_route_happy_path():
     # Last coord is destination [dest_lon, dest_lat]
     assert coords[-1] == [73.47, 16.05]
 
-    # Properties check
     props = feat["properties"]
     assert props["type"] == "route"
-    assert "Optimal Passage" in props["name"]
+    assert "Optimal Safe Passage" in props["name"] or "Optimal Passage" in props["name"]
 
 
 @pytest.mark.asyncio

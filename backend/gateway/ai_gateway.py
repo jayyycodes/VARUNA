@@ -103,29 +103,41 @@ async def call_llm(
     """
     target_model = MODELS.get(role, MODELS["default"])
     provider, model_name = _clean_model_name(target_model)
+    from backend.gateway.circuit_breaker import circuit_registry
+    from backend.gateway.observability import log_llm_span
 
-    # 1. Try Primary Provider (Groq)
+    # 1. Try Primary Provider (Guarded by Circuit Breaker)
+    primary_svc = f"{provider}_llm"
     t0 = time.monotonic()
-    try:
-        active_client = groq_client if provider == "groq" else cerebras_client
-        content = await _execute_chat(
-            active_client,
-            model_name,
-            messages,
-            temperature,
-            max_tokens,
-            response_format,
-        )
-        ms = (time.monotonic() - t0) * 1000
-        logger.info(f"[gateway] {role} → {provider}/{model_name} OK ({ms:.0f}ms)")
-        return content
 
-    except Exception as primary_err:
-        logger.warning(f"[gateway] {role} → {provider}/{model_name} FAILED: {primary_err}")
+    if circuit_registry.get(primary_svc).is_available():
+        try:
+            active_client = groq_client if provider == "groq" else cerebras_client
+            content = await _execute_chat(
+                active_client,
+                model_name,
+                messages,
+                temperature,
+                max_tokens,
+                response_format,
+            )
+            ms = (time.monotonic() - t0) * 1000
+            circuit_registry.get(primary_svc).record_success()
+            logger.info(f"[gateway] {role} → {provider}/{model_name} OK ({ms:.0f}ms)")
+            log_llm_span(role, provider, model_name, messages, content, ms)
+            return content
 
-    # 2. Try Fallback Provider (Cerebras or Secondary)
+        except Exception as primary_err:
+            circuit_registry.get(primary_svc).record_failure(primary_err)
+            logger.warning(f"[gateway] {role} → {provider}/{model_name} FAILED: {primary_err}")
+    else:
+        logger.info(f"[gateway] Primary {primary_svc} circuit is OPEN — skipping directly to fallback")
+
+    # 2. Try Fallback Provider (Guarded by Circuit Breaker)
     fb_provider, fb_model = _clean_model_name(FALLBACK_MODEL)
+    fb_svc = f"{fb_provider}_llm"
     t0 = time.monotonic()
+
     try:
         fallback_client = cerebras_client if fb_provider == "cerebras" or groq_client is None else groq_client
         content = await _execute_chat(
@@ -137,9 +149,13 @@ async def call_llm(
             response_format,
         )
         ms = (time.monotonic() - t0) * 1000
+        circuit_registry.get(fb_svc).record_success()
         logger.info(f"[gateway] {role} → {fb_provider}/{fb_model} (fallback) OK ({ms:.0f}ms)")
+        log_llm_span(role, fb_provider, fb_model, messages, content, ms)
         return content
 
     except Exception as fallback_err:
+        circuit_registry.get(fb_svc).record_failure(fallback_err)
         logger.error(f"[gateway] Fallback {FALLBACK_MODEL} also failed: {fallback_err}")
+        log_llm_span(role, fb_provider, fb_model, messages, "", (time.monotonic() - t0) * 1000, error=str(fallback_err))
         raise fallback_err

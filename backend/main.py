@@ -147,9 +147,28 @@ async def v1_chat(req: ChatRequest):
 @app.get("/v1/health")
 async def health():
     """Service health check — used by Frontend, Docker, load balancers, and CI."""
+    from backend.gateway.circuit_breaker import circuit_registry
+    from backend.gateway.observability import is_tracing_active
+
+    upstream = circuit_registry.get_all_status()
+    all_healthy = all(s["is_healthy"] for s in upstream)
+
     return {
-        "status": "ok",
+        "status": "ok" if all_healthy else "degraded",
         "service": "varuna-orca",
         "version": "0.1.0",
         "planner_ready": True,
+        "tracing_active": is_tracing_active(),
+        "upstream_circuits": upstream,
+    }
+
+
+@app.get("/api/health/upstream")
+async def upstream_health():
+    """Detailed upstream circuit breaker and latency monitoring."""
+    from backend.gateway.circuit_breaker import circuit_registry
+    circuits = circuit_registry.get_all_status()
+    return {
+        "all_healthy": all(s["is_healthy"] for s in circuits),
+        "circuits": circuits,
     }
