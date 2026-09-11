@@ -12,6 +12,24 @@ interface VerdictCardProps {
   onRetry?: () => void;
 }
 
+/**
+ * Parses markdown bold (**text**) into <strong> elements to prevent raw asterisks.
+ */
+const renderFormattedText = (text?: string | null) => {
+  if (!text) return null;
+  const parts = text.split(/(\*\*.*?\*\*)/g);
+  return parts.map((part, index) => {
+    if (part.startsWith('**') && part.endsWith('**') && part.length >= 4) {
+      return (
+        <strong key={index} className="verdict-card__bold-text">
+          {part.slice(2, -2)}
+        </strong>
+      );
+    }
+    return part;
+  });
+};
+
 export const VerdictCard: React.FC<VerdictCardProps> = ({
   response,
   loading = false,
@@ -131,12 +149,12 @@ export const VerdictCard: React.FC<VerdictCardProps> = ({
       </div>
 
       {/* 2. Headline Summary */}
-      <p className="verdict-card__headline-sub text-sm">{summary.headline}</p>
+      <p className="verdict-card__headline-sub text-sm">{renderFormattedText(summary.headline)}</p>
 
       {/* 3. Operational Action / Directive Box */}
       <div className="verdict-card__action-box">
         <div className="verdict-card__action-label mono text-xs">DIRECTIVE</div>
-        <p className="verdict-card__action text-sm">{summary.action}</p>
+        <p className="verdict-card__action text-sm">{renderFormattedText(summary.action)}</p>
       </div>
 
       {/* 4. Confidence Explanation */}
@@ -145,7 +163,7 @@ export const VerdictCard: React.FC<VerdictCardProps> = ({
           <span className="verdict-card__reason-bullet">
             <IconInfo size={12} />
           </span>{' '}
-          {summary.confidence_reason}
+          {renderFormattedText(summary.confidence_reason)}
         </div>
       )}
 
