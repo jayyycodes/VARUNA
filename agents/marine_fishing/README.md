@@ -1,135 +1,51 @@
 # Marine & Fishing Intelligence Agent
-**Owner:** Jaish
+**Owner:** Jaish  
+**Status:** MVP Complete ✅ | Next Phase: Live Satellite Ingestion & Historical Trends
 
 ## Responsibility
-Fetches real-time Sea Surface Temperature (SST), Chlorophyll-a concentration, and Potential Fishing Zone (PFZ) advisories. Evaluates oceanographic productivity and ranks optimal fishing spots near the vessel.
+Fetches and models Sea Surface Temperature (SST), Chlorophyll-a concentrations, and Potential Fishing Zone (PFZ) advisories. Evaluates oceanographic productivity and ranks optimal fishing spots near the vessel's home port.
 
 ---
 
-## 1. Live Public Data Sources (100% Free & Open)
-
-### A. NOAA CoastWatch ERDDAP (Global Daily SST for Indian Ocean)
-- **URL**: `https://coastwatch.pfeg.noaa.gov/erddap/griddap/jplMURSST41.json`
-- **Method**: `GET` (Open REST API, zero API key needed)
-- **Parameters**:
-  - `time`: `(last)`
-  - `latitude`: `[(lat-0.5):1:(lat+0.5)]`
-  - `longitude`: `[(lon-0.5):1:(lon+0.5)]`
-- Returns: Daily Multi-scale Ultra-high Resolution (MUR) Sea Surface Temperature at 1km/5km resolution.
-
-### B. Copernicus Marine Open API / MODIS Ocean Color (Chlorophyll-a)
-- **Parameters**: `chlor_a` in mg/m³. Optimal pelagic fish habitats in Indian waters range between **0.2 and 1.5 mg/m³** (upwelling zones).
-
-### C. INCOIS Potential Fishing Zone (PFZ) Advisories
-- **Source**: INCOIS WebGIS (`https://incois.gov.in/portal/datainfo/pfz.jsp`).
-- Features: Ocean thermal fronts and chlorophyll gradients indicating schools of Sardine, Mackerel, Tuna, and Ribbonfish.
+## 1. MVP Tasks (Completed ✅)
+- [x] **Oceanographic Profiling**: Modeled SST and chlorophyll distribution for both West (Arabian Sea) and East (Bay of Bengal) coasts.
+- [x] **Productivity Scoring Algorithm**: Implemented multi-factor ranking formula:
+  $$\text{Score} = 0.45 \times \text{Chlorophyll} + 0.35 \times \text{SST Front} - 0.20 \times \min\left(\frac{\text{Distance}}{50\text{ km}}, 1.0\right)$$
+- [x] **PFZ Zone Generation**: Dynamically constructs candidate fishing clusters with GPS coordinates, distance, target species (Sardine, Mackerel, Tuna, Pomfret), and SST/Chlorophyll attributes.
+- [x] **Standardized Envelope**: Wraps results into [`AgentEnvelope`](file:///c:/Development/Varuna/backend/schemas/envelope.py) with full audit telemetry.
 
 ---
 
-## 2. Zone Ranking & Productivity Formula
+## 2. Post-MVP & Production Tasks (Current Focus)
+According to the root `README.md` (Sections 1.1, 3, 6, & 9), the next operational priorities are:
 
-```python
-# Oceanographic productivity scoring algorithm:
-# Optimal SST for Indian tropical pelagics is 26°C - 29°C.
-# Optimal Chlorophyll is 0.4 - 1.2 mg/m³.
-productivity_score = (
-    0.45 * chlorophyll_factor +
-    0.35 * sst_thermal_front_factor -
-    0.20 * min(distance_km / 50.0, 1.0)
-)
-```
-
----
-
-## 3. Copy-Paste Runnable Implementation
-
-You can drop this directly into `agents/marine_fishing/marine_agent.py`:
-
-```python
-import math
-from datetime import datetime, timezone
-from backend.schemas.envelope import AgentEnvelope
-
-class MarineFishingAgent:
-    def __init__(self, redis_client=None):
-        self.redis = redis_client
-
-    async def get_ocean_state(self, lat: float, lon: float, date_str: str) -> AgentEnvelope:
-        query_run_id = f"marine-{lat:.2f}-{lon:.2f}-{date_str}"
-
-        # Baseline oceanographic profile for Indian West/East coast
-        # Nearshore: higher chlorophyll (upwelling), moderate SST
-        sst_celsius = 28.4
-        chlorophyll_mg_m3 = 0.72
-
-        # Generate candidate PFZ clusters within 30km radius
-        candidate_zones = [
-            {
-                "zone_id": f"PFZ-IND-{int(lat*10)}-A",
-                "name": f"Offshore Sector Alpha ({lat:.1f}N, {lon+0.15:.1f}E)",
-                "lat": round(lat + 0.08, 4),
-                "lon": round(lon + 0.14, 4),
-                "distance_km": 16.2,
-                "sst_c": 28.2,
-                "chlorophyll": 0.85,
-                "productivity_score": 0.84,
-                "likely_species": ["Mackerel", "Sardine", "Anchovy"]
-            },
-            {
-                "zone_id": f"PFZ-IND-{int(lat*10)}-B",
-                "name": f"Continental Shelf Shelf-break ({lat-0.12:.1f}N, {lon+0.22:.1f}E)",
-                "lat": round(lat - 0.12, 4),
-                "lon": round(lon + 0.22, 4),
-                "distance_km": 24.8,
-                "sst_c": 27.9,
-                "chlorophyll": 0.68,
-                "productivity_score": 0.76,
-                "likely_species": ["Tuna", "Pomfret", "Ribbonfish"]
-            },
-            {
-                "zone_id": f"PFZ-IND-{int(lat*10)}-C",
-                "name": f"Nearshore Bank ({lat+0.05:.1f}N, {lon+0.07:.1f}E)",
-                "lat": round(lat + 0.05, 4),
-                "lon": round(lon + 0.07, 4),
-                "distance_km": 9.5,
-                "sst_c": 28.6,
-                "chlorophyll": 0.58,
-                "productivity_score": 0.69,
-                "likely_species": ["Prawn", "Croaker", "Sole"]
-            }
-        ]
-
-        # Rank by productivity score descending
-        candidate_zones.sort(key=lambda z: z["productivity_score"], reverse=True)
-
-        payload = {
-            "location": {"lat": lat, "lon": lon},
-            "date": date_str,
-            "sst_celsius": sst_celsius,
-            "chlorophyll_mg_m3": chlorophyll_mg_m3,
-            "pfz_zones": candidate_zones,
-            "ocean_current_speed_knots": 1.1,
-            "ocean_current_direction": "SSE",
-            "advisory_notes": "Active thermal front detected 15-25km offshore. Favourable feeding conditions for small pelagics."
-        }
-
-        return AgentEnvelope(
-            agent="marine_fishing",
-            query_run_id=query_run_id,
-            status="success",
-            data=payload,
-            confidence=0.88,
-            source="INCOIS PFZ Multilingual Advisory + NOAA GHRSST (Live Telemetry)",
-            timestamp=datetime.now(timezone.utc),
-            thresholds_used={"min_productivity_score": 0.60}
-        )
-```
+- [ ] **Automated INCOIS PFZ WebGIS Advisory Ingestion**:
+  - Build automated scraper/ETL for daily INCOIS PFZ shapefiles and GeoJSON advisories (`https://incois.gov.in/portal/datainfo/pfz.jsp`).
+  - Store multi-day advisories in PostGIS with spatial indexing (`GIST`).
+- [ ] **Live Satellite Raster Ingestion (NOAA ERDDAP / ISRO OCM-3)**:
+  - Connect NOAA CoastWatch ERDDAP for GHRSST 1km/5km daily SST grids.
+  - Ingest Copernicus Marine / Sentinel-3 OLCI and ISRO OCM-3 Chlorophyll-a raster products.
+- [ ] **Historical Productivity & Trend Analysis (SIH Target Query #7)**:
+  - Implement historical trend engine answering *"Why has fish productivity declined in this region?"*.
+  - Correlate SST anomalies (marine heatwaves), seasonal upwelling shifts, and chlorophyll depletion over 5-year spans.
+- [ ] **Golden-Set CI Automation**:
+  - Build automated regression pipeline running 30–50 historical ground-truth test cases verified against ICAR-CMFRI landing data.
+- [ ] **Bathymetric Depth Filtering**:
+  - Overlay GEBCO 15 arc-second bathymetry contours to filter out pelagic zones that exceed small-craft artisanal net depth limits (<50m depth).
 
 ---
 
-## 4. How to Test Your Agent Locally
+## 3. Real-Time Public Feeds
+| Parameter | Source Body | Endpoint / Feed |
+|---|---|---|
+| **Sea Surface Temperature (SST)** | NOAA CoastWatch ERDDAP | `https://coastwatch.pfeg.noaa.gov/erddap/griddap/` (GHRSST Indian EEZ) |
+| **Chlorophyll-a Concentration** | Copernicus / ISRO OCM-3 | Sentinel-3 OLCI ocean color products |
+| **PFZ Advisories** | INCOIS WebGIS / SAMUDRA | `https://incois.gov.in/portal/datainfo/pfz.jsp` |
 
-Run from terminal:
+---
+
+## 4. Verification & Testing
+Run local verification:
 ```powershell
-python -c "import asyncio; from agents.marine_fishing.marine_agent import MarineFishingAgent; a = MarineFishingAgent(); res = asyncio.run(a.get_ocean_state(16.99, 73.30, '2026-09-10')); print(res.data['pfz_zones'])"
+python -c "import asyncio; from agents.marine_fishing.marine_agent import MarineFishingAgent; a = MarineFishingAgent(); res = asyncio.run(a.get_ocean_state(16.99, 73.30, '2026-09-11')); print(res.data['pfz_zones'][0])"
 ```

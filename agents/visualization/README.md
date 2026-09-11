@@ -1,25 +1,55 @@
-# Visualization / Reporting Agent
-**Owner:** Adeey (also owns the frontend that consumes this agent's output)
+# Visualization / Reporting Agent & Frontend
+**Owner:** Adeey  
+**Status:** MVP Complete ✅ | Next Phase: Offline Tile Caching & Historical Trend Charts
 
 ## Responsibility
-Converts Risk/Route/RAG outputs into GeoJSON map layers, chart specs,
-and the final natural-language explanation with citations — the last
-step before the response reaches the user.
+Transforms multi-agent reasoning, deterministic rule traces, GeoJSON spatial layers, and legal citations into an intuitive, high-aesthetic command dashboard for maritime operators and fishermen.
 
-## MVP Tasks
-- [ ] Define the final response schema: `{text, map_geojson, evidence_panel, citations}`
-- [ ] Build the natural-language explanation generator (LLM call — but constrained to ONLY restate the RiskVerdict's rule_trace, never invent new claims)
-- [ ] Build GeoJSON layer generation for: PFZ zones, hazard zones, geofence boundaries, route lines
-- [ ] Build the evidence/"why" panel data structure the frontend will render
-- [ ] Wire this into the frontend (React + Leaflet) — chat UI + map + evidence panel
+---
 
-## Further Stage (Production)
-- [ ] Groundedness eval: LLM-as-judge check that every sentence in the generated text traces to the evidence envelope
-- [ ] Chart generation for historical trend questions (SST/chlorophyll over time)
-- [ ] Multi-language output rendering (paired with the `translate_out()` wrapper)
-- [ ] Offline map tile caching for the region the user typically operates in
-- [ ] Progressive rendering: show map + partial data while the full explanation is still generating
+## 1. MVP Tasks (Completed ✅)
+- [x] **User Contract & Schema Definition**: Designed strict TypeScript interfaces in [`frontend/src/contracts/userResponse.ts`](file:///c:/Development/Varuna/frontend/src/contracts/userResponse.ts).
+- [x] **Interactive Leaflet Map Canvas**:
+  - Rendered PFZ fishing spot clusters with dual-ring halo styling and rich oceanographic telemetry popups.
+  - Rendered hazard polygons (cyclone cones, severe wave squalls) with red/amber safety styling.
+  - Rendered dynamic navigational routes as glowing dashed teal corridors (`#35B8A6`) with waypoint markers.
+  - Implemented dynamic auto-framing bounding box and centroid calculations.
+- [x] **Evidence & Provenance Panel**:
+  - *Rules & Traces Tab*: Visual audit cards showing deterministic thresholds, measured values, and `BREACH` / `PASSED` status.
+  - *Data Freshness Tab*: Real-time feed latency and station observation timestamps.
+  - *Statutory Citations Tab*: Grounded legal citations with official publishers and gazette excerpts.
+- [x] **Specialized Operational Views**:
+  - *Marine Intelligence Command* (Main map & safety assessment).
+  - *Route Optimization & Safe Passage* (Live navigational timeline, corridor clearance, and vessel telemetry HUD).
+  - *Active Alerts & Fleet Operations* dashboard views.
 
-## Interface Contract
-Consumes: `RiskVerdict`, Route Agent output, RAG Agent output
-Produces: final user-facing response `{text, map_geojson, evidence_panel, citations}`
+---
+
+## 2. Post-MVP & Production Tasks (Current Focus)
+According to the root `README.md` (Sections 1.1, 3, & 9), the next operational priorities are:
+
+- [ ] **Offline Map Tile Caching (Service Worker / PWA)**:
+  - Implement IndexedDB / CacheStorage service worker caching for coastal marine basemap tiles (0–12 NM zone) so maps render with zero cellular connectivity at sea.
+- [ ] **Historical Trend & Time-Series Charts (SIH Query #7)**:
+  - Build interactive time-series visualizations for SST anomalies, chlorophyll concentration cycles, and historical upwelling trends.
+- [ ] **Progressive Streaming Rendering**:
+  - Implement Server-Sent Events (SSE) / WebSocket streaming to render GeoJSON map layers instantly while the LLM natural-language explanation streams in progressively.
+- [ ] **Interactive Claim Grounding (Hover-to-Highlight)**:
+  - On hovering over any claim in the AI explanation, visually highlight the corresponding sensor card, rule trace, or citation in the Evidence Panel.
+- [ ] **Multilingual UI Localization (Bhashini Integration)**:
+  - Support Hindi, Marathi, Tamil, and Malayalam UI localization with Text-to-Speech (TTS) voice playback for artisanal boat operators.
+- [ ] **Mobile Touch Optimization**:
+  - Refine viewport gestures, high-contrast daylight mode, and enlarged touch targets for wet-finger operation on fishing vessels.
+
+---
+
+## 3. Verification & Frontend Build
+Test frontend build and TypeScript compilation:
+```powershell
+cd frontend
+npm run build
+```
+Or run live development server:
+```powershell
+npm run dev
+```

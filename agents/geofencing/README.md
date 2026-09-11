@@ -1,66 +1,53 @@
 # Geospatial / Geofencing Agent
-**Owner:** Vedant
+**Owner:** Vedant  
+**Status:** MVP Complete ✅ | Next Phase: Trajectory Intersections & Complete MPA Ingestion
 
 ## Responsibility
-Performs high-performance point-in-polygon and proximity checks against International Maritime Boundary Lines (IMBL), Exclusive Economic Zones (EEZ), and Marine Protected Areas (MPAs) using PostgreSQL + PostGIS.
+Performs sub-millisecond point-in-polygon containment and proximity buffer calculations against International Maritime Boundary Lines (IMBL), Exclusive Economic Zones (EEZ), and Marine Protected Areas (MPAs) using PostgreSQL + PostGIS.
 
-Works 100% offline without external internet or LLM calls.
-
----
-
-## 1. Local PostGIS Setup & Automated Seeding
-
-Your PostGIS instance runs via Docker on port **5433** (to prevent collision with native Windows PostgreSQL services).
-
-### Instant Seed Command
-Any teammate can seed the required spatial boundaries into PostGIS by running:
-```powershell
-python data/etl/setup_data.py
-```
-This automatically applies [`infra/002_geofencing_schema.sql`](file:///c:/Development/Varuna/infra/002_geofencing_schema.sql) and seeds reference boundaries (Sri Lanka EEZ, Kaziranga MPA, Malvan Sanctuary).
+> Operates **100% offline** without external internet dependencies or LLM overhead.
 
 ---
 
-## 2. PostGIS Spatial Queries Used
-
-In [`agents/geofencing/queries.py`](file:///c:/Development/Varuna/agents/geofencing/queries.py):
-
-```sql
--- Nearest boundary distance calculation and containment check:
-SELECT 
-    name,
-    ST_Distance(geom::geography, ST_SetSRID(ST_MakePoint(%s, %s), 4326)::geography) / 1000.0 AS distance_km,
-    ST_Contains(geom, ST_SetSRID(ST_MakePoint(%s, %s), 4326)) AS contains
-FROM restricted_zones
-ORDER BY geom <-> ST_SetSRID(ST_MakePoint(%s, %s), 4326)
-LIMIT 1;
-```
+## 1. MVP Tasks (Completed ✅)
+- [x] **PostGIS Spatial Engine**: Configured local containerized PostGIS instance on port `5433` with spatial indexes (`GIST`).
+- [x] **Boundary Seeding & Schema**: Automated loading of Sri Lanka EEZ, Indian EEZ, Pakistan EEZ, and Malvan Marine Sanctuary via [`data/etl/setup_data.py`](file:///c:/Development/Varuna/data/etl/setup_data.py).
+- [x] **Spatial Classification Logic**:
+  - Point inside polygon $\to$ `restricted` (Immediate halt warning).
+  - Distance $\le 2.0$ km $\to$ `warning` (Border proximity caution).
+  - Distance $> 2.0$ km $\to$ `clear`.
+- [x] **Standardized Envelope**: Wraps results into [`AgentEnvelope`](file:///c:/Development/Varuna/backend/schemas/envelope.py).
+- [x] **Automated Test Suite**: 8 automated test scenarios in `agents/geofencing/tests/test_geofencing.py` passing cleanly.
 
 ---
 
-## 3. Status Rules
+## 2. Post-MVP & Production Tasks (Current Focus)
+According to the root `README.md` (Sections 1.1, 3, 6, & 9), the next operational priorities are:
 
-| Calculated Spatial Condition | Output Status | Action / Warning |
+- [ ] **Full MarineRegions.org v12 Ingestion**:
+  - Ingest high-precision shapefiles for all Indian subcontinent maritime boundaries (India, Sri Lanka, Pakistan, Maldives, Bangladesh, Myanmar EEZ and treaty lines).
+- [ ] **Comprehensive WDPA Marine Protected Areas (MPAs)**:
+  - Load all 31+ Indian MPAs, Marine National Parks, and Biosphere Reserves (Gulf of Mannar, Sundarbans, Gahirmatha, Mahatma Gandhi Marine NP) from Protected Planet WDPA.
+- [ ] **Route Trajectory Corridor Intersection (`ST_Intersects`)**:
+  - Add spatial validation for entire multi-waypoint LineString routes to ensure no planned passage cuts through restricted marine reserves or crosses the IMBL.
+- [ ] **Monsoon Fishing Ban Territorial Polygons**:
+  - Map state-specific territorial water corridors (0–5 NM artisanal zone vs 5–12 NM mechanized zone vs 12–200 NM EEZ) to automatically flag trawlers operating during state monsoon bans.
+- [ ] **Onboard Offline Edge Mode (SpatiaLite / FlatGeobuf)**:
+  - Package boundaries into lightweight SpatiaLite or FlatGeobuf binaries for zero-network execution directly on vessels' mobile devices.
+
+---
+
+## 3. Boundary Status Rules
+| Spatial Condition | Status | Action / Notice |
 |---|---|---|
-| Point lies inside polygon (`contains == True`) | **`restricted`** | **UNSAFE**: Immediate warning to halt vessel and return to Indian EEZ. |
-| Distance to polygon edge `<= 2.0 km` | **`warning`** | **CAUTION**: Alert that vessel is within 2 km border proximity buffer. |
-| Distance to polygon edge `> 2.0 km` | **`clear`** | Safe to navigate. |
+| Inside Restricted Zone (`contains == True`) | **`restricted`** | **UNSAFE**: Immediate warning to halt vessel and return to Indian EEZ. |
+| Distance to Boundary $\le 2.0$ km | **`warning`** | **CAUTION**: Alert vessel is within 2 km border proximity buffer. |
+| Distance to Boundary $> 2.0$ km | **`clear`** | Cleared for lawful maritime navigation. |
 
 ---
 
-## 4. How to Run the Geofencing Test Suite
-
-Run the 8 automated boundary tests from terminal:
+## 4. Verification & Testing
+Run the automated PostGIS test suite:
 ```powershell
-pytest -v agents/geofencing/tests/test_geofencing.py
+pytest agents/geofencing/tests/test_geofencing.py -v
 ```
-
-All 8 test scenarios pass cleanly:
-1. `test_deep_ocean_clear` (Deep ocean coordinate)
-2. `test_inside_indian_eez_clear` (Mumbai coast)
-3. `test_sri_lanka_eez_restricted` (7.5°N, 79.0°E inside Sri Lanka EEZ)
-4. `test_sri_lanka_imbl_warning` (7.5°N, 78.705°E within 1.4km of IMBL)
-5. `test_mpa_restricted` (Inside sanctuary)
-6. `test_mpa_warning` (Edge proximity)
-7. `test_exact_boundary` (Exact perimeter ring)
-8. `test_route_crossing` (Multi-waypoint transition)
