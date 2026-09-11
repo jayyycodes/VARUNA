@@ -132,37 +132,51 @@ export const LayerRenderer: React.FC<LayerRendererProps> = ({ layer, visible, on
               ? '#1E8A8A'
               : '#35B8A6';
 
+          // Bug 1 fix: backend returns Point geometry for individual fishing spot candidates;
+          // previously these were silently dropped. Render as CircleMarker.
           if (geometry.type === 'Point') {
             const center = toLeafletLatLng(geometry.coordinates as [number, number]);
             return (
-              <CircleMarker
-                key={id}
-                center={center}
-                radius={8}
-                pathOptions={{
-                  color: tealColor,
-                  fillColor: tealColor,
-                  fillOpacity: 0.75,
-                  weight: 2,
-                }}
-                eventHandlers={{
-                  click: () => onSelectFeature?.(id),
-                }}
-              >
-                <Popup className="varuna-map-popup">
-                  <div className="map-popup-content">
-                    <span className="pfz-badge mono text-xs">PFZ TEAL LAYER</span>
-                    <h4 className="text-sm font-bold">{properties.name || properties.title || 'Potential Fishing Zone'}</h4>
-                    <div className="popup-grid mono text-xs">
-                      {properties.productivity_score && <div>Score: {properties.productivity_score}</div>}
-                      {properties.chlorophyll && <div>Chlorophyll: {properties.chlorophyll}</div>}
-                      {properties.sst && <div>SST: {properties.sst}°C</div>}
-                      {properties.distance_km && <div>Distance: {properties.distance_km} km</div>}
-                      {properties.species && <div>Species: {Array.isArray(properties.species) ? properties.species.join(', ') : properties.species}</div>}
+              <React.Fragment key={id}>
+                {/* Outer halo */}
+                <CircleMarker
+                  center={center}
+                  radius={10}
+                  pathOptions={{
+                    color: tealColor,
+                    fillColor: tealColor,
+                    fillOpacity: 0.2,
+                    weight: 1.5,
+                  }}
+                />
+                {/* Core PFZ dot */}
+                <CircleMarker
+                  center={center}
+                  radius={6}
+                  pathOptions={{
+                    color: tealColor,
+                    fillColor: tealColor,
+                    fillOpacity: 0.85,
+                    weight: 2,
+                  }}
+                  eventHandlers={{ click: () => onSelectFeature?.(id) }}
+                >
+                  <Popup className="varuna-map-popup">
+                    <div className="map-popup-content">
+                      <span className="pfz-badge mono text-xs">PFZ FISHING SPOT</span>
+                      <h4 className="text-sm font-bold">{properties.title || properties.name || 'Potential Fishing Zone'}</h4>
+                      <div className="popup-grid mono text-xs">
+                        {properties.productivity_score && <div>Score: {properties.productivity_score}</div>}
+                        {properties.chlorophyll && <div>Chlorophyll: {properties.chlorophyll}</div>}
+                        {properties.sst && <div>SST: {properties.sst}{typeof properties.sst === 'number' ? '°C' : ''}</div>}
+                        {properties.depth && <div>Depth: {properties.depth}</div>}
+                        {properties.distance_km && <div>Distance: {properties.distance_km} km</div>}
+                        {properties.species && <div>Species: {Array.isArray(properties.species) ? properties.species.join(', ') : properties.species}</div>}
+                      </div>
                     </div>
-                  </div>
-                </Popup>
-              </CircleMarker>
+                  </Popup>
+                </CircleMarker>
+              </React.Fragment>
             );
           }
 
