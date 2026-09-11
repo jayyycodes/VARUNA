@@ -1,6 +1,6 @@
 # Planner / Orchestrator Agent
 **Owner:** Jay  
-**Status:** MVP Complete ✅ | Next Phase: Production Hardening & Observability
+**Status:** Tier 2 Production Hardened ✅ | Golden Set Benchmarking (Tier 3)
 
 ## Responsibility
 Parses user natural-language intent, decomposes it into sub-tasks, dispatches specialized domain agents in parallel, enforces deterministic safety guardrails, and aggregates results into an explainable response envelope.
@@ -20,21 +20,21 @@ Parses user natural-language intent, decomposes it into sub-tasks, dispatches sp
 ## 2. Post-MVP & Production Tasks (Current Focus)
 According to the root `README.md` (Sections 3, 9, & 10), the next operational priorities are:
 
-- [ ] **Multi-Turn Session Memory (Redis)**:
-  - Persist conversation state, last-queried port/coordinates, vessel profile, and route waypoints across follow-up queries (e.g. *"Is it safe there tomorrow?"*).
-- [ ] **AI Gateway & Provider Abstraction**:
-  - Implement LiteLLM router with automatic failover: Groq `llama-3.3-70b-versatile` (primary) $\to$ Cerebras `llama3.1-70b` (fallback).
-  - Add request rate-limiting, usage metrics, and token cost tracking per query.
-- [ ] **Prompt Caching**:
-  - Enable prompt caching on static system prompts and agent schemas to achieve sub-second response times.
-- [ ] **Circuit Breaker Ladder**:
-  - If an upstream agent or external feed times out 3 times consecutively, trip circuit breaker for $N$ minutes and return cached/degraded envelopes without blocking the graph.
-- [ ] **Observability & Agent Trajectory Tracing**:
-  - Integrate LangSmith / Langfuse tracing across every state transition to record agent invocation order, tool call payloads, and latency breakdowns.
-- [ ] **Trajectory Evaluation Suite**:
-  - Run automated evals over the 30–50 query golden dataset to benchmark intent classification accuracy and tool selection correctness.
-- [ ] **Multilingual Pipeline Integration**:
-  - Connect `translate_in()` and `translate_out()` wrappers to Bhashini / IndicTrans2 for Hindi, Marathi, Tamil, and Malayalam translation.
+- [x] **Multi-Turn Session Memory**:
+  - Persists conversation state, last-queried port/coordinates, vessel profile, and route waypoints across follow-up queries (e.g. *"Is it safe there tomorrow?"*). Tested via `test_planner_multiturn_session`.
+- [x] **AI Gateway & Provider Abstraction**:
+  - Implemented high-performance router with automatic failover (Groq primary $\to$ Cerebras fallback) using `openai/gpt-oss-120b`.
+  - Added latency metrics, token tracking, and non-blocking circuit protection.
+- [x] **Circuit Breaker Ladder**:
+  - 3-state machine (`CLOSED`, `OPEN`, `HALF_OPEN`) in `backend/gateway/circuit_breaker.py` guarding upstream APIs (`open_meteo_weather`, `incois_wfs`, `geofencing_postgis`, `groq_llm`, `cerebras_llm`) with fast-fail fallback execution.
+- [x] **Observability & Agent Trajectory Tracing**:
+  - Integrated LangSmith SDK (`RunTree`) across state transitions in `backend/gateway/observability.py` recording agent invocation order, tool call payloads, latency breakdowns, and LLM spans.
+- [x] **Multilingual Pipeline Integration**:
+  - Integrated `translate_in()` and `translate_out()` wrappers in `backend/gateway/multilingual.py` for Hindi and Marathi Devanagari detection and bidirectional translation.
+- [x] **Upstream Health Monitoring**:
+  - Exposes circuit status via `GET /health` and dedicated `GET /api/health/upstream` endpoint.
+- [ ] **Golden Set Trajectory Evaluation Suite**:
+  - Benchmark intent classification accuracy and tool selection correctness across 50 regional golden queries.
 
 ---
 
