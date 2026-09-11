@@ -328,14 +328,66 @@ export class VarunaApiClient {
     }
 
     const mapLayers: MapLayer[] = [];
+    let center: [number, number] = derivedCenter;
+    let zoom = 9;
+
     if (raw.map_data && raw.map_data.features) {
-      mapLayers.push({
-        id: 'layer-live-features',
-        type: 'pfz',
-        label: 'Live Active Coordinates',
-        visible_by_default: true,
-        feature_collection: raw.map_data,
-      });
+      const allFeats = raw.map_data.features;
+      const routeFeats = allFeats.filter((f: any) => f.properties?.type === 'route' || f.geometry?.type === 'LineString');
+      const pfzFeats = allFeats.filter((f: any) => f.properties?.type === 'pfz_zone' || f.properties?.type === 'pfz');
+      const navFeats = allFeats.filter((f: any) => f.properties?.type?.includes('location') || f.properties?.type === 'mpa');
+
+      if (routeFeats.length > 0) {
+        mapLayers.push({
+          id: 'layer-live-route',
+          type: 'route',
+          label: 'Optimal Transit Corridor',
+          visible_by_default: true,
+          feature_collection: { type: 'FeatureCollection', features: routeFeats },
+        });
+
+        // Frame the route midpoint
+        const coords = routeFeats[0].geometry?.coordinates;
+        if (coords && coords.length > 0) {
+          const midIdx = Math.floor(coords.length / 2);
+          center = [coords[midIdx][0], coords[midIdx][1]];
+          zoom = coords.length > 10 ? 7 : 8;
+        }
+      }
+
+      if (pfzFeats.length > 0) {
+        mapLayers.push({
+          id: 'layer-live-pfz',
+          type: 'pfz',
+          label: 'Potential Fishing Zones',
+          visible_by_default: true,
+          feature_collection: { type: 'FeatureCollection', features: pfzFeats },
+        });
+      }
+
+      if (navFeats.length > 0) {
+        mapLayers.push({
+          id: 'layer-live-waypoints',
+          type: 'user_location',
+          label: 'Departure & Destinations',
+          visible_by_default: true,
+          feature_collection: { type: 'FeatureCollection', features: navFeats },
+        });
+
+        if (routeFeats.length === 0 && navFeats[0].geometry?.coordinates) {
+          center = [navFeats[0].geometry.coordinates[0], navFeats[0].geometry.coordinates[1]];
+        }
+      }
+
+      if (mapLayers.length === 0) {
+        mapLayers.push({
+          id: 'layer-live-features',
+          type: 'pfz',
+          label: 'Active Coordinates',
+          visible_by_default: true,
+          feature_collection: raw.map_data,
+        });
+      }
     }
 
     // Bug 4 fix: citations tab was always empty because citations: [] was hardcoded.
@@ -344,7 +396,7 @@ export class VarunaApiClient {
       .filter((ev: any) => ev?.agent === 'rag_advisory' || ev?.source === 'rag_advisory')
       .map((ev: any, idx: number) => ({
         id: ev.id || `cite-live-${idx + 1}`,
-        title: ev.title || ev.document_title || ev.chunk_title || 'Marine Gazette Reference',
+        title: ev.title || ev.document_title || ev.chunk_title || ev.source || 'Marine Gazette Reference',
         publisher: ev.publisher || ev.source_name || 'INCOIS / Ministry of Fisheries',
         url: ev.url || ev.source_url || '#',
         published_at: ev.published_at || ev.date || new Date(0).toISOString(),
@@ -381,8 +433,8 @@ export class VarunaApiClient {
       claims,
       map: {
         viewport: {
-          center: derivedCenter,
-          zoom: 9,
+          center,
+          zoom,
         },
         layers: mapLayers,
       },
