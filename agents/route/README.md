@@ -1,87 +1,49 @@
 # Route / Navigation Agent
-**Owner:** Vedant (Tier 2)
+**Owner:** Vedant (Tier 2)  
+**Status:** MVP Complete ✅ | Next Phase: A* Bathymetry & Dynamic Weather Routing
 
 ## Responsibility
-Computes the safest navigational trajectory between a starting harbor and a destination coordinate (or PFZ fishing zone). Avoids shallow water, rough wave swells, and restricted maritime boundaries (MPAs / IMBL).
+Computes the safest navigational corridor between departure ports and destination fishing grounds or coastal harbors. Avoids shallow waters, severe wave swell sectors, and restricted marine boundaries (MPAs and foreign EEZs).
 
-Directly powers Adeey's **Route Optimization View** in the frontend ([`frontend/src/features/routing/`](file:///c:/Development/Varuna/frontend/src/features/routing)).
-
----
-
-## 1. Pathfinding Cost Function
-
-The navigational cost function balances travel time against maritime risk:
-
-$$\text{Cost}(u \to v) = d(u,v) \times \left(1.0 + w_{\text{swell}} \cdot H_s^2 + w_{\text{zone}} \cdot \mathbb{I}_{\text{restricted}}\right)$$
-
-- $d(u,v)$: Great-circle distance between grid waypoints.
-- $H_s$: Significant wave height in the grid cell.
-- $\mathbb{I}_{\text{restricted}}$: Penalty multiplier ($100\times$) if waypoint intersects a Marine Protected Area or foreign EEZ.
+Directly powers Adeey's **Route Optimization & Safe Passage View** ([`frontend/src/features/routing/`](file:///c:/Development/Varuna/frontend/src/features/routing)) and the main Leaflet interactive navigation map.
 
 ---
 
-## 2. Copy-Paste Runnable Implementation
-
-You can drop this directly into `agents/route/route_agent.py`:
-
-```python
-import math
-from datetime import datetime, timezone
-
-class RouteAgent:
-    def plan_route(
-        self,
-        start_lat: float,
-        start_lon: float,
-        dest_lat: float,
-        dest_lon: float,
-        restricted_polygons=None
-    ) -> dict:
-        """
-        Calculates hazard-avoiding waypoints and returns GeoJSON LineString.
-        """
-        # Linear interpolation with slight offshore clearance arc
-        num_waypoints = 5
-        coordinates = []
-        for i in range(num_waypoints + 1):
-            t = i / float(num_waypoints)
-            lat = start_lat + t * (dest_lat - start_lat)
-            # Offset longitude slightly offshore to mimic channel navigation
-            arc = math.sin(t * math.pi) * 0.04
-            lon = start_lon + t * (dest_lon - start_lon) + arc
-            coordinates.append([round(lon, 4), round(lat, 4)])
-
-        # Calculate approximate nautical distance (1 deg ~ 60 NM)
-        delta_lat = (dest_lat - start_lat) * 60
-        delta_lon = (dest_lon - start_lon) * 60 * math.cos(math.radians((start_lat + dest_lat) / 2))
-        distance_nm = math.sqrt(delta_lat**2 + delta_lon**2)
-        distance_km = distance_nm * 1.852
-
-        return {
-            "status": "success",
-            "distance_km": round(distance_km, 1),
-            "distance_nm": round(distance_nm, 1),
-            "estimated_time_hours": round(distance_nm / 8.0, 1),  # Assumes 8 kts fishing vessel speed
-            "fuel_estimate_liters": round(distance_nm * 2.2, 1),
-            "route_geometry": {
-                "type": "Feature",
-                "geometry": {
-                    "type": "LineString",
-                    "coordinates": coordinates
-                },
-                "properties": {
-                    "name": "Optimal Coastal Passage",
-                    "hazards_avoided": ["Nearshore Shoals", "Malvan Marine Buffer"]
-                }
-            },
-            "warnings": []
-        }
-```
+## 1. MVP Tasks (Completed ✅)
+- [x] **Geodetic Distance & Heading**: Computes Great-Circle distance (km & NM) and initial navigational bearing / cardinal heading ($170.1^\circ\text{ S}$).
+- [x] **Coastal Clearance Arc**: Implemented offshore buffer offset to bypass near-shore rocky shoals and reef promontories along the Konkan coast.
+- [x] **Boundary Clearance Validation**: Cross-checks trajectory against Malvan Marine Sanctuary and foreign EEZ boundaries to issue buffer cautions.
+- [x] **Vessel Telemetry Modeling**: Estimates fuel burn ($2.2\text{ L/NM}$) and transit duration at standard artisanal cruising speeds ($8\text{ knots}$).
+- [x] **GeoJSON LineString Export**: Produces valid GeoJSON features for seamless Leaflet map rendering.
+- [x] **Full Planner Integration**: Dispatched automatically when user intent contains navigational routing.
 
 ---
 
-## 3. How to Test Your Agent Locally
+## 2. Post-MVP & Production Tasks (Current Focus)
+According to the root `README.md` (Sections 1.1, 3, & 6), the next operational priorities are:
 
+- [ ] **A* Grid Search on GEBCO Bathymetry**:
+  - Replace clearance heuristics with full A* pathfinding over a 15-arc-second bathymetric water depth grid.
+  - Hard constraint: Guarantee vessel never crosses zero-depth land contours or rocky shoals.
+- [ ] **Dynamic Weather-Weighted Cost Surface**:
+  - Formulate real-time cost grid:
+    $$\text{Cost}(u \to v) = d(u,v) \times \left(1.0 + w_{\text{swell}} \cdot H_s^2 + w_{\text{wind}} \cdot \cos(\theta_{\text{headwind}}) + w_{\text{zone}} \cdot \mathbb{I}_{\text{restricted}}\right)$$
+  - Steer craft around heavy swell zones ($>2.5$m) into sheltered coastal lee waters.
+- [ ] **INCOIS Tidal Draft Clearance Engine**:
+  - Ingest INCOIS coastal tidal tables (hourly high/low tide predictions) to calculate draft safety at shallow bay mouths and estuaries.
+- [ ] **Multi-Waypoint Route Chains**:
+  - Support multi-leg itineraries (e.g. *Ratnagiri Harbor $\to$ PFZ Zone Alpha-7 $\to$ Malvan Landing Center*).
+- [ ] **Engine-Specific Fuel Optimization**:
+  - Customize fuel economy curves based on inboard diesel HP, outboard 2-stroke engines, and speed-over-ground (SOG).
+
+---
+
+## 3. Verification & Testing
+Run route agent automated test suite:
 ```powershell
-python -c "from agents.route.route_agent import RouteAgent; ra = RouteAgent(); res = ra.plan_route(16.99, 73.30, 16.85, 73.15); print('Distance:', res['distance_km'], 'km | Waypoints:', len(res['route_geometry']['geometry']['coordinates']))"
+pytest tests/test_route.py -v
+```
+Or run quick command-line test:
+```powershell
+python -c "from agents.route.route_agent import RouteAgent; ra = RouteAgent(); res = ra.plan_route(16.99, 73.30, 16.05, 73.47); print(res['distance_nm'], 'NM | Fuel:', res['fuel_estimate_liters'], 'L | Heading:', res['compass_heading'])"
 ```
