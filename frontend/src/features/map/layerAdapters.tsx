@@ -286,18 +286,21 @@ export const LayerRenderer: React.FC<LayerRendererProps> = ({ layer, visible, on
           }
         }
 
-        // 5. Route / Transit corridor
-        if (featureType === 'route' || type === 'route' || geometry.type === 'LineString') {
+        // 5. Route / Transit corridor (Dual: Safe Recommended Corridor vs Direct Rhumb Line)
+        if (featureType === 'route' || featureType === 'route_direct' || type === 'route' || geometry.type === 'LineString') {
           if (geometry.type === 'LineString') {
             const positions = toLeafletLineString(geometry.coordinates as number[][]);
+            const isDirect = featureType === 'route_direct' || properties.route_variant === 'direct';
+
             return (
               <Polyline
                 key={id}
                 positions={positions}
                 pathOptions={{
-                  color: '#35B8A6',
-                  weight: 4,
-                  dashArray: '8, 6',
+                  color: isDirect ? '#94A3B8' : '#35B8A6',
+                  weight: isDirect ? 2.5 : 4,
+                  dashArray: isDirect ? '5, 8' : '8, 6',
+                  opacity: isDirect ? 0.7 : 0.95,
                 }}
                 eventHandlers={{
                   click: () => onSelectFeature?.(id),
@@ -305,14 +308,20 @@ export const LayerRenderer: React.FC<LayerRendererProps> = ({ layer, visible, on
               >
                 <Popup className="varuna-map-popup">
                   <div className="map-popup-content">
-                    <span className="pfz-badge mono text-xs">TRANSIT CORRIDOR</span>
-                    <h4 className="text-sm font-bold">{properties.name || 'Optimal Navigational Passage'}</h4>
+                    <span className="pfz-badge mono text-xs" style={{ background: isDirect ? 'rgba(148, 163, 184, 0.2)' : 'rgba(53, 184, 166, 0.2)', color: isDirect ? '#CBD5E1' : '#35B8A6' }}>
+                      {isDirect ? 'DIRECT BASELINE (UNBUFFERED)' : 'RECOMMENDED SAFE CORRIDOR'}
+                    </span>
+                    <h4 className="text-sm font-bold">{properties.name || (isDirect ? 'Direct Rhumb Line' : 'Optimal Navigational Passage')}</h4>
                     <div className="popup-grid mono text-xs">
                       {properties.distance_nm && <div>Distance: {properties.distance_nm} NM ({properties.distance_km} km)</div>}
                       {properties.ete_hours && <div>Est. Time: {properties.ete_hours} hrs @ {properties.vessel_speed_kts || 8} kts</div>}
                       {properties.fuel_liters && <div>Est. Fuel: {properties.fuel_liters} L</div>}
                       {properties.bearing && <div>Heading: {properties.cardinal} ({properties.bearing}°)</div>}
-                      {properties.hazards_avoided && <div>Avoided: {Array.isArray(properties.hazards_avoided) ? properties.hazards_avoided.join(', ') : properties.hazards_avoided}</div>}
+                      {isDirect ? (
+                        <div style={{ color: '#F59E0B' }}>⚠️ Hazards: Cuts across near-shore shoals & unchecked sanctuary buffers</div>
+                      ) : (
+                        properties.hazards_avoided && <div>Avoided: {Array.isArray(properties.hazards_avoided) ? properties.hazards_avoided.join(', ') : properties.hazards_avoided}</div>
+                      )}
                     </div>
                   </div>
                 </Popup>

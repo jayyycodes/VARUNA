@@ -21,6 +21,7 @@ Graph:
 import asyncio
 import json
 import logging
+import time
 import uuid
 from datetime import date, timedelta
 from typing import Any, TypedDict
@@ -51,6 +52,9 @@ class PlannerState(TypedDict, total=False):
     conversation_id: str
     user_id: str
     query_run_id: str
+    prior_location: dict[str, Any] | None
+    prior_destination: dict[str, Any] | None
+    detected_language: str
 
     # ── After intent classification ────────────────────────────────
     intent: str                         # safety_check | find_fishing_zone | route_request | regulation_question
@@ -202,10 +206,16 @@ def resolve_port_location(query: str, extracted_loc: dict[str, Any] | None) -> d
     return {"lat": 16.99, "lon": 73.30, "name": "Ratnagiri, Maharashtra (default)"}
 
 
-def extract_route_endpoints(query: str, parsed: dict | None = None) -> tuple[dict[str, Any], dict[str, Any] | None]:
+def extract_route_endpoints(
+    query: str,
+    parsed: dict | None = None,
+    prior_location: dict[str, Any] | None = None,
+    prior_destination: dict[str, Any] | None = None,
+) -> tuple[dict[str, Any], dict[str, Any] | None]:
     """
     Extracts departure and destination locations for routing.
     Detects patterns like 'from PortA to PortB' or multiple ports in query.
+    Falls back to prior session location for multi-turn queries.
     """
     q_lower = query.lower()
     ports_found = [p for p in INDIAN_COASTAL_PORTS if p in q_lower]
@@ -221,7 +231,19 @@ def extract_route_endpoints(query: str, parsed: dict | None = None) -> tuple[dic
         dest = INDIAN_COASTAL_PORTS[dest_key]
         return start, dest
 
-    # Check if destination explicitly parsed
+    # Single port in routing query with prior location context
+    if len(ports_found) == 1:
+        port = INDIAN_COASTAL_PORTS[ports_found[0]]
+        # If query asks "to <port>" or "route to <port>" and we have prior location
+        if prior_location and any(kw in q_lower for kw in ["to ", "reach ", "route "]):
+            return prior_location, port
+        return port, None
+
+    # No explicit port in query — check prior location for follow-up questions
+    if prior_location and any(kw in q_lower for kw in ["there", "here", "tomorrow", "this", "safe", "weather", "route"]):
+        return prior_location, prior_destination
+
+    # Check if destination explicitly parsed by LLM
     if parsed and parsed.get("destination"):
         raw_dest = parsed["destination"]
         dest = resolve_port_location(raw_dest.get("name", ""), raw_dest)
@@ -278,7 +300,12 @@ async def classify_intent(state: PlannerState) -> dict:
         parsed = json.loads(clean_raw.strip())
 
         intent = parsed.get("intent", "safety_check")
-        location, destination = extract_route_endpoints(state["query"], parsed)
+        location, destination = extract_route_endpoints(
+            state["query"],
+            parsed,
+            prior_location=state.get("prior_location"),
+            prior_destination=state.get("prior_destination"),
+        )
         query_date = parsed.get("date", tomorrow_str)
 
         logger.info(
@@ -291,7 +318,12 @@ async def classify_intent(state: PlannerState) -> dict:
 
     except Exception as e:
         logger.error(f"[planner] Intent classification failed: {e} — using defaults")
-        location, destination = extract_route_endpoints(state["query"], None)
+        location, destination = extract_route_endpoints(
+            state["query"],
+            None,
+            prior_location=state.get("prior_location"),
+            prior_destination=state.get("prior_destination"),
+        )
         return {
             "intent": "safety_check",
             "location": location,
@@ -312,68 +344,95 @@ async def dispatch_data_agents(state: PlannerState) -> dict:
     lat = state["location"]["lat"]
     lon = state["location"]["lon"]
     d = state["date"]
+    intent = state.get("intent", "safety_check")
 
     async def _get_weather() -> AgentEnvelope:
-        """Call Cbum's LIVE WeatherAgent; fall back to mock only on import/crash."""
+        """Call Cbum's LIVE WeatherAgent; fall back to mock on circuit break or crash."""
+        from backend.gateway.circuit_breaker import circuit_registry
+        from backend.gateway.observability import log_agent_trajectory
+        t0 = time.monotonic()
         try:
             from agents.weather.weather_agent import WeatherAgent
-            result = await WeatherAgent().get_forecast(lat=lat, lon=lon, date=d, query_run_id=qid)
-            # 'degraded' is still real live data with a fallback payload — do NOT replace with mock.
-            # Only fall back to mock on a hard 'error' status (shouldn't happen; WeatherAgent
-            # returns degraded instead, but guard anyway).
-            if result.status == "error":
-                logger.warning(
-                    f"[planner] Live Weather returned error ({result.error_message}) — using mock fallback"
-                )
-                return mock_weather(qid, lat, lon, d)
+            async def _fetch():
+                return await WeatherAgent().get_forecast(lat=lat, lon=lon, date=d, query_run_id=qid)
+
+            result = await circuit_registry.call(
+                "open_meteo_weather",
+                _fetch,
+                fallback_factory=lambda: mock_weather(qid, lat, lon, d),
+            )
+            ms = (time.monotonic() - t0) * 1000
+            log_agent_trajectory(qid, "weather", intent, result.status, ms, {"lat": lat, "lon": lon, "date": d}, result.data)
             logger.info(f"[planner] Live Weather OK ({result.status}) — {result.data.get('forecast_summary')}")
             return result
         except Exception as exc:
-            logger.warning(f"[planner] WeatherAgent import/call failed: {exc} — using mock fallback")
-            return mock_weather(qid, lat, lon, d)
+            logger.warning(f"[planner] WeatherAgent call failed: {exc} — using mock fallback")
+            res = mock_weather(qid, lat, lon, d)
+            log_agent_trajectory(qid, "weather", intent, "mock_fallback", (time.monotonic() - t0) * 1000, {"lat": lat, "lon": lon}, res.data, error=str(exc))
+            return res
 
     async def _get_geofencing() -> AgentEnvelope:
-        """Call Vedant's LIVE GeofencingAgent (PostGIS); fall back to mock on any failure."""
+        """Call Vedant's LIVE GeofencingAgent (PostGIS); fall back to mock on circuit break or crash."""
+        from backend.gateway.circuit_breaker import circuit_registry
+        from backend.gateway.observability import log_agent_trajectory
+        t0 = time.monotonic()
         try:
             from agents.geofencing.agent import GeofencingAgent
             from agents.geofencing.models import GeofencingRequest
-            result = await GeofencingAgent(db_pool=None).run(
-                GeofencingRequest(query_run_id=qid, lat=lat, lon=lon)
-            )
-            if result.status == "error":
-                logger.warning(
-                    f"[planner] Live Geofencing returned error ({result.error_message}) — using mock fallback"
+
+            async def _fetch():
+                return await GeofencingAgent(db_pool=None).run(
+                    GeofencingRequest(query_run_id=qid, lat=lat, lon=lon)
                 )
-                return mock_geofencing(qid, lat, lon)
+
+            result = await circuit_registry.call(
+                "geofencing_postgis",
+                _fetch,
+                fallback_factory=lambda: mock_geofencing(qid, lat, lon),
+            )
+            ms = (time.monotonic() - t0) * 1000
+            log_agent_trajectory(qid, "geofencing", intent, result.status, ms, {"lat": lat, "lon": lon}, result.data)
             logger.info(
                 f"[planner] Live Geofencing OK — status: {result.data.get('status')}, "
                 f"nearest: {result.data.get('nearest_boundary_name')}"
             )
             return result
         except Exception as exc:
-            logger.warning(f"[planner] GeofencingAgent import/call failed: {exc} — using mock fallback")
-            return mock_geofencing(qid, lat, lon)
+            logger.warning(f"[planner] GeofencingAgent call failed: {exc} — using mock fallback")
+            res = mock_geofencing(qid, lat, lon)
+            log_agent_trajectory(qid, "geofencing", intent, "mock_fallback", (time.monotonic() - t0) * 1000, {"lat": lat, "lon": lon}, res.data, error=str(exc))
+            return res
 
     async def _get_marine() -> AgentEnvelope:
-        """Call Jaish's LIVE MarineFishingAgent; fall back to mock on any failure."""
+        """Call Jaish's LIVE MarineFishingAgent; fall back to mock on circuit break or crash."""
+        from backend.gateway.circuit_breaker import circuit_registry
+        from backend.gateway.observability import log_agent_trajectory
+        t0 = time.monotonic()
         try:
             from agents.marine_fishing.marine_agent import MarineFishingAgent
-            result = await MarineFishingAgent().get_ocean_state(
-                lat=lat, lon=lon, date_str=d, query_run_id=qid
-            )
-            if result.status == "error":
-                logger.warning(
-                    f"[planner] Live Marine returned error ({result.error_message}) — using mock fallback"
+
+            async def _fetch():
+                return await MarineFishingAgent().get_ocean_state(
+                    lat=lat, lon=lon, date_str=d, query_run_id=qid
                 )
-                return mock_marine(qid, lat, lon, d)
+
+            result = await circuit_registry.call(
+                "incois_wfs",
+                _fetch,
+                fallback_factory=lambda: mock_marine(qid, lat, lon, d),
+            )
+            ms = (time.monotonic() - t0) * 1000
+            log_agent_trajectory(qid, "marine", intent, result.status, ms, {"lat": lat, "lon": lon, "date": d}, result.data)
             logger.info(
                 f"[planner] Live Marine OK ({result.status}) — "
                 f"{len(result.data.get('pfz_zones', []))} zones"
             )
             return result
         except Exception as exc:
-            logger.warning(f"[planner] MarineFishingAgent import/call failed: {exc} — using mock fallback")
-            return mock_marine(qid, lat, lon, d)
+            logger.warning(f"[planner] MarineFishingAgent call failed: {exc} — using mock fallback")
+            res = mock_marine(qid, lat, lon, d)
+            log_agent_trajectory(qid, "marine", intent, "mock_fallback", (time.monotonic() - t0) * 1000, {"lat": lat, "lon": lon}, res.data, error=str(exc))
+            return res
 
     # Dispatch Weather + Marine + Geofencing in parallel
     weather, marine, geo = await asyncio.gather(_get_weather(), _get_marine(), _get_geofencing())
@@ -405,6 +464,8 @@ async def dispatch_data_agents(state: PlannerState) -> dict:
     if dest_lat is not None and dest_lon is not None and (intent in ("route_request", "find_fishing_zone") or dest_info is not None):
         try:
             from agents.route.route_agent import RouteAgent
+            from backend.gateway.observability import log_agent_trajectory
+            t0_r = time.monotonic()
             r_agent = RouteAgent()
             r_env = await r_agent.plan_route(
                 start_lat=start_lat,
@@ -414,6 +475,8 @@ async def dispatch_data_agents(state: PlannerState) -> dict:
                 query_run_id=qid,
             )
             route_result = r_env.model_dump(mode="json")
+            ms_r = (time.monotonic() - t0_r) * 1000
+            log_agent_trajectory(qid, "route", intent, r_env.status, ms_r, {"start": [start_lat, start_lon], "dest": [dest_lat, dest_lon]}, route_result["data"])
             logger.info(
                 f"[planner] RouteAgent OK ({r_env.status}) — "
                 f"{route_result['data'].get('distance_nm')} NM | "
@@ -440,14 +503,19 @@ async def dispatch_rag(state: PlannerState) -> dict:
     """Call RAG/Advisory agent for regulation questions."""
     qid = state["query_run_id"]
     q = state["query"]
+    from backend.gateway.observability import log_agent_trajectory
+    t0_rag = time.monotonic()
     try:
         from agents.rag_advisory.rag_agent import RAGAdvisoryAgent
         agent = RAGAdvisoryAgent()
         rag_result = await agent.answer_with_citations(question=q, query_run_id=qid)
+        ms_rag = (time.monotonic() - t0_rag) * 1000
+        log_agent_trajectory(qid, "rag_advisory", state.get("intent", ""), "success", ms_rag, {"query": q}, rag_result)
         logger.info(f"[planner] Live RAG agent OK — {len(rag_result.get('citations', []))} citations")
     except Exception as e:
         logger.warning(f"[planner] Live RAG agent failed ({e}) — using mock fallback")
         rag_result = mock_rag(qid, q)
+        log_agent_trajectory(qid, "rag_advisory", state.get("intent", ""), "mock_fallback", (time.monotonic() - t0_rag) * 1000, {"query": q}, rag_result, error=str(e))
 
     return {"rag_result": rag_result}
 
@@ -629,10 +697,14 @@ def _build_map_data(state: PlannerState) -> dict:
             },
         })
 
-    # Route navigation LineString feature
+    # Route navigation LineString features (Safe Corridor + Direct Baseline)
     route = state.get("route_result", {})
-    if route and route.get("data", {}).get("route_feature"):
-        features.append(route["data"]["route_feature"])
+    if route:
+        r_data = route.get("data", {})
+        if r_data.get("route_feature"):
+            features.append(r_data["route_feature"])
+        if r_data.get("route_direct_feature"):
+            features.append(r_data["route_direct_feature"])
 
     return {"type": "FeatureCollection", "features": features}
 
@@ -658,6 +730,8 @@ def _build_evidence(state: PlannerState) -> list[dict]:
                 ev_entry["distance_nm"] = r_data.get("distance_nm")
                 ev_entry["estimated_time_hours"] = r_data.get("estimated_time_hours")
                 ev_entry["fuel_liters"] = r_data.get("fuel_estimate_liters")
+                if "comparison" in r_data:
+                    ev_entry["comparison"] = r_data["comparison"]
             evidence.append(ev_entry)
 
     # RAG citations
@@ -736,6 +810,7 @@ class PlannerAgent:
 
     def __init__(self):
         self.graph = _build_graph()
+        self.sessions: dict[str, dict[str, Any]] = {}
         logger.info("[planner] LangGraph compiled — ready to handle queries")
 
     async def handle_query(
@@ -749,7 +824,7 @@ class PlannerAgent:
 
         Args:
             query: Natural language question about marine conditions.
-            conversation_id: Session ID for multi-turn context (future).
+            conversation_id: Session ID for multi-turn context.
             user_id: User identifier.
 
         Returns:
@@ -757,17 +832,33 @@ class PlannerAgent:
             {query_run_id, intent, text, map_data, evidence, risk_verdict, status}
         """
         query_run_id = str(uuid.uuid4())
-        logger.info(f"[planner] New query: {query!r}  (run={query_run_id[:8]}…)")
+        cid = conversation_id or "default_session"
+
+        # 1. Retrieve prior session context for multi-turn continuity
+        prior_context = self.sessions.get(cid, {})
+        prior_loc = prior_context.get("location")
+        prior_dest = prior_context.get("destination")
+
+        # 2. Multilingual translation & language detection
+        from backend.gateway.multilingual import translate_in, translate_out
+        clean_query, detected_lang = await translate_in(query)
+
+        logger.info(
+            f"[planner] Query: {query!r} (lang={detected_lang}, en={clean_query!r}, run={query_run_id[:8]}…)"
+        )
 
         try:
             result = await self.graph.ainvoke({
-                "query": query,
-                "conversation_id": conversation_id,
+                "query": clean_query,
+                "conversation_id": cid,
                 "user_id": user_id,
                 "query_run_id": query_run_id,
+                "prior_location": prior_loc,
+                "prior_destination": prior_dest,
+                "detected_language": detected_lang,
             })
 
-            return result.get("response", {
+            resp = result.get("response", {
                 "query_run_id": query_run_id,
                 "intent": "error",
                 "text": "An unexpected error occurred while processing your query.",
@@ -776,6 +867,25 @@ class PlannerAgent:
                 "risk_verdict": None,
                 "status": "error",
             })
+
+            # 3. Save updated session state
+            final_loc = result.get("location") or prior_loc
+            final_dest = result.get("destination") or prior_dest
+            self.sessions[cid] = {
+                "location": final_loc,
+                "destination": final_dest,
+                "last_query": clean_query,
+                "last_intent": result.get("intent"),
+                "last_verdict": result.get("risk_verdict", {}).get("verdict"),
+                "route": result.get("route_result"),
+            }
+
+            # 4. Outbound localized translation if needed
+            if detected_lang != "en" and resp.get("text"):
+                resp["text"] = await translate_out(resp["text"], detected_lang)
+                resp["detected_language"] = detected_lang
+
+            return resp
 
         except Exception as e:
             logger.error(f"[planner] Pipeline failed: {e}", exc_info=True)
