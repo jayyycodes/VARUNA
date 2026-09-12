@@ -8,6 +8,7 @@ using a Hierarchical A* pathfinding algorithm over dynamic grids.
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import math
 import uuid
@@ -19,10 +20,59 @@ from agents.geofencing.queries import check_geofence
 from agents.route.grid import build_bounding_box, calculate_resolution
 from agents.route.pathfinding import a_star_search, heuristic
 
+from pathlib import Path
+from shapely.geometry import LineString, Point, shape
+from shapely.ops import unary_union
+
 logger = logging.getLogger("varuna.route")
 
 R_EARTH_KM = 6371.0
 KM_PER_NM = 1.852
+
+COASTLINE_FILE = Path(__file__).resolve().parents[2] / "data" / "shapefiles" / "india_coastline_simplified.geojson"
+_COASTLINE_GEOM = None
+
+def get_coastline_geometry():
+    """Loads and caches simplified India coastline polygon geometry for collision detection."""
+    global _COASTLINE_GEOM
+    if _COASTLINE_GEOM is None and COASTLINE_FILE.exists():
+        try:
+            with open(COASTLINE_FILE, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            polys = []
+            for feat in data.get("features", []):
+                g = shape(feat["geometry"])
+                if g.is_valid:
+                    polys.append(g)
+            if polys:
+                _COASTLINE_GEOM = unary_union(polys)
+        except Exception as e:
+            logger.warning(f"[route] Failed to load coastline shapefile: {e}")
+    return _COASTLINE_GEOM
+
+def check_line_coastline_intersection(coords: list[list[float]]) -> bool:
+    """Checks if a GeoJSON LineString [lon, lat] intersects or crosses the simplified coastline landmass."""
+    geom = get_coastline_geometry()
+    if geom is None or len(coords) < 2:
+        return False
+    try:
+        line = LineString(coords)
+        if geom.crosses(line):
+            return True
+
+        for i in range(len(coords) - 1):
+            seg = LineString([coords[i], coords[i + 1]])
+            if geom.crosses(seg):
+                return True
+
+        for lon, lat in coords[1:-1]:
+            if geom.contains(Point(lon, lat)):
+                return True
+
+        return False
+    except Exception as exc:
+        logger.warning(f"[route] Coastline intersection check error: {exc}")
+        return False
 
 def haversine_distance_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     return heuristic(lat1, lon1, lat2, lon2)
@@ -61,24 +111,36 @@ def generate_waypoints(
     start_lon: float,
     dest_lat: float,
     dest_lon: float,
-    num_steps: int = 6,
+    num_steps: int = 8,
     max_arc: float = 0.03,
 ) -> list[list[float]]:
     """
-    Generate intermediate navigational waypoints with seaward coastal clearance.
+    Generate intermediate navigational waypoints with perpendicular seaward coastal clearance.
     Returns coordinates formatted as GeoJSON [lon, lat].
     """
     coordinates: list[list[float]] = []
-    avg_lon = (start_lon + dest_lon) / 2.0
-    seaward_sign = -1.0 if avg_lon < 78.0 else 1.0
+
+    d_lat = dest_lat - start_lat
+    d_lon = dest_lon - start_lon
+    dist_deg = math.hypot(d_lat, d_lon)
+
+    if dist_deg < 1e-6:
+        return [[round(start_lon, 4), round(start_lat, 4)], [round(dest_lon, 4), round(dest_lat, 4)]]
+
+    u_lat = d_lat / dist_deg
+    u_lon = d_lon / dist_deg
+
+    p_lat = -u_lon
+    p_lon = u_lat
 
     for i in range(num_steps + 1):
         t = i / float(num_steps)
-        lat = start_lat + t * (dest_lat - start_lat)
-        base_lon = start_lon + t * (dest_lon - start_lon)
+        base_lat = start_lat + t * d_lat
+        base_lon = start_lon + t * d_lon
 
-        arc_offset = math.sin(t * math.pi) * max_arc * seaward_sign
-        lon = base_lon + arc_offset
+        arc_factor = math.sin(t * math.pi) * max_arc
+        lat = base_lat + arc_factor * p_lat
+        lon = base_lon + arc_factor * p_lon
 
         coordinates.append([round(lon, 4), round(lat, 4)])
 
@@ -274,18 +336,44 @@ class RouteAgent:
                 error_message=str(exc),
             )
 
-    def _generate_fallback_corridor(self, start_lat, start_lon, dest_lat, dest_lon, dist_km) -> dict:
-        clearance_deg = max(0.10, min(0.35, (dist_km / 100.0) * 0.15))
+    def _generate_fallback_corridor(self, start_lat: float, start_lon: float, dest_lat: float, dest_lon: float, dist_km: float) -> dict:
+        base_clearance = max(0.10, min(0.35, (dist_km / 100.0) * 0.15))
+        warnings = []
+
         coords = generate_waypoints(
-            start_lat, start_lon, dest_lat, dest_lon, num_steps=6, max_arc=clearance_deg
+            start_lat, start_lon, dest_lat, dest_lon, num_steps=8, max_arc=base_clearance
         )
+
+        coastline_geom = get_coastline_geometry()
+        if coastline_geom is not None and check_line_coastline_intersection(coords):
+            logger.info("[route] Coastline collision detected in fallback corridor. Auto-deflecting seaward...")
+            deflected = False
+
+            # Test increasing arc multipliers and both perpendicular directions (+/-)
+            for arc_multiplier in [1.5, 2.5, 4.0, 6.0, 8.0, 12.0, 16.0]:
+                for direction_sign in [-1.0, 1.0]:
+                    candidate_arc = base_clearance * arc_multiplier * direction_sign
+                    candidate_coords = generate_waypoints(
+                        start_lat, start_lon, dest_lat, dest_lon, num_steps=12, max_arc=candidate_arc
+                    )
+                    if not check_line_coastline_intersection(candidate_coords):
+                        coords = candidate_coords
+                        deflected = True
+                        warnings.append("Applied seaward coastline deflection for fallback corridor around landmass")
+                        break
+                if deflected:
+                    break
+
+            if not deflected:
+                warnings.append("Fallback corridor line intersects coastline; maximum seaward deflection reached")
+
         return {
             "route_status": "clear",
             "route_geometry": {
                 "type": "LineString",
                 "coordinates": coords,
             },
-            "warnings": [],
+            "warnings": warnings,
         }
 
     def _run_hierarchical_pathfinding_sync(self, start_lat, start_lon, dest_lat, dest_lon, geo_agent, dist_km) -> dict:

@@ -94,3 +94,36 @@ async def test_benchmark_long_route(mock_check):
     assert envelope.status == "success"
     assert envelope.data["route_status"] == "clear"
     assert latency_ms < 500.0, f"Benchmark failed: {latency_ms:.2f}ms"
+
+
+@pytest.mark.asyncio
+async def test_fallback_corridor_coastline_deflection():
+    """Verify offline fallback corridor detects coastline landmass intersection and auto-deflects seaward."""
+    from agents.route.route_agent import check_line_coastline_intersection, get_coastline_geometry
+
+    # Ensure coastline geometry loads successfully
+    geom = get_coastline_geometry()
+    assert geom is not None
+
+    # Straight line cutting through Kathiawar Peninsula (Veraval / Gujarat landmass)
+    straight_line = [[69.6, 21.6], [72.7, 21.1]]
+    assert check_line_coastline_intersection(straight_line) is True
+
+    # Offline RouteAgent without database connection pool
+    offline_agent = RouteAgent(geofencing_agent=None)
+
+    # Route from Porbandar to Surat across Kathiawar peninsula
+    envelope = await offline_agent.plan_route(21.6, 69.6, 21.1, 72.7)
+
+    assert envelope.status == "success"
+    assert envelope.data["route_status"] == "clear"
+
+    coords = envelope.data["route_feature"]["geometry"]["coordinates"]
+
+    # Deflected route coordinates must NO LONGER intersect the land polygon!
+    assert check_line_coastline_intersection(coords) is False
+
+    # Check warnings contain deflection notice
+    warnings = envelope.data.get("warnings", [])
+    assert any("seaward coastline deflection" in w for w in warnings)
+
