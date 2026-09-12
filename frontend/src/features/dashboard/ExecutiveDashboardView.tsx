@@ -30,21 +30,38 @@ export const ExecutiveDashboardView: React.FC<ExecutiveDashboardViewProps> = ({
   const { t } = useLocalization();
   const [fleetCount, setFleetCount] = useState<number>(24);
   const [alertCount, setAlertCount] = useState<number>(4);
+  const [liveSst, setLiveSst] = useState<string>('28.4°C');
+  const [liveChl, setLiveChl] = useState<string>('0.82 mg/m³');
+  const [isLiveApi, setIsLiveApi] = useState<boolean>(false);
 
   useEffect(() => {
-    async function loadStats() {
+    async function loadDashboardData() {
       try {
-        const [fleet, alerts] = await Promise.all([
-          apiClient.fetchFleetStatus(),
-          apiClient.fetchActiveAlerts(),
+        const [fleet, alerts, trends, health] = await Promise.all([
+          apiClient.fetchFleetStatus().catch(() => null),
+          apiClient.fetchActiveAlerts().catch(() => null),
+          apiClient.fetchHistoricalTrends().catch(() => null),
+          apiClient.checkHealth().catch(() => ({ online: false })),
         ]);
+
+        if (health?.online) setIsLiveApi(true);
         if (fleet?.active_craft) setFleetCount(fleet.active_craft);
         if (alerts?.length) setAlertCount(alerts.length);
+        if (trends) {
+          if (trends.sst_observed_celsius?.length) {
+            const lastSst = trends.sst_observed_celsius[trends.sst_observed_celsius.length - 1];
+            setLiveSst(`${lastSst.toFixed(1)}°C`);
+          }
+          if (trends.chlorophyll_observed_mg_m3?.length) {
+            const lastChl = trends.chlorophyll_observed_mg_m3[trends.chlorophyll_observed_mg_m3.length - 1];
+            setLiveChl(`${lastChl.toFixed(2)} mg/m³`);
+          }
+        }
       } catch (err) {
-        console.warn('Dashboard live stats fallback:', err);
+        console.warn('Dashboard live stats error:', err);
       }
     }
-    loadStats();
+    loadDashboardData();
   }, []);
 
   const scenariosList = Object.entries(FIXTURES).filter(
@@ -64,7 +81,9 @@ export const ExecutiveDashboardView: React.FC<ExecutiveDashboardViewProps> = ({
       <div className="exec-left-column">
         {/* 1. Header & Hero Cards Section */}
         <div className="exec-section-header">
-          <h2 className="exec-section-title">{t('marineAdvisoryCards')}</h2>
+          <h2 className="exec-section-title">
+            {t('marineAdvisoryCards')} {isLiveApi && <span className="ml-2 text-xs text-safe font-bold">● LIVE FASTAPI BACKEND</span>}
+          </h2>
           <span className="exec-section-link" onClick={() => onNavigateView('map')}>{t('viewMapView')}</span>
         </div>
 
@@ -100,10 +119,10 @@ export const ExecutiveDashboardView: React.FC<ExecutiveDashboardViewProps> = ({
               3 PFZ ZONES ACTIVE
             </div>
             <div className="exec-card__sub-text-light mono">
-              SST 28.4°C • CHL 0.82 mg/m³
+              SST {liveSst} • CHL {liveChl}
             </div>
             <div className="exec-card__bottom">
-              <span className="exec-card__date-light mono">UPDATED: LIVE</span>
+              <span className="exec-card__date-light mono">UPDATED: {isLiveApi ? 'LIVE API' : 'LIVE'}</span>
               <div className="exec-card__toggle-pill">
                 <span className="toggle-dot" />
                 <span>{t('sensorsOn')}</span>
