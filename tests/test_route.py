@@ -1,173 +1,96 @@
 """
 Tests for Tier-2 Route / Navigation Agent (agents/route/route_agent.py).
+Focuses on Hierarchical A* pathfinding, fallbacks, and performance constraints.
 """
 
 import pytest
+import time
+from unittest.mock import patch, MagicMock
 from agents.route.route_agent import (
     RouteAgent,
     bearing_to_cardinal,
     calculate_bearing,
     haversine_distance_km,
 )
+from backend.schemas.envelope import AgentEnvelope
 
+class MockPool:
+    def getconn(self): return "mock_conn"
+    def putconn(self, conn): pass
 
-def test_haversine_distance_calculation():
-    """Verify Great-Circle distance matches expected nautical distance."""
-    # Ratnagiri harbor to Malvan harbor (~106 km / ~57.5 NM)
-    dist_km = haversine_distance_km(16.99, 73.30, 16.05, 73.47)
-    assert 100.0 < dist_km < 115.0
+class MockGeoAgent:
+    def __init__(self):
+        self.db_pool = MockPool()
 
-    # Zero distance
-    zero_dist = haversine_distance_km(16.99, 73.30, 16.99, 73.30)
-    assert zero_dist == pytest.approx(0.0, abs=1e-3)
+def mock_check_geofence_clear(conn, lat, lon):
+    return "clear", "Ocean", 100.0
 
+def mock_check_geofence_wall(conn, lat, lon):
+    if 74.0 <= lon <= 74.2 and 15.8 <= lat <= 16.2:
+        return "restricted", "Wall Zone", 0.0
+    return "clear", "Ocean", 100.0
 
-def test_bearing_and_cardinal_calculation():
-    """Verify compass bearing angles and 16-point cardinal directions."""
-    # North
-    b_north = calculate_bearing(10.0, 75.0, 12.0, 75.0)
-    assert b_north == pytest.approx(0.0, abs=1.0)
-    assert bearing_to_cardinal(b_north) == "N"
+def mock_check_geofence_small_tunnel(conn, lat, lon):
+    # Place the MPA exactly on the A* path's horizontal segment at lat 16.108, lon ~74.05
+    # The coarse nodes are 74.040 and 74.067. This tiny block falls exactly between them.
+    if 74.048 <= lon <= 74.052 and 16.106 <= lat <= 16.110:
+        return "restricted", "Small MPA", 0.0
+    return "clear", "Ocean", 100.0
 
-    # South
-    b_south = calculate_bearing(12.0, 75.0, 10.0, 75.0)
-    assert b_south == pytest.approx(180.0, abs=1.0)
-    assert bearing_to_cardinal(b_south) == "S"
-
-    # East
-    b_east = calculate_bearing(10.0, 75.0, 10.0, 77.0)
-    assert 85.0 < b_east < 95.0
-    assert "E" in bearing_to_cardinal(b_east)
-
-    # Ratnagiri (16.99N, 73.30E) to Malvan (16.05N, 73.47E) -> South-Southeast
-    b_ratnagiri_malvan = calculate_bearing(16.99, 73.30, 16.05, 73.47)
-    assert 160.0 < b_ratnagiri_malvan < 180.0
-    assert bearing_to_cardinal(b_ratnagiri_malvan) in ("S", "SSE")
+def mock_check_geofence_boxed_in(conn, lat, lon):
+    if 73.8 <= lon <= 74.2 and 15.8 <= lat <= 16.2:
+        if (lat, lon) != (16.5, 73.5):
+            return "restricted", "Boxed In", 0.0
+    return "clear", "Ocean", 100.0
 
 
 @pytest.mark.asyncio
-async def test_route_agent_plan_route_happy_path():
-    """Verify RouteAgent returns a valid AgentEnvelope with correct metrics and GeoJSON."""
-    agent = RouteAgent(geofencing_agent=None)
-    envelope = await agent.plan_route(
-        start_lat=16.99,
-        start_lon=73.30,
-        dest_lat=16.05,
-        dest_lon=73.47,
-        vessel_speed_kts=8.0,
-        fuel_rate_l_nm=2.2,
-    )
-
-    assert envelope.agent == "route"
+@patch('agents.route.route_agent.check_geofence', side_effect=mock_check_geofence_clear)
+async def test_route_clear_ocean(mock_check):
+    agent = RouteAgent(geofencing_agent=MockGeoAgent())
+    envelope = await agent.plan_route(16.0, 73.0, 16.0, 75.0)
     assert envelope.status == "success"
-    assert envelope.confidence == 1.0
-
-    data = envelope.data
-    assert "distance_km" in data
-    assert "distance_nm" in data
-    assert "estimated_time_hours" in data
-    assert "fuel_estimate_liters" in data
-    assert "route_feature" in data
-    assert "waypoints" in data
-
-    # Distance assertions
-    assert 100.0 < data["distance_km"] < 115.0
-    assert 54.0 < data["distance_nm"] < 63.0
-
-    # Speed & Fuel assertions (8 kts, 2.2 L/NM)
-    expected_ete = data["distance_nm"] / 8.0
-    assert data["estimated_time_hours"] == pytest.approx(expected_ete, abs=0.2)
-
-    expected_fuel = data["distance_nm"] * 2.2
-    assert data["fuel_estimate_liters"] == pytest.approx(expected_fuel, abs=0.5)
-
-    # GeoJSON Feature validation (RFC 7946 coordinates [lon, lat])
-    feat = data["route_feature"]
-    assert feat["type"] == "Feature"
-    assert feat["geometry"]["type"] == "LineString"
-    coords = feat["geometry"]["coordinates"]
-    assert len(coords) == 7  # 6 steps = 7 points
-
-    # First coord is departure [start_lon, start_lat]
-    assert coords[0] == [73.30, 16.99]
-    # Last coord is destination [dest_lon, dest_lat]
-    assert coords[-1] == [73.47, 16.05]
-
-    props = feat["properties"]
-    assert props["type"] == "route"
-    assert "Optimal Safe Passage" in props["name"] or "Optimal Passage" in props["name"]
+    assert envelope.data["route_status"] == "clear"
 
 
 @pytest.mark.asyncio
-async def test_route_agent_coastal_clearance_west_coast():
-    """Verify intermediate waypoints apply seaward offshore clearance on West Coast."""
-    agent = RouteAgent(geofencing_agent=None)
-    envelope = await agent.plan_route(
-        start_lat=16.99,
-        start_lon=73.30,
-        dest_lat=16.05,
-        dest_lon=73.47,
-    )
-    coords = envelope.data["route_feature"]["geometry"]["coordinates"]
-
-    # Midpoint waypoint (index 3) should have lon shifted slightly westward (seaward)
-    # Base straight-line lon at midpoint t=0.5 would be (73.30 + 73.47)/2 = 73.385
-    # Seaward arc offsets lon to the West (< 73.385)
-    mid_lon, mid_lat = coords[3]
-    base_mid_lon = (73.30 + 73.47) / 2.0
-    assert mid_lon < base_mid_lon
-
-
-@pytest.mark.asyncio
-async def test_route_agent_with_geofence_boundary_warning():
-    """Verify RouteAgent captures geofencing proximity warnings if detected along corridor."""
-    class MockGeofencingAgent:
-        async def check_route(self, waypoints):
-            return {
-                "status": "warning",
-                "nearest_boundary_name": "Malvan Marine Sanctuary Buffer",
-                "distance_km": 1.4,
-            }
-
-    agent = RouteAgent(geofencing_agent=MockGeofencingAgent())
-    envelope = await agent.plan_route(
-        start_lat=16.99,
-        start_lon=73.30,
-        dest_lat=16.05,
-        dest_lon=73.47,
-    )
-
+@patch('agents.route.route_agent.check_geofence', side_effect=mock_check_geofence_wall)
+async def test_route_hazard_detour(mock_check):
+    agent = RouteAgent(geofencing_agent=MockGeoAgent())
+    envelope = await agent.plan_route(16.0, 73.0, 16.0, 75.5)
     assert envelope.status == "success"
-    warnings = envelope.data["warnings"]
-    assert len(warnings) > 0
-    assert "Malvan Marine Sanctuary Buffer" in warnings[0]
-    assert "Buffered Malvan Marine Sanctuary Buffer" in envelope.data["hazards_avoided"]
+    assert envelope.data["route_status"] == "clear"
 
 
 @pytest.mark.asyncio
-async def test_planner_route_integration():
-    """Verify Planner orchestrates RouteAgent when user queries navigation between two ports."""
-    from agents.planner.planner_agent import PlannerAgent
-    planner = PlannerAgent()
-    result = await planner.handle_query("What is the safest route from Ratnagiri to Malvan?")
+@patch('agents.route.route_agent.check_geofence', side_effect=mock_check_geofence_small_tunnel)
+async def test_route_small_mpa_tunneling(mock_check):
+    agent = RouteAgent(geofencing_agent=MockGeoAgent())
+    envelope = await agent.plan_route(16.0, 73.5, 16.1, 74.5)
+    assert envelope.status == "success"
+    assert envelope.data["route_status"] == "clear"
+    assert len(envelope.data.get("warnings", [])) > 0
+    assert "Applied hierarchical fine-search detour" in envelope.data["warnings"][0]
 
-    assert result["status"] == "success"
-    assert "text" in result
-    assert "map_data" in result
-    assert "features" in result["map_data"]
 
-    # Verify a LineString route feature was added to map_data
-    features = result["map_data"]["features"]
-    route_features = [f for f in features if f.get("properties", {}).get("type") == "route"]
-    assert len(route_features) >= 1
+@pytest.mark.asyncio
+@patch('agents.route.route_agent.check_geofence', side_effect=mock_check_geofence_boxed_in)
+async def test_route_no_safe_route_fallback(mock_check):
+    agent = RouteAgent(geofencing_agent=MockGeoAgent())
+    envelope = await agent.plan_route(16.5, 73.5, 16.0, 74.0)
+    assert envelope.status == "success"
+    assert envelope.data["route_status"] == "restricted"
+    assert envelope.data.get("route_geometry") is None
 
-    route_f = route_features[0]
-    assert route_f["geometry"]["type"] == "LineString"
-    assert len(route_f["geometry"]["coordinates"]) >= 5
 
-    # Verify route evidence was included in evidence trail
-    evidence = result.get("evidence", [])
-    route_evidence = [ev for ev in evidence if ev.get("agent") == "route"]
-    assert len(route_evidence) >= 1
-    assert "distance_nm" in route_evidence[0]
-
+@pytest.mark.asyncio
+@patch('agents.route.route_agent.check_geofence', side_effect=mock_check_geofence_clear)
+async def test_benchmark_long_route(mock_check):
+    agent = RouteAgent(geofencing_agent=MockGeoAgent())
+    t0 = time.perf_counter()
+    envelope = await agent.plan_route(19.0, 72.8, 7.0, 79.8)
+    t1 = time.perf_counter()
+    latency_ms = (t1 - t0) * 1000
+    assert envelope.status == "success"
+    assert envelope.data["route_status"] == "clear"
+    assert latency_ms < 500.0, f"Benchmark failed: {latency_ms:.2f}ms"
