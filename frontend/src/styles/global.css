@@ -32,12 +32,37 @@ html, body, #root {
 
 body {
   font-family: var(--font-body);
-  font-size: var(--text-body-size);
-  font-weight: var(--text-body-weight);
-  line-height: var(--text-body-leading);
-  color: var(--foam-50);
+  font-size: var(--text-body-size, 14px);
+  font-weight: var(--text-body-weight, 400);
+  line-height: var(--text-body-leading, 1.5);
+  color: var(--text-dark-primary, #FFFFFF);
   background-color: var(--canvas-dark);
+  transition: background-color 0.25s ease, color 0.25s ease;
 }
+
+[data-theme="sunlight"] body {
+  color: var(--text-light-primary);
+  background-color: var(--canvas-light);
+}
+
+/* Touch targets for wet fingers / mobile boats (WCAG 2.5.5 AAA Target Size) */
+.touch-target,
+button,
+a,
+input,
+select {
+  min-height: 44px;
+}
+
+@media (max-width: 768px) {
+  .touch-target,
+  button,
+  a {
+    min-height: 48px;
+    min-width: 48px;
+  }
+}
+
 
 /* ================================================================
    TYPOGRAPHY UTILITIES

@@ -1,0 +1,249 @@
+.trends-view {
+  padding: 32px;
+  max-width: 1000px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  color: #FFFFFF;
+  overflow-y: auto;
+  height: 100%;
+}
+
+[data-theme="sunlight"] .trends-view {
+  color: #0F172A;
+}
+
+.trends-header {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.trends-badge {
+  color: var(--status-pfz);
+  font-weight: 700;
+  letter-spacing: 1.5px;
+}
+
+.trends-title {
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+}
+
+.trends-sector-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: var(--radius-card-secondary, 16px);
+  padding: 14px 20px;
+  margin-top: 8px;
+}
+
+[data-theme="sunlight"] .trends-sector-card {
+  background: #FFFFFF;
+  border-color: rgba(15, 23, 42, 0.12);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.sector-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.decline-pill {
+  background: rgba(239, 68, 68, 0.18);
+  color: var(--status-unsafe);
+  padding: 6px 14px;
+  border-radius: var(--radius-pill, 999px);
+  border: 1px solid var(--status-unsafe);
+  font-size: 12px;
+}
+
+[data-theme="sunlight"] .decline-pill {
+  background: var(--status-unsafe-bg);
+  color: var(--status-unsafe-text);
+}
+
+/* Primary Causes Card */
+.trends-causes-card {
+  padding: 16px 20px;
+  border-radius: var(--radius-card-secondary, 16px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="sunlight"] .trends-causes-card {
+  background: #FFFFFF;
+  border-color: rgba(15, 23, 42, 0.1);
+}
+
+.causes-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--status-caution);
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+
+[data-theme="sunlight"] .causes-title {
+  color: var(--status-caution-text);
+}
+
+.causes-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cause-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  line-height: 1.5;
+}
+
+.cause-bullet {
+  color: var(--status-caution);
+  font-size: 10px;
+  margin-top: 2px;
+}
+
+/* Chart Canvas */
+.trends-chart-card {
+  padding: 20px;
+  border-radius: var(--radius-card-primary, 24px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+[data-theme="sunlight"] .trends-chart-card {
+  background: #FFFFFF;
+  border-color: rgba(15, 23, 42, 0.12);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+}
+
+.chart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.chart-tabs {
+  display: flex;
+  gap: 6px;
+  background: rgba(0, 0, 0, 0.3);
+  padding: 4px;
+  border-radius: var(--radius-pill, 999px);
+}
+
+[data-theme="sunlight"] .chart-tabs {
+  background: #F1F5F9;
+}
+
+.chart-tab {
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-pill, 999px);
+  padding: 6px 14px;
+  color: var(--text-dark-secondary, #94A3B8);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+[data-theme="sunlight"] .chart-tab {
+  color: #475569;
+}
+
+.chart-tab--active {
+  background: #FFFFFF;
+  color: #0F172A !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+[data-theme="sunlight"] .chart-tab--active {
+  background: #0F172A;
+  color: #FFFFFF !important;
+}
+
+.chart-legend {
+  display: flex;
+  gap: 16px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.legend-line {
+  display: inline-block;
+  width: 18px;
+  height: 3px;
+  border-radius: 2px;
+}
+
+.legend-line--baseline {
+  background: var(--text-dark-secondary, #94A3B8);
+}
+
+.legend-line--observed {
+  background: var(--status-unsafe);
+}
+
+.chart-svg-container {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.trends-svg {
+  width: 100%;
+  height: auto;
+  max-height: 280px;
+}
+
+/* Statutory Card */
+.trends-statutory-card {
+  padding: 16px 20px;
+  border-radius: var(--radius-card-secondary, 16px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-left: 4px solid var(--status-pfz);
+}
+
+[data-theme="sunlight"] .trends-statutory-card {
+  background: #FFFFFF;
+  border-color: rgba(15, 23, 42, 0.1);
+  border-left-color: var(--status-pfz);
+}
+
+.statutory-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--status-pfz);
+  margin-bottom: 6px;
+}
+
+.statutory-act {
+  margin-bottom: 4px;
+}
+
+/* Footer */
+.trends-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 0;
+}

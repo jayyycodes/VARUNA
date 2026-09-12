@@ -3,11 +3,15 @@ import type { UserResponseV1 } from '../../contracts/userResponse';
 import { IconInfo, IconAlert } from '../../components/Icons';
 import './VerdictCard.css';
 
+import { FishermanQuickView } from './FishermanQuickView';
+
 interface VerdictCardProps {
   response?: UserResponseV1 | null;
   loading?: boolean;
   loadingMessage?: string;
   error?: string | null;
+  mode?: 'fisherman' | 'command';
+  onInspectDetails?: () => void;
   onSelectReason?: (claimId: string, evidenceId?: string) => void;
   onRetry?: () => void;
 }
@@ -35,6 +39,8 @@ export const VerdictCard: React.FC<VerdictCardProps> = ({
   loading = false,
   loadingMessage = 'Checking weather, marine conditions, and boundaries...',
   error = null,
+  mode = 'command',
+  onInspectDetails,
   onSelectReason,
   onRetry,
 }) => {
@@ -106,6 +112,17 @@ export const VerdictCard: React.FC<VerdictCardProps> = ({
   const { summary, decision_status, claims, degradation } = response;
   const verdict = summary.verdict;
   const isDegraded = decision_status === 'degraded' || decision_status === 'indeterminate';
+
+  // If in simplified Fisherman Mode, render the 4-state high-accessibility card
+  if (mode === 'fisherman') {
+    return (
+      <FishermanQuickView
+        response={response}
+        onInspectDetails={onInspectDetails}
+        onSelectReason={(reasonText) => onSelectReason?.(reasonText)}
+      />
+    );
+  }
 
   // Extract top 1-3 actionable claims for fast tapping
   const headlineClaims = claims.slice(0, 3);

@@ -1,0 +1,327 @@
+.fisherman-quick-view {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+}
+
+.fisherman-status-banner {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px 24px;
+  border-radius: var(--radius-card-primary, 24px);
+  background: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(16px);
+  border: 1.5px solid rgba(255, 255, 255, 0.12);
+  position: relative;
+  transition: all 0.25s ease;
+}
+
+[data-theme="sunlight"] .fisherman-status-banner {
+  background: #FFFFFF;
+  border-color: rgba(15, 23, 42, 0.12);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+}
+
+/* Card variant borders and subtle background tints */
+.fisherman-card--safe .fisherman-status-banner {
+  border-color: var(--status-safe);
+  background: linear-gradient(135deg, rgba(52, 211, 153, 0.12) 0%, rgba(15, 23, 42, 0.8) 100%);
+}
+
+[data-theme="sunlight"] .fisherman-card--safe .fisherman-status-banner {
+  background: linear-gradient(135deg, var(--status-safe-bg) 0%, #FFFFFF 100%);
+  border-color: var(--status-safe);
+}
+
+.fisherman-card--caution .fisherman-status-banner {
+  border-color: var(--status-caution);
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.12) 0%, rgba(15, 23, 42, 0.8) 100%);
+}
+
+[data-theme="sunlight"] .fisherman-card--caution .fisherman-status-banner {
+  background: linear-gradient(135deg, var(--status-caution-bg) 0%, #FFFFFF 100%);
+  border-color: var(--status-caution);
+}
+
+.fisherman-card--unsafe .fisherman-status-banner {
+  border-color: var(--status-unsafe);
+  background: linear-gradient(135deg, rgba(248, 113, 113, 0.14) 0%, rgba(15, 23, 42, 0.85) 100%);
+}
+
+[data-theme="sunlight"] .fisherman-card--unsafe .fisherman-status-banner {
+  background: linear-gradient(135deg, var(--status-unsafe-bg) 0%, #FFFFFF 100%);
+  border-color: var(--status-unsafe);
+}
+
+.fisherman-card--unknown .fisherman-status-banner {
+  border-color: var(--status-unknown);
+  background: linear-gradient(135deg, rgba(148, 163, 184, 0.10) 0%, rgba(15, 23, 42, 0.8) 100%);
+}
+
+[data-theme="sunlight"] .fisherman-card--unknown .fisherman-status-banner {
+  background: linear-gradient(135deg, var(--status-unknown-bg) 0%, #FFFFFF 100%);
+  border-color: var(--status-unknown);
+}
+
+.fisherman-status-icon-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 60px;
+  height: 60px;
+  border-radius: var(--radius-card-secondary, 16px);
+  background: rgba(0, 0, 0, 0.35);
+  flex-shrink: 0;
+}
+
+[data-theme="sunlight"] .fisherman-status-icon-wrapper {
+  background: rgba(15, 23, 42, 0.06);
+}
+
+.fisherman-status-text {
+  flex: 1;
+}
+
+.fisherman-status-badge {
+  color: var(--text-dark-secondary, #94A3B8);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  margin-bottom: 4px;
+}
+
+[data-theme="sunlight"] .fisherman-status-badge {
+  color: var(--text-light-muted, #475569);
+}
+
+.fisherman-status-title {
+  font-size: 24px;
+  font-weight: 800;
+  line-height: 1.2;
+  margin-bottom: 4px;
+}
+
+.fisherman-status-subtext {
+  font-size: 13px;
+  color: var(--text-dark-secondary, #94A3B8);
+  line-height: 1.4;
+}
+
+[data-theme="sunlight"] .fisherman-status-subtext {
+  color: var(--text-light-secondary, #334155);
+}
+
+/* Audio button with 48px target */
+.fisherman-audio-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: var(--radius-pill, 999px);
+  padding: 10px 16px;
+  cursor: pointer;
+  color: #FFFFFF;
+  font-size: 12px;
+  font-weight: 700;
+  min-height: 48px;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+[data-theme="sunlight"] .fisherman-audio-btn {
+  background: #F1F5F9;
+  border-color: rgba(15, 23, 42, 0.14);
+  color: #0F172A;
+}
+
+.fisherman-audio-btn:hover {
+  background: rgba(255, 255, 255, 0.16);
+  transform: translateY(-1px);
+}
+
+[data-theme="sunlight"] .fisherman-audio-btn:hover {
+  background: #E2E8F0;
+}
+
+.fisherman-audio-btn--active {
+  background: rgba(239, 68, 68, 0.2) !important;
+  border-color: var(--status-unsafe) !important;
+  animation: pulse-audio 1.5s infinite;
+}
+
+@keyframes pulse-audio {
+  0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+  70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+}
+
+/* Action callout */
+.fisherman-action-callout {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 18px;
+  background: rgba(0, 0, 0, 0.35);
+  border-radius: var(--radius-card-tertiary, 12px);
+  border-left: 4px solid var(--status-safe);
+}
+
+.fisherman-card--caution .fisherman-action-callout {
+  border-left-color: var(--status-caution);
+}
+
+.fisherman-card--unsafe .fisherman-action-callout {
+  border-left-color: var(--status-unsafe);
+}
+
+.fisherman-card--unknown .fisherman-action-callout {
+  border-left-color: var(--status-unknown);
+}
+
+[data-theme="sunlight"] .fisherman-action-callout {
+  background: #F8FAFC;
+  border-color: rgba(15, 23, 42, 0.08);
+}
+
+.action-tag {
+  color: var(--text-dark-secondary, #94A3B8);
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+[data-theme="sunlight"] .action-tag {
+  color: var(--text-light-muted, #475569);
+}
+
+.action-text {
+  color: #FFFFFF;
+  margin: 0;
+}
+
+[data-theme="sunlight"] .action-text {
+  color: #0F172A;
+}
+
+/* 4 Big Weather Tiles */
+.fisherman-tiles-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+.fisherman-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 16px;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-card-secondary, 16px);
+  transition: all 0.2s ease;
+}
+
+[data-theme="sunlight"] .fisherman-tile {
+  background: #FFFFFF;
+  border-color: rgba(15, 23, 42, 0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+}
+
+.tile-icon-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tile-label {
+  color: var(--text-dark-secondary, #94A3B8);
+  font-size: 11px;
+}
+
+[data-theme="sunlight"] .tile-label {
+  color: var(--text-light-muted, #475569);
+}
+
+.tile-value {
+  font-size: 20px;
+  font-weight: 800;
+  color: #FFFFFF;
+}
+
+[data-theme="sunlight"] .tile-value {
+  color: #0F172A;
+}
+
+.tile-status {
+  font-size: 11px;
+}
+
+/* Inspect button */
+.fisherman-inspect-row {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.fisherman-inspect-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: var(--radius-pill, 999px);
+  padding: 8px 18px;
+  color: var(--text-dark-secondary, #94A3B8);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  min-height: 44px;
+  transition: all 0.2s ease;
+}
+
+[data-theme="sunlight"] .fisherman-inspect-btn {
+  border-color: rgba(15, 23, 42, 0.16);
+  color: var(--text-light-secondary, #334155);
+}
+
+.fisherman-inspect-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #FFFFFF;
+}
+
+[data-theme="sunlight"] .fisherman-inspect-btn:hover {
+  background: #F1F5F9;
+  color: #0F172A;
+}
+
+/* Screen reader utility */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (max-width: 900px) {
+  .fisherman-tiles-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .fisherman-status-banner {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .fisherman-audio-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}

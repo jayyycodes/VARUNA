@@ -11,10 +11,11 @@ import {
   IconChevronRight,
   IconChevronLeft,
   IconLogoStarburst,
+  IconWave,
 } from '../../components/Icons';
 import './Sidebar.css';
 
-export type ActiveNavView = 'map' | 'routing' | 'chat' | 'reasoning' | 'alerts' | 'fleet';
+export type ActiveNavView = 'map' | 'routing' | 'chat' | 'reasoning' | 'alerts' | 'fleet' | 'trends';
 
 interface SidebarProps {
   onSelectScenario: (fixtureId: string) => void;
@@ -138,6 +139,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
             title="Fleet Operations"
           >
             <IconShip size={18} />
+          </button>
+
+          <button
+            type="button"
+            className={`icon-bar__btn ${activeView === 'trends' ? 'icon-bar__btn--active' : ''}`}
+            onClick={() => onChangeView('trends')}
+            title="Fishery Trends & Anomalies (SIH Query #7)"
+          >
+            <IconWave size={18} />
           </button>
         </nav>
 

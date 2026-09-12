@@ -10,17 +10,66 @@ import { AgenticReasoningView } from './features/reasoning/AgenticReasoningView'
 import { ActiveAlertsView } from './features/alerts/ActiveAlertsView';
 import { FleetOpsView } from './features/fleet/FleetOpsView';
 import { RouteOptimizationView } from './features/routing/RouteOptimizationView';
+import { HistoricalTrendsView } from './features/analytics/HistoricalTrendsView';
 import { ChatAssistantView } from './features/chat/ChatAssistantView';
 import { ChatAssistantModal } from './features/chat/ChatAssistantModal';
-import { IconMapPin, IconSearch, IconCopilotBot } from './components/Icons';
+import { LanguageSelector } from './components/LanguageSelector';
+import { useLocalization } from './hooks/useLocalization';
+import {
+  IconMapPin,
+  IconSearch,
+  IconCopilotBot,
+  IconSun,
+  IconMoon,
+  IconAnchor,
+  IconBook,
+} from './components/Icons';
 import { useIsMobile } from './hooks/useIsMobile';
 import './App.css';
 
 function App() {
   const isMobile = useIsMobile();
+  const { currentLang, setLanguage, t } = useLocalization();
 
-  // Active Main View: 'map' | 'routing' | 'chat' | 'reasoning' | 'alerts' | 'fleet'
+  // Active Main View: 'map' | 'routing' | 'chat' | 'reasoning' | 'alerts' | 'fleet' | 'trends'
   const [activeView, setActiveView] = useState<ActiveNavView>('map');
+
+  // Mode: Persona split with device-aware default (Mobile => Fisherman, Desktop => Command)
+  const [mode, setMode] = useState<'fisherman' | 'command'>(() => {
+    try {
+      const saved = localStorage.getItem('varuna_ui_mode') as 'fisherman' | 'command';
+      if (saved && (saved === 'fisherman' || saved === 'command')) return saved;
+    } catch {}
+    return isMobile ? 'fisherman' : 'command';
+  });
+
+  const toggleMode = () => {
+    const next = mode === 'fisherman' ? 'command' : 'fisherman';
+    setMode(next);
+    try {
+      localStorage.setItem('varuna_ui_mode', next);
+    } catch {}
+  };
+
+  // Sunlight Daylight vs Dark Mode
+  const [theme, setTheme] = useState<'dark' | 'sunlight'>(() => {
+    try {
+      const saved = localStorage.getItem('varuna_theme') as 'dark' | 'sunlight';
+      if (saved && (saved === 'dark' || saved === 'sunlight')) return saved;
+    } catch {}
+    return 'dark';
+  });
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    try {
+      localStorage.setItem('varuna_theme', theme);
+    } catch {}
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme((prev) => (prev === 'dark' ? 'sunlight' : 'dark'));
+  };
 
   // Primary State
   const [response, setResponse] = useState<UserResponseV1 | null>(null);
@@ -41,8 +90,6 @@ function App() {
   const [railCollapsed, setRailCollapsed] = useState<boolean>(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(false);
 
-  // Search input state in top bar
-  const [topSearch, setTopSearch] = useState<string>('');
   // Bug 6 fix: preserve the last-submitted query so users can see what result is active.
   const [activeQuery, setActiveQuery] = useState<string | null>(null);
 
@@ -90,7 +137,6 @@ function App() {
       setError(err.message || 'Error processing maritime safety query.');
     } finally {
       setLoading(false);
-      setTopSearch(''); // Clear input but activeQuery keeps the submitted text
     }
   };
 
@@ -146,6 +192,7 @@ function App() {
               {activeView === 'reasoning' && 'Agentic Reasoning'}
               {activeView === 'alerts' && 'Active Marine Alerts'}
               {activeView === 'fleet' && 'Fleet Operations'}
+              {activeView === 'trends' && 'Fishery Trends & Anomalies (SIH Query #7)'}
             </h1>
             {/* Bug 6 fix: show active query as breadcrumb so user retains context after submit */}
             {activeQuery && !activeScenarioId ? (
@@ -164,25 +211,44 @@ function App() {
           </div>
 
           <div className="dashboard-topbar__right">
-            {/* Top Search Bar */}
-            <form
-              className="topbar-search"
-              onSubmit={(e) => {
-                e.preventDefault();
-                handleQuerySubmit(topSearch);
-              }}
+            {/* Language Selector */}
+            <LanguageSelector currentLang={currentLang} onLanguageChange={setLanguage} />
+
+            {/* Fisherman Mode vs Operations Mode Toggle */}
+            <button
+              type="button"
+              className={`topbar-control-btn ${mode === 'fisherman' ? 'topbar-control-btn--active' : ''}`}
+              onClick={toggleMode}
+              role="switch"
+              aria-checked={mode === 'fisherman'}
+              aria-label="Toggle between Fisherman View and Operations View"
+              title={mode === 'fisherman' ? 'Switch to Operations View' : 'Switch to Fisherman View'}
             >
-              <IconSearch size={14} className="topbar-search__icon" />
-              <input
-                type="text"
-                value={topSearch}
-                onChange={(e) => setTopSearch(e.target.value)}
-                placeholder="Search coordinates or query..."
-                className="topbar-search__input"
-                aria-label="Search marine safety intelligence"
-              />
-              <span className="topbar-search__shortcut mono">⌘K</span>
-            </form>
+              {mode === 'fisherman' ? (
+                <IconAnchor size={14} color={mode === 'fisherman' ? 'var(--status-safe)' : 'currentColor'} />
+              ) : (
+                <IconBook size={14} />
+              )}
+              <span>{mode === 'fisherman' ? t('fishermanMode') : t('commandMode')}</span>
+            </button>
+
+            {/* Sunlight High-Contrast Daylight Mode Toggle */}
+            <button
+              type="button"
+              className={`topbar-control-btn ${theme === 'sunlight' ? 'topbar-control-btn--active' : ''}`}
+              onClick={toggleTheme}
+              role="switch"
+              aria-checked={theme === 'sunlight'}
+              aria-label="Toggle Sunlight High-Contrast Daylight Mode"
+              title={theme === 'sunlight' ? 'Switch to Dark Mode' : 'Switch to Sunlight Daylight Mode'}
+            >
+              {theme === 'sunlight' ? (
+                <IconSun size={14} color="#D97706" />
+              ) : (
+                <IconMoon size={14} />
+              )}
+              <span>{theme === 'sunlight' ? t('sunlightMode') : t('darkMode')}</span>
+            </button>
 
             {/* Topbar AI Copilot Trigger Button */}
             <button
@@ -197,19 +263,7 @@ function App() {
 
             <div className="topbar-telemetry-pill mono text-xs">
               <span className="telemetry-live-dot" />
-              LIVE TELEMETRY
-            </div>
-
-            <div
-              className="topbar-user-profile"
-              title="Adeey • Lead Experience Architect (Click to open Copilot)"
-              onClick={() => setActiveView('chat')}
-            >
-              <div className="topbar-user-avatar">A</div>
-              <div className="topbar-user-info">
-                <span className="topbar-user-name">Adeey</span>
-                <span className="topbar-user-role mono text-xs">Architect</span>
-              </div>
+              LIVE
             </div>
           </div>
         </header>
@@ -224,6 +278,14 @@ function App() {
                   response={response}
                   loading={loading}
                   error={error}
+                  mode={mode}
+                  onInspectDetails={() => {
+                    if (isMobile) {
+                      setBottomSheetOpen(true);
+                    } else {
+                      setRailCollapsed(false);
+                    }
+                  }}
                   onSelectReason={handleSelectReason}
                   onRetry={() => executeScenario(activeScenarioId || 'safe_complete')}
                 />
@@ -294,6 +356,11 @@ function App() {
           {/* View 6: Fleet Operations */}
           {activeView === 'fleet' && (
             <FleetOpsView />
+          )}
+
+          {/* View 7: Fishery Trends & Environmental Anomalies (SIH Query #7) */}
+          {activeView === 'trends' && (
+            <HistoricalTrendsView />
           )}
         </main>
       </div>
