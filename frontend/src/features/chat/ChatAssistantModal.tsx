@@ -360,7 +360,7 @@ export const ChatAssistantModal: React.FC<ChatAssistantModalProps> = ({
                       className="thinking-toggle-btn mono text-xs"
                       onClick={() => toggleThinking(msg.id)}
                     >
-                      <IconTree size={12} color="#D8FA36" />
+                      <IconTree size={12} color="#38BDF8" />
                       <span>
                         {expandedThinking[msg.id]
                           ? 'Hide Reasoning Process'

@@ -1,52 +1,77 @@
-.trends-view {
-  padding: 32px;
-  max-width: 1000px;
+/* ==========================================================================
+   VARUNA — Bento Grid Dashboard Layout for Historical Trends (SIH Query #7)
+   Matching Reference UI Layout & Aesthetic (Image 2)
+   ========================================================================== */
+
+.trends-view.bento-container {
+  padding: 20px 28px;
+  max-width: 1320px;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
-  gap: 20px;
-  color: #FFFFFF;
+  gap: 16px;
+  color: var(--text-light-primary, #0F172A);
   overflow-y: auto;
   height: 100%;
 }
 
-[data-theme="sunlight"] .trends-view {
-  color: #0F172A;
-}
-
+/* 1. Header */
 .trends-header {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 4px;
 }
 
 .trends-badge {
-  color: var(--status-pfz);
+  color: #0D9488;
   font-weight: 700;
-  letter-spacing: 1.5px;
+  letter-spacing: 1.2px;
+  font-size: 11px;
 }
 
 .trends-title {
-  font-size: 26px;
+  font-size: 22px;
   font-weight: 800;
-  letter-spacing: -0.5px;
+  letter-spacing: -0.4px;
+  color: var(--text-light-primary, #0F172A);
 }
 
-.trends-sector-card {
+.trends-subtitle {
+  font-size: 12px;
+  color: var(--text-light-secondary, #64748B);
+  max-width: 860px;
+}
+
+/* 2. Top Summary Row */
+.bento-top-row {
+  display: flex;
+  gap: 14px;
+  align-items: stretch;
+}
+
+.bento-card {
+  background: #FFFFFF;
+  border-radius: var(--radius-card-secondary, 20px);
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  padding: 16px 20px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.03);
+  transition: all 0.2s ease;
+}
+
+[data-theme="dark"] .bento-card {
+  background: rgba(15, 23, 42, 0.75);
+  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+  color: #FFFFFF;
+}
+
+.bento-card--sector {
+  flex: 1;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: rgba(15, 23, 42, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: var(--radius-card-secondary, 16px);
-  padding: 14px 20px;
-  margin-top: 8px;
-}
-
-[data-theme="sunlight"] .trends-sector-card {
+  gap: 16px;
   background: #FFFFFF;
-  border-color: rgba(15, 23, 42, 0.12);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
 .sector-info {
@@ -55,82 +80,239 @@
   gap: 2px;
 }
 
+.sector-name {
+  font-size: 14px;
+  color: var(--text-light-primary, #0F172A);
+}
+
 .decline-pill {
-  background: rgba(239, 68, 68, 0.18);
-  color: var(--status-unsafe);
+  background: #FEF2F2;
+  color: #DC2626;
   padding: 6px 14px;
   border-radius: var(--radius-pill, 999px);
-  border: 1px solid var(--status-unsafe);
-  font-size: 12px;
+  border: 1px solid #FCA5A5;
+  font-size: 11px;
+  white-space: nowrap;
 }
 
-[data-theme="sunlight"] .decline-pill {
-  background: var(--status-unsafe-bg);
-  color: var(--status-unsafe-text);
-}
-
-/* Primary Causes Card */
-.trends-causes-card {
-  padding: 16px 20px;
-  border-radius: var(--radius-card-secondary, 16px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-[data-theme="sunlight"] .trends-causes-card {
-  background: #FFFFFF;
-  border-color: rgba(15, 23, 42, 0.1);
+.bento-card--drivers {
+  flex: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .causes-title {
   display: flex;
   align-items: center;
-  gap: 8px;
-  color: var(--status-caution);
+  gap: 6px;
+  color: #D97706;
   font-weight: 700;
-  margin-bottom: 10px;
-}
-
-[data-theme="sunlight"] .causes-title {
-  color: var(--status-caution-text);
+  font-size: 11px;
 }
 
 .causes-list {
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 4px;
 }
 
 .cause-item {
   display: flex;
   align-items: flex-start;
-  gap: 8px;
-  line-height: 1.5;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--text-light-secondary, #475569);
+  line-height: 1.4;
 }
 
 .cause-bullet {
-  color: var(--status-caution);
-  font-size: 10px;
+  color: #F59E0B;
+  font-size: 8px;
   margin-top: 2px;
 }
 
-/* Chart Canvas */
-.trends-chart-card {
-  padding: 20px;
-  border-radius: var(--radius-card-primary, 24px);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+/* 3. Bento Grid (3 Columns) */
+.bento-grid {
+  display: grid;
+  grid-template-columns: 285px 1fr 270px;
+  gap: 14px;
+  align-items: stretch;
+}
+
+.bento-col {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  height: 100%;
+}
+
+/* Card Headers & Shared Elements */
+.card-top-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.card-subtitle {
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.card-more {
+  color: #94A3B8;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.bento-arrow-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: bold;
+  cursor: pointer;
+  color: inherit;
+  transition: all 0.2s ease;
+}
+
+.bento-arrow-btn:hover {
+  background: rgba(0, 0, 0, 0.08);
+  transform: translateY(-1px);
+}
+
+.bento-arrow-btn--sm {
+  width: 24px;
+  height: 24px;
+  font-size: 10px;
+}
+
+/* Column 1: Left Column Cards */
+.bento-card--focus {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.focus-body {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.focus-avatar-pod {
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+  background: #EFF6FF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.focus-title {
+  color: #0F172A;
+}
+
+.focus-progress-area {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.progress-track {
+  width: 100%;
+  height: 6px;
+  background: #F1F5F9;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: #4F8BF9;
+  border-radius: 999px;
+}
+
+.focus-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.btn-secondary {
+  flex: 1;
+  background: #F1F5F9;
+  border: 1px solid #E2E8F0;
+  border-radius: var(--radius-pill);
+  padding: 6px 12px;
+  color: #475569;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-primary {
+  flex: 1;
+  background: #0F172A;
+  border: none;
+  border-radius: var(--radius-pill);
+  padding: 6px 12px;
+  color: #FFFFFF;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* Pastel Governance Card */
+.bento-card--governance {
+  background: #FEF3C7;
+  border-color: #FDE68A;
+  color: #92400E;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.governance-badge {
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.governance-title {
+  color: #78350F;
+  margin-bottom: 4px;
+}
+
+.governance-desc {
+  color: #92400E;
+  line-height: 1.4;
+}
+
+/* Column 2: Center Column (Dark Hero Telemetry Observation Card) */
+.bento-card--hero-dark {
+  background: linear-gradient(155deg, #0C101A 0%, #07090F 100%);
+  color: #FFFFFF;
+  border-radius: 28px;
+  padding: 24px 28px;
+  box-shadow: 0 24px 48px -12px rgba(0, 0, 0, 0.65), inset 0 1px 1px rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   display: flex;
   flex-direction: column;
   gap: 16px;
+  position: relative;
+  overflow: hidden;
 }
 
-[data-theme="sunlight"] .trends-chart-card {
-  background: #FFFFFF;
-  border-color: rgba(15, 23, 42, 0.12);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
-}
-
-.chart-header {
+.hero-dark-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -138,112 +320,345 @@
   gap: 12px;
 }
 
-.chart-tabs {
+.hero-title-area {
   display: flex;
+  align-items: center;
   gap: 6px;
-  background: rgba(0, 0, 0, 0.3);
-  padding: 4px;
-  border-radius: var(--radius-pill, 999px);
 }
 
-[data-theme="sunlight"] .chart-tabs {
-  background: #F1F5F9;
+.hero-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: #FFFFFF;
+  letter-spacing: -0.3px;
+}
+
+.hero-more {
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 18px;
+  margin-left: 4px;
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.hero-more:hover {
+  color: #FFFFFF;
+}
+
+.chart-tabs {
+  display: flex;
+  gap: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  padding: 4px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .chart-tab {
   background: transparent;
   border: none;
-  border-radius: var(--radius-pill, 999px);
+  border-radius: 999px;
   padding: 6px 14px;
-  color: var(--text-dark-secondary, #94A3B8);
-  font-size: 12px;
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 11px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-[data-theme="sunlight"] .chart-tab {
-  color: #475569;
+.chart-tab:hover {
+  color: rgba(255, 255, 255, 0.9);
 }
 
 .chart-tab--active {
-  background: #FFFFFF;
-  color: #0F172A !important;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-}
-
-[data-theme="sunlight"] .chart-tab--active {
-  background: #0F172A;
-  color: #FFFFFF !important;
-}
-
-.chart-legend {
-  display: flex;
-  gap: 16px;
-}
-
-.legend-item {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.legend-line {
-  display: inline-block;
-  width: 18px;
-  height: 3px;
-  border-radius: 2px;
-}
-
-.legend-line--baseline {
-  background: var(--text-dark-secondary, #94A3B8);
-}
-
-.legend-line--observed {
-  background: var(--status-unsafe);
+  background: #FFFFFF !important;
+  color: #0B0E17 !important;
+  font-weight: 700;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
 }
 
 .chart-svg-container {
   width: 100%;
-  overflow-x: auto;
+  margin-top: 6px;
+  margin-bottom: 4px;
 }
 
 .trends-svg {
   width: 100%;
   height: auto;
-  max-height: 280px;
+  max-height: 220px;
+  overflow: visible;
 }
 
-/* Statutory Card */
-.trends-statutory-card {
-  padding: 16px 20px;
-  border-radius: var(--radius-card-secondary, 16px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-left: 4px solid var(--status-pfz);
+/* Telemetry Driver Metrics Breakdown in Hero Card */
+.hero-activity-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.09);
 }
 
-[data-theme="sunlight"] .trends-statutory-card {
-  background: #FFFFFF;
-  border-color: rgba(15, 23, 42, 0.1);
-  border-left-color: var(--status-pfz);
+.activity-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #FFFFFF;
+  letter-spacing: -0.2px;
 }
 
-.statutory-header {
+.activity-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.activity-row {
   display: flex;
   align-items: center;
-  gap: 8px;
-  color: var(--status-pfz);
-  margin-bottom: 6px;
+  gap: 14px;
 }
 
-.statutory-act {
+.activity-label {
+  width: 190px;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.activity-bar-wrap {
+  flex: 1;
+  height: 9px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.activity-bar {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.activity-bar--coral {
+  background: linear-gradient(90deg, #FF6B6B 0%, #FF4D4D 100%);
+  box-shadow: 0 0 10px rgba(255, 77, 77, 0.45);
+}
+
+.activity-bar--sage {
+  background: linear-gradient(90deg, #34D399 0%, #00E676 100%);
+  box-shadow: 0 0 10px rgba(0, 230, 118, 0.45);
+}
+
+.activity-bar--cyan {
+  background: linear-gradient(90deg, #38BDF8 0%, #00B0FF 100%);
+  box-shadow: 0 0 10px rgba(0, 176, 255, 0.45);
+}
+
+.activity-pct {
+  color: #FFFFFF;
+  font-size: 12px;
+  font-weight: 700;
+  width: 36px;
+  text-align: right;
+}
+
+/* Center Subrow Cards */
+.bento-subrow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  flex: 1;
+}
+
+.bento-subrow .bento-card {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.bento-card--pastel-mint {
+  background: #ECFDF5;
+  border-color: #A7F3D0;
+  color: #065F46;
+}
+
+.bento-card--pastel-sage {
+  background: #EFF6FF;
+  border-color: #BFDBFE;
+  color: #1E40AF;
+}
+
+.pastel-label {
+  color: inherit;
+  opacity: 0.8;
+}
+
+.pastel-title {
+  color: inherit;
   margin-bottom: 4px;
+}
+
+.pastel-desc {
+  color: inherit;
+  opacity: 0.85;
+  line-height: 1.4;
+}
+
+/* Column 3: Right Column Cards */
+.bento-card--calendar {
+  background: #111827;
+  color: #FFFFFF;
+  border-radius: 20px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.calendar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.calendar-nav-btn {
+  color: #94A3B8;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.calendar-month-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+}
+
+.month-cell {
+  background: rgba(255, 255, 255, 0.06);
+  border: none;
+  border-radius: 8px;
+  padding: 6px 2px;
+  color: #94A3B8;
+  font-size: 10px;
+  font-family: monospace;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.month-cell:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: #FFFFFF;
+}
+
+.month-cell--active {
+  background: #FFFFFF !important;
+  color: #111827 !important;
+  font-weight: bold;
+}
+
+/* Pastel Rose Tags Card */
+.bento-card--tags {
+  background: #FFF1F2;
+  border-color: #FECDD3;
+  color: #881337;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.tags-title {
+  color: #881337;
+}
+
+.tags-cloud {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 4px 0;
+}
+
+.tag-pill {
+  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid #FECDD3;
+  border-radius: var(--radius-pill);
+  padding: 4px 10px;
+  font-size: 10px;
+  color: #9F1239;
+  font-weight: 600;
+}
+
+.tag-pill--active {
+  background: #E11D48;
+  color: #FFFFFF;
+  border-color: #E11D48;
+}
+
+.tags-explore-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 4px;
+  color: #9F1239;
+}
+
+/* Stat Callout Card */
+.bento-card--stat-callout {
+  background: #FFFFFF;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  flex: 1;
+}
+
+.stat-num-area {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.stat-number {
+  font-size: 28px;
+  color: #0F172A;
+}
+
+.stat-icon {
+  font-size: 20px;
 }
 
 /* Footer */
 .trends-footer {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 12px 0;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.footer-sources-row {
+  display: flex;
+  gap: 12px;
+}
+
+.footer-source-pill {
+  background: #F1F5F9;
+  padding: 3px 8px;
+  border-radius: var(--radius-pill);
+  color: #475569;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1024px) {
+  .bento-grid {
+    grid-template-columns: 1fr;
+  }
+  .bento-top-row {
+    flex-direction: column;
+  }
 }
