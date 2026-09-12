@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import type { UserResponseV1 } from './contracts/userResponse';
 import { apiClient } from './api/client';
 import { Sidebar } from './features/query/Sidebar';
@@ -26,6 +27,17 @@ import {
 } from './components/Icons';
 import { useIsMobile } from './hooks/useIsMobile';
 import './App.css';
+
+const NAV_ACCENTS: Record<ActiveNavView, { accent: string; accentText: string }> = {
+  overview: { accent: '#FFFFFF', accentText: '#0F172A' },
+  map: { accent: '#0EA5E9', accentText: '#FFFFFF' },
+  routing: { accent: '#14B8A6', accentText: '#FFFFFF' },
+  chat: { accent: '#8B5CF6', accentText: '#FFFFFF' },
+  reasoning: { accent: '#F59E0B', accentText: '#FFFFFF' },
+  alerts: { accent: '#EF4444', accentText: '#FFFFFF' },
+  fleet: { accent: '#3B82F6', accentText: '#FFFFFF' },
+  trends: { accent: '#10B981', accentText: '#FFFFFF' },
+};
 
 function App() {
   const isMobile = useIsMobile();
@@ -73,7 +85,7 @@ function App() {
   // Panel Toggles
   const [bottomSheetOpen, setBottomSheetOpen] = useState<boolean>(false);
   const [railCollapsed, setRailCollapsed] = useState<boolean>(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(true);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(false);
 
   // Bug 6 fix: preserve the last-submitted query so users can see what result is active.
   const [activeQuery, setActiveQuery] = useState<string | null>(null);
@@ -183,15 +195,15 @@ function App() {
 
             {/* Bug 6 fix: show active query as breadcrumb so user retains context after submit */}
             {activeQuery && !activeScenarioId ? (
-              <div className="dashboard-topbar__location-pill mono text-xs" style={{ gap: 6 }}>
+              <div className="dashboard-topbar__location-pill mono" style={{ gap: 5 }}>
                 <IconSearch size={11} color="#64748B" />
                 <span style={{ color: '#64748B', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {activeQuery}
                 </span>
               </div>
             ) : (
-              <div className="dashboard-topbar__location-pill mono text-xs">
-                <IconMapPin size={13} color="#64748B" />
+              <div className="dashboard-topbar__location-pill mono">
+                <IconMapPin size={11} color="#64748B" />
                 <span>{t('locationContext')}</span>
               </div>
             )}
@@ -199,7 +211,7 @@ function App() {
 
           {/* Centered Pill Search Bar (Compact size matching control buttons) */}
           <div className="topbar-search-pill">
-            <IconSearch size={13} className="topbar-search-pill__icon" />
+            <IconSearch size={12} className="topbar-search-pill__icon" />
             <input
               type="text"
               className="topbar-search-pill__input"
@@ -227,9 +239,9 @@ function App() {
               title={mode === 'fisherman' ? 'Switch to Operations View' : 'Switch to Fisherman View'}
             >
               {mode === 'fisherman' ? (
-                <IconAnchor size={14} color={mode === 'fisherman' ? 'var(--status-safe)' : 'currentColor'} />
+                <IconAnchor size={13} color={mode === 'fisherman' ? 'var(--status-safe)' : 'currentColor'} />
               ) : (
-                <IconBook size={14} />
+                <IconBook size={13} />
               )}
               <span>{mode === 'fisherman' ? t('fishermanMode') : t('commandMode')}</span>
             </button>
@@ -241,146 +253,151 @@ function App() {
               onClick={() => setActiveView('chat')}
               title="Open VARUNA Copilot Page"
             >
-              <IconCopilotBot size={15} color="#D8FA36" />
+              <IconCopilotBot size={13} color="#60A5FA" />
               <span>{t('askCopilot')}</span>
             </button>
-
-            <div className="topbar-telemetry-pill mono text-xs">
-              <span className="telemetry-live-dot" />
-              {t('live')}
-            </div>
           </div>
         </header>
 
         {/* Dashboard Main Workspace */}
-        <main className="dashboard-workspace" role="main">
-          {/* View 0: Executive Dashboard (Matching Reference Mockup Layout) */}
-          {activeView === 'overview' && (
-            <ExecutiveDashboardView
-              response={response}
-              activeScenarioId={activeScenarioId}
-              onSelectScenario={executeScenario}
-              onNavigateView={setActiveView}
-            />
-          )}
-
-          {activeView === 'map' && (
-            <div className="map-view-grid">
-              {/* Left Test Scenarios Grounding Drawer */}
-              {!isMobile && (
-                <ScenarioDrawer
+        <main
+          className="dashboard-workspace"
+          role="main"
+          style={
+            {
+              '--panel-accent': NAV_ACCENTS[activeView].accent,
+              '--panel-accent-text': NAV_ACCENTS[activeView].accentText,
+            } as React.CSSProperties
+          }
+        >
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeView}
+              style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              transition={{
+                duration: 0.25,
+                delay: 0.2,
+                ease: [0.22, 1, 0.36, 1],
+              }}
+            >
+              {/* View 0: Executive Dashboard (Matching Reference Mockup Layout) */}
+              {activeView === 'overview' && (
+                <ExecutiveDashboardView
+                  response={response}
                   activeScenarioId={activeScenarioId}
                   onSelectScenario={executeScenario}
-                  loading={loading}
+                  onNavigateView={setActiveView}
                 />
               )}
 
-              {/* Center Map Card Canvas */}
-              <div className="map-card-wrapper">
-                <VerdictCard
+              {activeView === 'map' && (
+                <div className="map-view-grid">
+                  {/* Left Test Scenarios Grounding Drawer */}
+                  {!isMobile && (
+                    <ScenarioDrawer
+                      activeScenarioId={activeScenarioId}
+                      onSelectScenario={executeScenario}
+                      loading={loading}
+                    />
+                  )}
+
+                  {/* Center Map Card Canvas */}
+                  <div className="map-card-wrapper">
+                    <VerdictCard
+                      response={response}
+                      loading={loading}
+                      error={error}
+                      mode={mode}
+                      onInspectDetails={() => {
+                        if (isMobile) {
+                          setBottomSheetOpen(true);
+                        } else {
+                          setRailCollapsed(false);
+                        }
+                      }}
+                      onSelectReason={handleSelectReason}
+                      onRetry={() => executeScenario(activeScenarioId || 'safe_complete')}
+                    />
+
+                    <MapCanvas
+                      response={response}
+                      selectedFeatureId={selectedFeatureId}
+                      onSelectFeature={handleSelectFeature}
+                    />
+                  </div>
+
+                  {/* Right Evidence Rail */}
+                  {!isMobile && (
+                    <EvidenceRail
+                      response={response}
+                      selectedEvidenceId={selectedEvidenceId}
+                      selectedClaimId={selectedClaimId}
+                      onSelectFeature={handleSelectFeature}
+                      isCollapsed={railCollapsed}
+                      onToggleCollapse={() => setRailCollapsed(!railCollapsed)}
+                    />
+                  )}
+
+                  {/* Mobile Bottom Sheet */}
+                  {isMobile && (
+                    <BottomSheet
+                      isOpen={bottomSheetOpen}
+                      onToggle={() => setBottomSheetOpen(!bottomSheetOpen)}
+                      response={response}
+                      selectedEvidenceId={selectedEvidenceId}
+                      selectedClaimId={selectedClaimId}
+                      onSelectFeature={handleSelectFeature}
+                    />
+                  )}
+                </div>
+              )}
+
+              {/* View 2: Route Optimization & Safe Passage */}
+              {activeView === 'routing' && (
+                <RouteOptimizationView response={response} />
+              )}
+
+              {/* View 3: VARUNA AI Copilot Conversational Page */}
+              {activeView === 'chat' && (
+                <ChatAssistantView
+                  onSelectScenario={executeScenario}
+                  onChangeView={setActiveView}
+                  currentResponse={response}
+                />
+              )}
+
+              {/* View 4: Agentic Reasoning */}
+              {activeView === 'reasoning' && (
+                <AgenticReasoningView response={response} />
+              )}
+
+              {/* View 5: Active Alerts */}
+              {activeView === 'alerts' && (
+                <ActiveAlertsView
                   response={response}
-                  loading={loading}
-                  error={error}
-                  mode={mode}
-                  onInspectDetails={() => {
-                    if (isMobile) {
-                      setBottomSheetOpen(true);
-                    } else {
-                      setRailCollapsed(false);
-                    }
+                  onSelectScenario={(scenarioId) => {
+                    setActiveView('map');
+                    executeScenario(scenarioId);
                   }}
-                  onSelectReason={handleSelectReason}
-                  onRetry={() => executeScenario(activeScenarioId || 'safe_complete')}
-                />
-
-                <MapCanvas
-                  response={response}
-                  selectedFeatureId={selectedFeatureId}
-                  onSelectFeature={handleSelectFeature}
-                />
-              </div>
-
-              {/* Right Evidence Rail */}
-              {!isMobile && (
-                <EvidenceRail
-                  response={response}
-                  selectedEvidenceId={selectedEvidenceId}
-                  selectedClaimId={selectedClaimId}
-                  onSelectFeature={handleSelectFeature}
-                  isCollapsed={railCollapsed}
-                  onToggleCollapse={() => setRailCollapsed(!railCollapsed)}
                 />
               )}
 
-              {/* Mobile Bottom Sheet */}
-              {isMobile && (
-                <BottomSheet
-                  isOpen={bottomSheetOpen}
-                  onToggle={() => setBottomSheetOpen(!bottomSheetOpen)}
-                  response={response}
-                  selectedEvidenceId={selectedEvidenceId}
-                  selectedClaimId={selectedClaimId}
-                  onSelectFeature={handleSelectFeature}
-                />
+              {/* View 6: Fleet Operations */}
+              {activeView === 'fleet' && (
+                <FleetOpsView />
               )}
-            </div>
-          )}
 
-          {/* View 2: Route Optimization & Safe Passage */}
-          {activeView === 'routing' && (
-            <RouteOptimizationView response={response} />
-          )}
-
-          {/* View 3: VARUNA AI Copilot Conversational Page */}
-          {activeView === 'chat' && (
-            <ChatAssistantView
-              onSelectScenario={executeScenario}
-              onChangeView={setActiveView}
-              currentResponse={response}
-            />
-          )}
-
-          {/* View 4: Agentic Reasoning */}
-          {activeView === 'reasoning' && (
-            <AgenticReasoningView response={response} />
-          )}
-
-          {/* View 5: Active Alerts */}
-          {activeView === 'alerts' && (
-            <ActiveAlertsView
-              response={response}
-              onSelectScenario={(scenarioId) => {
-                setActiveView('map');
-                executeScenario(scenarioId);
-              }}
-            />
-          )}
-
-          {/* View 6: Fleet Operations */}
-          {activeView === 'fleet' && (
-            <FleetOpsView />
-          )}
-
-          {/* View 7: Fishery Trends & Environmental Anomalies (SIH Query #7) */}
-          {activeView === 'trends' && (
-            <HistoricalTrendsView />
-          )}
+              {/* View 7: Fishery Trends & Environmental Anomalies (SIH Query #7) */}
+              {activeView === 'trends' && (
+                <HistoricalTrendsView />
+              )}
+            </motion.div>
+          </AnimatePresence>
         </main>
       </div>
-
-      {/* Floating AI Agent Launcher Button (Claude / Grok Style) */}
-      {activeView !== 'chat' && (
-        <button
-          type="button"
-          className="floating-ai-launcher-btn"
-          onClick={() => setChatModalOpen(true)}
-          title="Ask VARUNA AI Copilot (⌘J)"
-        >
-          <IconCopilotBot size={17} className="launcher-sparkle-icon" color="#D8FA36" />
-          <span>{t('askVarunaAI')}</span>
-          <span className="mono text-xs" style={{ opacity: 0.7 }}>⌘J</span>
-        </button>
-      )}
 
       {/* Conversational Marine AI Assistant Modal */}
       <ChatAssistantModal

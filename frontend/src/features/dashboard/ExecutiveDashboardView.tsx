@@ -302,7 +302,7 @@ export const ExecutiveDashboardView: React.FC<ExecutiveDashboardViewProps> = ({
             </div>
 
             <div className="stat-item-row" onClick={() => onNavigateView('chat')}>
-              <div className="stat-item-icon-wrap stat-item-icon--purple">
+              <div className="stat-item-icon-wrap stat-item-icon--ocean">
                 <IconCopilotBot size={16} color="#FFFFFF" />
               </div>
               <div className="stat-item-info">

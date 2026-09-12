@@ -3,7 +3,7 @@
  * Imports tokens, sets global resets, typography, and layout primitives.
  */
 
-@import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=Manrope:wght@400;450;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,600;0,6..96,700;0,6..96,800;0,6..96,900;1,6..96,600;1,6..96,700;1,6..96,800;1,6..96,900&family=Playfair+Display:ital,wght@0,700;0,800;0,900;1,700;1,800;1,900&family=Sora:wght@400;500;600;700&family=Manrope:wght@400;450;500;600;700&display=swap');
 @import './tokens.css';
 
 /* ================================================================

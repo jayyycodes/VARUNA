@@ -19,8 +19,10 @@
 }
 
 .evidence-rail--collapsed {
-  width: 50px;
-  min-width: 50px;
+  width: 52px;
+  min-width: 52px;
+  cursor: pointer;
+  background: #F8FAFC;
 }
 
 .evidence-rail__header {
@@ -31,6 +33,13 @@
   align-items: center;
   background: #FFFFFF;
   flex-shrink: 0;
+}
+
+.evidence-rail--collapsed .evidence-rail__header {
+  padding: 14px 8px;
+  justify-content: center;
+  border-bottom: none;
+  background: transparent;
 }
 
 .evidence-rail__title {
@@ -47,19 +56,34 @@
 }
 
 .evidence-rail__toggle-btn {
-  background: #F1F4EE;
-  border: 1px solid var(--border-light-subtle);
-  color: var(--text-light-secondary);
-  border-radius: var(--radius-pill);
-  padding: 4px 10px;
-  font-size: 11px;
+  width: 28px;
+  height: 28px;
+  background: transparent;
+  border: none;
+  color: #64748B;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
+  box-shadow: none;
   transition: all 150ms ease;
+  flex-shrink: 0;
+  padding: 0;
 }
 
 .evidence-rail__toggle-btn:hover {
-  background: #E5E9E0;
-  color: var(--text-light-primary);
+  background: rgba(0, 0, 0, 0.06);
+  color: #0F172A;
+}
+
+.evidence-rail__collapsed-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  padding: 20px 0;
 }
 
 .evidence-rail__content {

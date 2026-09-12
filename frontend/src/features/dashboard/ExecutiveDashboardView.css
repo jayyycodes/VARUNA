@@ -415,12 +415,15 @@
   font-weight: 600;
 }
 
-/* Right Column (Floating Statistic Card) */
+/* Right Column (Floating Statistic Card - Sticky) */
 .exec-right-column {
   width: 360px;
   min-width: 360px;
   display: flex;
   flex-direction: column;
+  position: sticky;
+  top: 0;
+  align-self: flex-start;
 }
 
 .exec-statistic-card {
@@ -600,8 +603,8 @@
   background: #D97706;
 }
 
-.stat-item-icon--purple {
-  background: #7C3AED;
+.stat-item-icon--ocean {
+  background: #2563EB;
 }
 
 .stat-item-info {
@@ -639,5 +642,5 @@
 }
 
 .stat-item-badge--ai {
-  color: #7C3AED;
+  color: #2563EB;
 }

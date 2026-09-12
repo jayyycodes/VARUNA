@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { motion } from 'framer-motion';
 import { useLocalization } from '../../hooks/useLocalization';
 import {
   IconMap,
@@ -7,8 +8,9 @@ import {
   IconShip,
   IconRoute,
   IconCopilotBot,
-  IconLogoStarburst,
   IconWave,
+  IconChevronLeft,
+  IconChevronRight,
 } from '../../components/Icons';
 import './Sidebar.css';
 
@@ -16,7 +18,7 @@ export type ActiveNavView = 'overview' | 'map' | 'routing' | 'chat' | 'reasoning
 
 interface SidebarProps {
   onSelectScenario?: (fixtureId: string) => void;
-  onSubmitQuery: (text: string) => void;
+  onSubmitQuery?: (text: string) => void;
   onOpenChat?: () => void;
   activeScenarioId?: string | null;
   loading?: boolean;
@@ -41,8 +43,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const navItems = [
     {
       id: 'overview' as ActiveNavView,
-      label: t('navOverview'),
-      fullLabel: t('navOverview'),
+      label: t('navOverview') || 'Dashboard',
+      fullLabel: 'Marine Command',
       icon: (
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <rect x="3" y="3" width="7" height="7" rx="1.5" />
@@ -54,47 +56,47 @@ export const Sidebar: React.FC<SidebarProps> = ({
     },
     {
       id: 'map' as ActiveNavView,
-      label: t('navMap'),
-      fullLabel: t('navMap'),
+      label: t('navMap') || 'Ocean Map',
+      fullLabel: 'Tactical Ocean Map',
       icon: <IconMap size={18} />,
     },
     {
       id: 'routing' as ActiveNavView,
-      label: t('navRouting'),
-      fullLabel: t('navRouting'),
+      label: t('navRouting') || 'Passage Route',
+      fullLabel: 'Route Optimization',
       icon: <IconRoute size={18} />,
     },
     {
       id: 'chat' as ActiveNavView,
-      label: t('navChat'),
-      fullLabel: t('navChat'),
+      label: t('navChat') || 'VARUNA AI',
+      fullLabel: 'VARUNA Copilot',
       badge: 'AI',
       icon: <IconCopilotBot size={19} />,
     },
     {
       id: 'reasoning' as ActiveNavView,
-      label: t('navReasoning'),
-      fullLabel: t('navReasoning'),
+      label: t('navReasoning') || 'Rule Engine',
+      fullLabel: 'Agentic Reasoning',
       icon: <IconTree size={18} />,
     },
     {
       id: 'alerts' as ActiveNavView,
-      label: t('navAlerts'),
-      fullLabel: t('navAlerts'),
+      label: t('navAlerts') || 'Active Alerts',
+      fullLabel: 'Marine Warnings',
       badge: 'LIVE',
       badgeType: 'warning',
       icon: <IconAlert size={18} />,
     },
     {
       id: 'fleet' as ActiveNavView,
-      label: t('navFleet'),
-      fullLabel: t('navFleet'),
+      label: t('navFleet') || 'Fleet Ops',
+      fullLabel: 'Fleet Operations',
       icon: <IconShip size={18} />,
     },
     {
       id: 'trends' as ActiveNavView,
-      label: t('navTrends'),
-      fullLabel: t('navTrends'),
+      label: t('navTrends') || 'Fishery Trends',
+      fullLabel: 'Fishery Analytics',
       badge: 'Q#7',
       icon: <IconWave size={18} />,
     },
@@ -116,19 +118,19 @@ export const Sidebar: React.FC<SidebarProps> = ({
           aria-expanded={!isCollapsed}
         >
           <div className="brand-logo-pod">
-            <IconLogoStarburst size={20} color="#FFFFFF" />
+            <img src="/logo.png" alt="VARUNA Logo" className="brand-logo-img" />
           </div>
           {!isCollapsed && (
             <div className="brand-title-area">
-              <span className="brand-name">VARUNA</span>
-              <span className="brand-subtitle">{t('coastalIntelligence')}</span>
+              <img src="/varuna-font.png" alt="VARUNA" className="brand-name-img" />
+              <span className="brand-subtitle">Marine Intelligence</span>
             </div>
           )}
         </button>
       </div>
 
       {/* 2. Navigation Items List */}
-      <nav className="varuna-sidebar__nav">
+      <nav className="varuna-sidebar__nav relative">
         {navItems.map((item) => {
           const isActive = activeView === item.id;
           return (
@@ -139,16 +141,53 @@ export const Sidebar: React.FC<SidebarProps> = ({
               onClick={() => onChangeView(item.id)}
               title={isCollapsed ? item.fullLabel : undefined}
             >
-              <span className="varuna-nav-item__icon">{item.icon}</span>
+              {/* Morphing Dashboard-Connected Pill Background */}
+              {isActive && (
+                <motion.div
+                  layoutId="activeNavPill"
+                  className="active-nav-pill"
+                  transition={{ type: 'spring', stiffness: 400, damping: 32 }}
+                />
+              )}
+
+              {/* Icon with subtle scale & accent color */}
+              <motion.span
+                className="varuna-nav-item__icon"
+                animate={{
+                  scale: isActive ? 1.05 : 1,
+                  color: isActive ? '#0F172A' : '#94A3B8',
+                }}
+                transition={{ duration: 0.15 }}
+              >
+                {item.icon}
+              </motion.span>
+
+              {/* Label + badge with dynamic accent text */}
               {!isCollapsed && (
-                <div className="varuna-nav-item__body">
-                  <span className="varuna-nav-item__label">{item.fullLabel}</span>
+                <span className="varuna-nav-item__body">
+                  <motion.span
+                    className="varuna-nav-item__label"
+                    animate={{
+                      color: isActive ? '#0F172A' : '#94A3B8',
+                    }}
+                    transition={{ duration: 0.15 }}
+                  >
+                    {item.fullLabel}
+                  </motion.span>
                   {item.badge && (
-                    <span className={`varuna-nav-item__badge ${item.badgeType === 'warning' ? 'badge--warning' : ''}`}>
+                    <span
+                      className={`varuna-nav-item__badge ${
+                        item.badgeType === 'warning' ? 'badge--warning' : ''
+                      }`}
+                      style={{
+                        background: isActive ? 'rgba(15, 23, 42, 0.1)' : 'rgba(255, 255, 255, 0.12)',
+                        color: isActive ? '#0F172A' : '#94A3B8',
+                      }}
+                    >
                       {item.badge}
                     </span>
                   )}
-                </div>
+                </span>
               )}
             </button>
           );
@@ -157,6 +196,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       {/* 3. Footer Profile / Status */}
       <div className="varuna-sidebar__footer">
+        {/* Toggle Button above profile */}
+        <button
+          type="button"
+          className="varuna-sidebar__toggle-btn"
+          onClick={handleToggle}
+          title={isCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
+          aria-label={isCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
+        >
+          {isCollapsed ? <IconChevronRight size={15} /> : <IconChevronLeft size={15} />}
+          {!isCollapsed && <span className="toggle-btn-label">Collapse Sidebar</span>}
+        </button>
+
         <button
           type="button"
           className="varuna-sidebar__profile-btn"

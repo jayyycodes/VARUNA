@@ -4,19 +4,19 @@
 
 .verdict-card {
   position: absolute;
-  top: 16px;
-  left: 16px;
+  top: 12px;
+  left: 12px;
   z-index: var(--z-verdict-card);
-  width: 320px;
-  max-width: calc(100% - 32px);
-  padding: 16px 18px;
-  border-radius: 20px;
+  width: 250px;
+  max-width: calc(100% - 24px);
+  padding: 10px 12px;
+  border-radius: 16px;
   background: rgba(14, 20, 32, 0.72); /* Translucent frosted glass */
   backdrop-filter: blur(16px) saturate(180%);
   -webkit-backdrop-filter: blur(16px) saturate(180%);
   border: 1px solid rgba(255, 255, 255, 0.18);
-  border-left: 4.5px solid var(--water-400);
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  border-left: 3.5px solid var(--water-400);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2);
   color: #FFFFFF;
 }
 
@@ -47,18 +47,18 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 6px;
-  gap: 8px;
+  margin-bottom: 4px;
+  gap: 6px;
 }
 
 .verdict-card__hero-left {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
 
 .verdict-hero-icon {
-  font-size: 16px;
+  font-size: 13px;
   line-height: 1;
   display: inline-flex;
   align-items: center;
@@ -86,9 +86,9 @@
 
 .verdict-card__hero-verdict {
   font-family: var(--font-display);
-  font-size: 24px;
-  font-weight: 700;
-  letter-spacing: -0.02em;
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
   line-height: 1;
   margin: 0;
   color: #FFFFFF;
@@ -104,16 +104,16 @@
 .verdict-card__degraded-tag {
   background: rgba(245, 158, 11, 0.2);
   color: var(--verdict-caution);
-  padding: 2px 6px;
+  padding: 1.5px 5px;
   border-radius: var(--radius-pill);
-  font-size: 8.5px;
+  font-size: 7.5px;
   font-weight: 700;
   border: 1px solid rgba(245, 158, 11, 0.35);
 }
 
 .verdict-card__confidence-pill {
   color: var(--water-300);
-  font-size: 9.5px;
+  font-size: 8.5px;
 }
 .verdict-card__confidence-pill .confidence-value {
   color: #FFFFFF;
@@ -123,10 +123,10 @@
 /* Headline Subtitle */
 .verdict-card__headline-sub {
   color: rgba(255, 255, 255, 0.9);
-  font-size: 11.5px;
-  line-height: 1.35;
+  font-size: 10px;
+  line-height: 1.3;
   font-weight: 500;
-  margin: 0 0 8px 0;
+  margin: 0 0 6px 0;
 }
 
 /* Directive Action Box (Frosted Glass Container) */
@@ -135,23 +135,23 @@
   border: 1px solid rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  border-radius: var(--radius-card-tertiary);
-  padding: 8px 10px;
-  margin-bottom: 8px;
+  border-radius: 8px;
+  padding: 5px 8px;
+  margin-bottom: 6px;
 }
 
 .verdict-card__action-label {
   color: var(--water-300);
-  font-size: 8.5px;
-  font-weight: 700;
+  font-size: 7.5px;
+  font-weight: 800;
   letter-spacing: 0.08em;
-  margin-bottom: 2px;
+  margin-bottom: 1px;
 }
 
 .verdict-card__action {
   color: #FFFFFF;
-  font-size: 11.5px;
-  line-height: 1.35;
+  font-size: 10px;
+  line-height: 1.3;
   margin: 0;
   font-weight: 500;
 }
@@ -159,9 +159,9 @@
 /* Confidence Reason */
 .verdict-card__confidence-reason {
   color: rgba(255, 255, 255, 0.7);
-  font-size: 10px;
-  margin-bottom: 8px;
-  line-height: 1.35;
+  font-size: 9px;
+  margin-bottom: 6px;
+  line-height: 1.25;
 }
 .verdict-card__reason-bullet {
   color: rgba(255, 255, 255, 0.9);
@@ -173,34 +173,34 @@
 /* Key Factors / Reasons Section */
 .verdict-card__reasons-section {
   border-top: 1px solid rgba(255, 255, 255, 0.1);
-  padding-top: 8px;
-  margin-top: 6px;
+  padding-top: 5px;
+  margin-top: 4px;
 }
 
 .verdict-card__reasons-label {
   color: rgba(255, 255, 255, 0.7);
-  font-size: 8.5px;
-  font-weight: 700;
+  font-size: 8px;
+  font-weight: 800;
   letter-spacing: 0.06em;
-  margin-bottom: 6px;
+  margin-bottom: 4px;
 }
 
 .verdict-card__reasons-list {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 3px;
 }
 
 .verdict-card__reason-chip {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid rgba(255, 255, 255, 0.08);
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
-  padding: 6px 8px;
-  border-radius: var(--radius-card-tertiary);
+  padding: 4px 6px;
+  border-radius: 6px;
   color: #FFFFFF;
   text-align: left;
   cursor: pointer;
@@ -221,11 +221,11 @@
 }
 
 .verdict-card__reason-kind {
-  font-size: 8px;
-  font-weight: 700;
+  font-size: 7.5px;
+  font-weight: 800;
   background: #202A38;
   color: var(--water-200);
-  padding: 1px 5px;
+  padding: 1px 4px;
   border-radius: 3px;
   flex-shrink: 0;
 }
@@ -233,13 +233,13 @@
 .verdict-card__reason-text {
   flex: 1;
   color: var(--water-100);
-  font-size: 10.5px;
-  line-height: 1.25;
+  font-size: 9.5px;
+  line-height: 1.2;
 }
 
 .verdict-card__reason-arrow {
   color: var(--water-400);
-  font-size: 11px;
+  font-size: 9.5px;
   transition: transform 120ms ease;
 }
 
@@ -305,13 +305,13 @@
    SUNLIGHT MODE OVERRIDES FOR VERDICTCARD (Ultra-Transparent Liquid Glass)
    ================================================================ */
 [data-theme="sunlight"] .verdict-card {
-  background: rgba(255, 255, 255, 0.38) !important;
+  background: rgba(255, 255, 255, 0.45) !important;
   backdrop-filter: blur(14px) saturate(180%) contrast(105%) !important;
   -webkit-backdrop-filter: blur(14px) saturate(180%) contrast(105%) !important;
-  border: 1px solid rgba(255, 255, 255, 0.55) !important;
-  border-left: 4.5px solid #3B82F6 !important;
-  border-radius: 24px !important;
-  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.12), 0 1px 0 rgba(255, 255, 255, 0.8) inset, 0 -1px 0 rgba(0, 0, 0, 0.03) inset !important;
+  border: 1px solid rgba(255, 255, 255, 0.6) !important;
+  border-left: 3.5px solid #3B82F6 !important;
+  border-radius: 16px !important;
+  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.08), 0 1px 0 rgba(255, 255, 255, 0.8) inset !important;
   color: #0F172A !important;
 }
 
@@ -342,10 +342,11 @@
 
 [data-theme="sunlight"] .verdict-card__confidence-pill {
   color: #475569;
-  background: rgba(255, 255, 255, 0.4);
-  padding: 3px 8px;
-  border-radius: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.5);
+  padding: 2px 6px;
+  border-radius: 5px;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  font-size: 8px;
 }
 
 [data-theme="sunlight"] .verdict-card__confidence-pill .confidence-value {
@@ -356,27 +357,30 @@
 [data-theme="sunlight"] .verdict-card__headline-sub {
   color: #1E293B;
   font-weight: 600;
+  font-size: 10px;
 }
 
 /* Directive Box in Sunlight Mode - Liquid Glass */
 [data-theme="sunlight"] .verdict-card__action-box {
-  background: rgba(255, 255, 255, 0.32);
+  background: rgba(255, 255, 255, 0.35);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.5);
-  border-radius: 14px;
-  padding: 10px 12px;
-  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  border-radius: 8px;
+  padding: 6px 8px;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.03);
 }
 
 [data-theme="sunlight"] .verdict-card__action-label {
   color: #475569;
   font-weight: 800;
+  font-size: 7.5px;
 }
 
 [data-theme="sunlight"] .verdict-card__action {
   color: #0F172A;
-  font-weight: 700;
+  font-weight: 600;
+  font-size: 10px;
   background: transparent;
   border: none;
   padding: 0;

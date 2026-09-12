@@ -21,7 +21,7 @@ export const TRANSLATIONS: Record<LanguageCode, Record<string, string>> = {
     // App-level titles
     appTitle: 'VARUNA Maritime Intelligence',
     pageMapTitle: 'Marine Intelligence Command',
-    pageRoutingTitle: 'Route Optimization & Safe Passage',
+    pageRoutingTitle: 'Route Optimization',
     pageChatTitle: 'VARUNA AI',
     pageReasoningTitle: 'Agentic Reasoning',
     pageAlertsTitle: 'Active Marine Alerts',
@@ -257,7 +257,7 @@ export const TRANSLATIONS: Record<LanguageCode, Record<string, string>> = {
   hi: {
     appTitle: 'वरुण समुद्री सूचना प्रणाली',
     pageMapTitle: 'समुद्री सूचना कमांड',
-    pageRoutingTitle: 'मार्ग अनुकूलन एवं सुरक्षित मार्ग',
+    pageRoutingTitle: 'मार्ग अनुकूलन',
     pageChatTitle: 'वरुण AI',
     pageReasoningTitle: 'एजेंटिक रीज़निंग',
     pageAlertsTitle: 'सक्रिय समुद्री चेतावनियां',
@@ -478,7 +478,7 @@ export const TRANSLATIONS: Record<LanguageCode, Record<string, string>> = {
   mr: {
     appTitle: 'वरुण सागरी माहिती प्रणाली',
     pageMapTitle: 'सागरी माहिती कमांड',
-    pageRoutingTitle: 'मार्ग अनुकूलन आणि सुरक्षित मार्ग',
+    pageRoutingTitle: 'मार्ग अनुकूलन',
     pageChatTitle: 'वरुण AI',
     pageReasoningTitle: 'एजेंटिक रिझनिंग',
     pageAlertsTitle: 'सक्रिय सागरी सूचना',
@@ -699,7 +699,7 @@ export const TRANSLATIONS: Record<LanguageCode, Record<string, string>> = {
   ta: {
     appTitle: 'வருணா கடல்சார் தகவல் அமைப்பு',
     pageMapTitle: 'கடல்சார் தகவல் கட்டுப்பாடு',
-    pageRoutingTitle: 'பாதை மேம்படுத்தல் & பாதுகாப்பான பயணம்',
+    pageRoutingTitle: 'பாதை உகப்பாக்கம்',
     pageChatTitle: 'வருணா AI',
     pageReasoningTitle: 'ஏஜென்டிக் ரீசனிங்',
     pageAlertsTitle: 'செயலில் உள்ள கடல் எச்சரிக்கைகள்',

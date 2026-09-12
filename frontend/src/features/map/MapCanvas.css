@@ -24,74 +24,99 @@
 
 /* Custom Dark Popup styling */
 .leaflet-popup-content-wrapper {
-  background: rgba(11, 30, 45, 0.95) !important;
+  background: rgba(15, 23, 42, 0.96) !important;
   backdrop-filter: blur(16px) !important;
   -webkit-backdrop-filter: blur(16px) !important;
-  color: var(--foam-50) !important;
-  border-radius: var(--radius-card-secondary) !important;
-  border: 1px solid var(--water-600) !important;
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6) !important;
+  color: #FFFFFF !important;
+  border-radius: 12px !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.65), 0 0 1px rgba(255, 255, 255, 0.2) !important;
   padding: 6px !important;
 }
 
 .leaflet-popup-tip {
-  background: rgba(11, 30, 45, 0.95) !important;
-  border: 1px solid var(--water-600) !important;
+  background: rgba(15, 23, 42, 0.96) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+}
+
+.leaflet-popup-content {
+  color: #FFFFFF !important;
+  margin: 8px 12px !important;
+  line-height: 1.4 !important;
 }
 
 .leaflet-container a.leaflet-popup-close-button {
-  color: var(--water-300) !important;
-  padding: 8px 12px 0 0 !important;
+  color: #94A3B8 !important;
+  padding: 8px 10px 0 0 !important;
+}
+
+.leaflet-container a.leaflet-popup-close-button:hover {
+  color: #FFFFFF !important;
 }
 
 .map-popup-content {
-  padding: 4px;
+  padding: 4px 2px;
 }
 
 .map-popup-content h4 {
-  margin: 4px 0 8px 0;
-  color: var(--foam-50);
+  margin: 6px 0 8px 0;
+  color: #FFFFFF !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  line-height: 1.35 !important;
 }
 
 .pfz-badge {
-  background: rgba(53, 184, 166, 0.25);
-  color: var(--pfz-high);
-  padding: 2px 6px;
-  border-radius: 3px;
-  font-size: 9px;
+  background: rgba(45, 212, 191, 0.2);
+  color: #2DD4BF;
+  border: 1px solid rgba(45, 212, 191, 0.4);
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-size: 10px;
   font-weight: 700;
+  display: inline-block;
+  letter-spacing: 0.04em;
 }
 
 .hazard-badge {
   color: #FFFFFF;
-  padding: 2px 6px;
-  border-radius: 3px;
-  font-size: 9px;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-size: 10px;
   font-weight: 700;
+  display: inline-block;
 }
 
 .geo-badge {
-  background: rgba(209, 67, 67, 0.25);
-  color: #FF8080;
-  border: 1px solid rgba(209, 67, 67, 0.5);
-  padding: 2px 6px;
-  border-radius: 3px;
-  font-size: 9px;
+  background: rgba(248, 113, 113, 0.2);
+  color: #FCA5A5;
+  border: 1px solid rgba(248, 113, 113, 0.4);
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-size: 10px;
   font-weight: 700;
+  display: inline-block;
 }
 
 .advisory-badge {
-  background: rgba(143, 163, 175, 0.2);
-  color: var(--water-200);
-  padding: 2px 6px;
-  border-radius: 3px;
-  font-size: 9px;
+  background: rgba(148, 163, 184, 0.2);
+  color: #CBD5E1;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-size: 10px;
+  display: inline-block;
 }
 
 .popup-grid {
   display: flex;
   flex-direction: column;
-  gap: 3px;
-  color: var(--water-200);
+  gap: 4px;
+  color: #E2E8F0 !important;
+  font-size: 11px !important;
   margin-top: 6px;
+  background: rgba(0, 0, 0, 0.35);
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
