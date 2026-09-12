@@ -152,13 +152,13 @@ export const RouteOptimizationView: React.FC<RouteOptimizationViewProps> = ({ re
         </div>
 
         {/* Port Pair Controls & Calculate Button */}
-        <div className="route-header__actions flex gap-2 items-center flex-wrap">
-          <div className="flex items-center gap-1">
-            <span className="mono text-xs text-muted">{t('departure')}:</span>
+        <div className="route-header__actions">
+          <div className="route-select-group">
+            <span className="route-select-label mono text-xs">{t('departure')}:</span>
             <select
               value={departurePort}
               onChange={(e) => setDeparturePort(e.target.value)}
-              className="bg-slate-800 text-white text-xs rounded px-2 py-1 border border-slate-700 font-mono"
+              className="route-port-select"
             >
               {portsCatalog.map((p) => (
                 <option key={p.id} value={p.id}>{p.name}</option>
@@ -166,12 +166,12 @@ export const RouteOptimizationView: React.FC<RouteOptimizationViewProps> = ({ re
             </select>
           </div>
 
-          <div className="flex items-center gap-1">
-            <span className="mono text-xs text-muted">{t('destination')}:</span>
+          <div className="route-select-group">
+            <span className="route-select-label mono text-xs">{t('destination')}:</span>
             <select
               value={destinationPort}
               onChange={(e) => setDestinationPort(e.target.value)}
-              className="bg-slate-800 text-white text-xs rounded px-2 py-1 border border-slate-700 font-mono"
+              className="route-port-select"
             >
               {portsCatalog.map((p) => (
                 <option key={p.id} value={p.id}>{p.name}</option>
@@ -181,11 +181,11 @@ export const RouteOptimizationView: React.FC<RouteOptimizationViewProps> = ({ re
 
           <button
             type="button"
-            className="route-btn-reoptimize"
+            className={`route-btn-reoptimize ${isOptimizing ? 'route-btn-reoptimize--loading' : ''}`}
             onClick={handleInitiateOptimization}
             disabled={isOptimizing}
           >
-            <IconSparkles size={14} color="#0F172A" />
+            <IconSparkles size={14} />
             <span>{isOptimizing ? t('calculatingRoute') : t('calculateRoute')}</span>
           </button>
         </div>
