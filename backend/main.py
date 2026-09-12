@@ -30,6 +30,7 @@ from pydantic import BaseModel, Field
 
 from agents.planner.planner_agent import PlannerAgent
 from backend.routes.alerts import router as alerts_router
+from backend.routes.analytics import router as analytics_router
 
 # ── Logging ──────────────────────────────────────────────────────────
 logging.basicConfig(
@@ -59,6 +60,7 @@ app.add_middleware(
 
 # Register subrouters
 app.include_router(alerts_router)
+app.include_router(analytics_router)
 
 
 # ── Planner (singleton) ──────────────────────────────────────────────

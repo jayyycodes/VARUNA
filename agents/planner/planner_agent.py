@@ -92,6 +92,7 @@ Given a user query about marine / fishing / coastal conditions, extract:
    - "find_fishing_zone"  → asks where to fish, best spots, PFZ
    - "route_request"      → asks about navigation, how to reach a location safely
    - "regulation_question" → asks about rules, regulations, why a zone is restricted
+   - "historical_trends"   → asks why fish catch or productivity declined, historical trends, upwelling changes
 
 2. **location** — lat/lon and place name.
    If the user names a place, approximate its coordinates.
@@ -119,8 +120,9 @@ It is FINAL. State it clearly — do NOT soften, override, or reinterpret it.
 4. If PFZ fishing zones are available, recommend the top zones with distance and likely species.
 5. If geofencing data is available, mention boundary status and any warnings.
 6. If route navigation data is available, provide the recommended compass heading, nautical distance (NM), estimated travel time (hours), and fuel required (liters).
-7. Be concise and practical — your audience is working fishermen, not academics.
-8. End with one clear, actionable recommendation.
+7. If historical fishery trends or productivity decline data are available, explain the root causes (SST anomaly, upwelling suppression, chlorophyll deficit, and statutory MFRA conservation notes).
+8. Be concise and practical — your audience is working fishermen, not academics.
+9. End with one clear, actionable recommendation.
 
 Write the response as plain text paragraphs. No markdown headers or bullet points."""
 
@@ -412,9 +414,18 @@ async def dispatch_data_agents(state: PlannerState) -> dict:
             from agents.marine_fishing.marine_agent import MarineFishingAgent
 
             async def _fetch():
-                return await MarineFishingAgent().get_ocean_state(
+                agent = MarineFishingAgent()
+                ocean_state = await agent.get_ocean_state(
                     lat=lat, lon=lon, date_str=d, query_run_id=qid
                 )
+                # Check for historical fishery trend inquiries (SIH Query #7)
+                q_lower = state.get("query", "").lower()
+                if intent == "historical_trends" or any(kw in q_lower for kw in ["decline", "declined", "decrease", "trend", "productivity", "catch drop", "why has"]):
+                    trend_env = await agent.analyze_historical_trends(
+                        lat=lat, lon=lon, sector_name=state.get("location", {}).get("name"), query_run_id=qid
+                    )
+                    ocean_state.data["historical_trends"] = trend_env.data
+                return ocean_state
 
             result = await circuit_registry.call(
                 "incois_wfs",
@@ -642,11 +653,13 @@ def _build_map_data(state: PlannerState) -> dict:
     # PFZ zones from marine data
     marine = state.get("marine_result", {})
     for zone in marine.get("data", {}).get("pfz_zones", []):
+        z_lon = float(zone.get("lon") if zone.get("lon") is not None else zone.get("center_lon", 0))
+        z_lat = float(zone.get("lat") if zone.get("lat") is not None else zone.get("center_lat", 0))
         features.append({
             "type": "Feature",
             "geometry": {
                 "type": "Point",
-                "coordinates": [zone.get("center_lon", 0), zone.get("center_lat", 0)],
+                "coordinates": [z_lon, z_lat],
             },
             "properties": {
                 "type": "pfz_zone",
@@ -654,7 +667,11 @@ def _build_map_data(state: PlannerState) -> dict:
                 "name": zone.get("name"),
                 "productivity_score": zone.get("productivity_score"),
                 "distance_km": zone.get("distance_km"),
-                "species": zone.get("species_likely", []),
+                "species": zone.get("likely_species", zone.get("species_likely", [])),
+                "estimated_depth_m": zone.get("estimated_depth_m"),
+                "depth_category": zone.get("depth_category"),
+                "gear_compatible": zone.get("gear_compatible", True),
+                "gear_warning": zone.get("gear_warning"),
                 "icon": "fish",
             },
         })
