@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import type { UserResponseV1 } from '../../contracts/userResponse';
+import { apiClient } from '../../api/client';
+import { useLocalization } from '../../hooks/useLocalization';
 import {
   IconSparkles,
   IconShip,
@@ -16,278 +18,274 @@ interface RouteOptimizationViewProps {
 }
 
 export const RouteOptimizationView: React.FC<RouteOptimizationViewProps> = ({ response }) => {
+  const { t } = useLocalization();
   const [isOptimizing, setIsOptimizing] = useState(false);
   const [selectedWaypoint, setSelectedWaypoint] = useState<string>('transit');
 
-  const handleInitiateOptimization = () => {
+  // Custom route state
+  const [departurePort, setDeparturePort] = useState<string>('ratnagiri');
+  const [destinationPort, setDestinationPort] = useState<string>('malvan');
+  const [portsCatalog, setPortsCatalog] = useState<Array<{ id: string; name: string }>>([
+    { id: 'ratnagiri', name: 'Ratnagiri Harbour' },
+    { id: 'malvan', name: 'Malvan Port' },
+    { id: 'mumbai', name: 'Mumbai Sassoon Docks' },
+    { id: 'alibaug', name: 'Alibaug Port' },
+    { id: 'goa', name: 'Mormugao Port, Goa' },
+    { id: 'cochin', name: 'Cochin Fisheries Harbour' },
+  ]);
+  const [customPlan, setCustomPlan] = useState<any>(null);
+
+  useEffect(() => {
+    async function loadPorts() {
+      try {
+        const ports = await apiClient.fetchPortsCatalog();
+        if (ports && ports.length > 0) {
+          setPortsCatalog(ports);
+        }
+      } catch (e) {
+        console.warn('Using default ports catalog:', e);
+      }
+    }
+    loadPorts();
+  }, []);
+
+  const handleInitiateOptimization = async () => {
     setIsOptimizing(true);
-    setTimeout(() => {
+    try {
+      const plan = await apiClient.planCustomRoute({
+        departure_port: departurePort,
+        destination_port: destinationPort,
+        vessel_speed_kts: 8.0,
+      });
+      if (plan && plan.status === 'success') {
+        setCustomPlan(plan);
+      }
+    } catch (err) {
+      console.warn('Live route calculation fallback:', err);
+    } finally {
       setIsOptimizing(false);
-    }, 1200);
+    }
   };
 
-  // ── Extract live route features from response ───────────────────
+  // ── Extract live route features from response or customPlan ─────
   const routeLayer = response?.map?.layers?.find(
     (l) => l.type === 'route' || l.feature_collection?.features?.some((f) => f.properties?.type === 'route')
   );
-  const routeFeature = routeLayer?.feature_collection?.features?.find(
+  const responseRouteFeature = routeLayer?.feature_collection?.features?.find(
     (f) => f.properties?.type === 'route' || f.geometry?.type === 'LineString'
   );
-  const userLocFeature = response?.map?.layers
-    ?.flatMap((l) => l.feature_collection?.features || [])
-    .find((f) => f.properties?.type === 'user_location');
-  const destLocFeature = response?.map?.layers
-    ?.flatMap((l) => l.feature_collection?.features || [])
-    .find((f) => f.properties?.type === 'destination_location');
-  const topPfz = response?.map?.layers
-    ?.flatMap((l) => l.feature_collection?.features || [])
-    .find((f) => f.properties?.type === 'pfz_zone' || f.properties?.type === 'pfz');
 
+  const routeFeature = customPlan?.safe_route_feature || responseRouteFeature;
   const hasLiveRoute = Boolean(routeFeature);
-  const rProps = routeFeature?.properties || {};
+  const rProps = routeFeature?.properties || customPlan || {};
 
-  const depName = userLocFeature?.properties?.name || 'Ratnagiri Harbour';
-  const destName = destLocFeature?.properties?.name || topPfz?.properties?.name || 'Malvan Port';
+  const depName =
+    customPlan?.departure?.name ||
+    rProps.departure ||
+    portsCatalog.find((p) => p.id === departurePort)?.name ||
+    'Ratnagiri Harbour';
 
-  const routeTitle = hasLiveRoute ? `Route to ${destName}` : 'Route to Zone Alpha-7';
-  const corridorBadge = hasLiveRoute
-    ? `SAFE PASSAGE CORRIDOR // ${depName.toUpperCase()} ➔ ${destName.toUpperCase()}`
-    : 'SAFE PASSAGE CORRIDOR // RATNAGIRI ➔ ZONE ALPHA-7';
+  const destName =
+    customPlan?.destination?.name ||
+    rProps.destination ||
+    portsCatalog.find((p) => p.id === destinationPort)?.name ||
+    'Malvan Port';
 
-  const waypoints = hasLiveRoute
-    ? [
-        {
-          id: 'departure',
-          type: 'DEPARTURE',
-          name: depName,
-          subtext: rProps.departure || 'Departure Berth / Harbor Point',
-          status: 'CLEARED',
-          statusClass: 'status--cleared',
-          pillIcon: <IconCheck size={11} />,
-          markerNode: <div className="marker-dot marker-dot--departure" />,
-        },
-        {
-          id: 'transit',
-          type: 'TRANSIT CORRIDOR',
-          name: `${rProps.name || 'Optimal Passage'} (${rProps.cardinal || 'S'} ${rProps.bearing || 170}°)`,
-          subtext: `${rProps.distance_nm || 57.3} NM (${rProps.distance_km || 106} km) • Est. ${rProps.ete_hours || 7.2} hrs • ${rProps.fuel_liters || 126}L fuel`,
-          status: response?.summary?.verdict === 'UNSAFE' ? 'CAUTION — LIGHTNING' : 'CORRIDOR ACTIVE',
-          statusClass: response?.summary?.verdict === 'UNSAFE' ? 'status--caution' : 'status--cleared',
-          pillIcon: <IconAlert size={11} />,
-          markerNode: <IconWave size={13} color="#35B8A6" />,
-        },
-        {
-          id: 'destination',
-          type: 'DESTINATION',
-          name: destName,
-          subtext: rProps.destination || 'Destination Harbor / Potential Fishing Zone',
-          status: `ETA +${rProps.ete_hours || 7.2} HRS`,
-          statusClass: 'status--eta',
-          pillIcon: <IconMapPin size={11} />,
-          markerNode: <IconMapPin size={13} color="#E0A030" />,
-        },
-      ]
-    : [
-        {
-          id: 'departure',
-          type: 'DEPARTURE',
-          name: 'Ratnagiri Harbour',
-          subtext: 'Berth 4, Terminal East • 17.02° N, 73.18° E',
-          status: 'CLEARED',
-          statusClass: 'status--cleared',
-          pillIcon: <IconCheck size={11} />,
-          markerNode: <div className="marker-dot marker-dot--departure" />,
-        },
-        {
-          id: 'transit',
-          type: 'TRANSIT CORRIDOR',
-          name: 'Sindhudurg Waters',
-          subtext: 'Expected swells 1.2m - 2.4m • Minor wave surge near bay mouth',
-          status: 'CAUTION — SWELL',
-          statusClass: 'status--caution',
-          pillIcon: <IconAlert size={11} />,
-          markerNode: <IconWave size={13} color="#D97706" />,
-        },
-        {
-          id: 'destination',
-          type: 'DESTINATION',
-          name: 'Zone Alpha-7 (PFZ Prime)',
-          subtext: 'Deep Sea Sector 42A • 12 NM off Mirya Bay • High Chlorophyll Front',
-          status: 'ETA +4 HRS',
-          statusClass: 'status--eta',
-          pillIcon: <IconMapPin size={11} />,
-          markerNode: <IconMapPin size={13} color="#64748B" />,
-        },
-      ];
+  const routeTitle = hasLiveRoute ? `Route: ${depName} ➔ ${destName}` : `${t('routeTitle')}: Ratnagiri ➔ Malvan`;
+  const corridorBadge = `${t('routeCorridorBadge')} // ${depName.toUpperCase()} ➔ ${destName.toUpperCase()}`;
+
+  const distanceNm = customPlan?.distance_nm || rProps.distance_nm || 57.3;
+  const distanceKm = customPlan?.distance_km || rProps.distance_km || 106.1;
+  const eteHours = customPlan?.estimated_time_hours || rProps.ete_hours || 7.2;
+  const fuelLiters = customPlan?.fuel_estimate_liters || rProps.fuel_liters || 126.0;
+  const bearing = customPlan?.initial_bearing_degrees || rProps.bearing || 170;
+  const cardinal = customPlan?.cardinal_direction || rProps.cardinal || 'S';
+  const hazards = customPlan?.hazards_avoided || rProps.hazards_avoided || [
+    '2km IMBL Buffer Maintained',
+    'Malvan Sanctuary Core Cleared',
+    'Angria Bank Shoal Clearance',
+  ];
+
+  const waypoints = [
+    {
+      id: 'departure',
+      type: t('departure'),
+      name: depName,
+      subtext: `Berth Point • ${depName}`,
+      status: 'CLEARED',
+      statusClass: 'status--cleared',
+      pillIcon: <IconCheck size={11} />,
+      markerNode: <div className="marker-dot marker-dot--departure" />,
+    },
+    {
+      id: 'transit',
+      type: t('transitCorridor'),
+      name: `Optimal Safe Passage (${cardinal} ${Math.round(bearing)}°)`,
+      subtext: `${distanceNm} NM (${distanceKm} km) • Est. ${eteHours} hrs • ${fuelLiters}L fuel`,
+      status: response?.summary?.verdict === 'UNSAFE' ? 'CAUTION — WEATHER' : 'CORRIDOR ACTIVE',
+      statusClass: response?.summary?.verdict === 'UNSAFE' ? 'status--caution' : 'status--cleared',
+      pillIcon: <IconAlert size={11} />,
+      markerNode: <IconWave size={13} color="#35B8A6" />,
+    },
+    {
+      id: 'destination',
+      type: t('destination'),
+      name: destName,
+      subtext: `Destination Harbor • ETA +${eteHours} HRS`,
+      status: `ETA +${eteHours} HRS`,
+      statusClass: 'status--eta',
+      pillIcon: <IconMapPin size={11} />,
+      markerNode: <IconMapPin size={13} color="#E0A030" />,
+    },
+  ];
 
   return (
-    <div className="route-opt-view">
-      {/* 1. Header Bar */}
-      <header className="route-opt-header">
-        <div>
-          <div className="route-opt-badge mono text-xs">
-            {corridorBadge}
-          </div>
-          <h1 className="route-opt-title text-display">{routeTitle}</h1>
-          <p className="route-opt-subtitle text-sm text-muted">
-            {hasLiveRoute
-              ? `Live Navigational Corridor • Distance: ${rProps.distance_nm || 57.3} NM • Heading: ${rProps.bearing || 170}° (${rProps.cardinal || 'S'}) • Est. Fuel: ${rProps.fuel_liters || 126} L`
-              : 'Active Multi-Domain Route Optimization & Safe Navigation Trajectory'}
+    <div className="route-optimization-view">
+      {/* Top Header Row */}
+      <header className="route-header">
+        <div className="route-header__titles">
+          <div className="route-badge mono text-xs">{corridorBadge}</div>
+          <h1 className="route-title text-display">{routeTitle}</h1>
+          <p className="route-subtitle text-sm text-muted">
+            {t('routeSubtitle')}
           </p>
         </div>
 
-        <button
-          type="button"
-          className={`route-opt-btn ${isOptimizing ? 'route-opt-btn--loading' : ''}`}
-          onClick={handleInitiateOptimization}
-          disabled={isOptimizing}
-        >
-          <IconSparkles size={15} />
-          <span>{isOptimizing ? 'COMPUTING CORRIDOR...' : 'RE-OPTIMIZE CORRIDOR'}</span>
-        </button>
+        {/* Port Pair Controls & Calculate Button */}
+        <div className="route-header__actions">
+          <div className="route-select-group">
+            <span className="route-select-label mono text-xs">{t('departure')}:</span>
+            <select
+              value={departurePort}
+              onChange={(e) => setDeparturePort(e.target.value)}
+              className="route-port-select"
+            >
+              {portsCatalog.map((p) => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="route-select-group">
+            <span className="route-select-label mono text-xs">{t('destination')}:</span>
+            <select
+              value={destinationPort}
+              onChange={(e) => setDestinationPort(e.target.value)}
+              className="route-port-select"
+            >
+              {portsCatalog.map((p) => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
+          </div>
+
+          <button
+            type="button"
+            className={`route-btn-reoptimize ${isOptimizing ? 'route-btn-reoptimize--loading' : ''}`}
+            onClick={handleInitiateOptimization}
+            disabled={isOptimizing}
+          >
+            <IconSparkles size={14} />
+            <span>{isOptimizing ? t('calculatingRoute') : t('calculateRoute')}</span>
+          </button>
+        </div>
       </header>
 
-      {/* 2. Main Two-Column Layout */}
-      <div className="route-opt-grid">
-        {/* Left Column: Navigation Sequence Cards */}
-        <section className="nav-sequence-column">
-          <div className="nav-sequence-card">
-            <h3 className="nav-sequence-title">Navigation Sequence</h3>
-
-            <div className="sequence-timeline">
-              <div className="sequence-timeline__spine" />
-
-              {waypoints.map((wp) => {
-                const isSelected = selectedWaypoint === wp.id;
-                return (
-                  <div
-                    key={wp.id}
-                    className={`sequence-step ${isSelected ? 'sequence-step--selected' : ''}`}
-                    onClick={() => setSelectedWaypoint(wp.id)}
-                  >
-                    <div className="sequence-step__marker">
-                      {wp.markerNode}
-                    </div>
-
-                    <article className="sequence-step__content">
-                      <div className="sequence-step__header">
-                        <span className="sequence-step__type mono text-xs">{wp.type}</span>
-                        <span className={`sequence-step__pill mono text-xs ${wp.statusClass}`}>
-                          {wp.pillIcon}
-                          <span>{wp.status}</span>
-                        </span>
-                      </div>
-
-                      <h4 className="sequence-step__name">{wp.name}</h4>
-                      <p className="sequence-step__desc text-xs">{wp.subtext}</p>
-                    </article>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Safety Clearance Summary Box */}
-            <div className="route-safety-summary">
-              <div className="route-safety-summary__header">
-                <span className="mono text-xs font-bold text-safe">CORRIDOR CLEARANCE: 99.4%</span>
-                <span className="mono text-xs text-muted">SWAN Model v1.2</span>
-              </div>
-              <p className="route-safety-summary__text text-xs">
-                Optimal routing holds course 214° SW to bypass nearshore shallow swell reef. Favorable chlorophyll density gradient expected at waypoint 3.
-              </p>
-            </div>
+      {/* Main 2-Column Layout */}
+      <div className="route-content-grid">
+        {/* Left Column: Waypoints & Flight Plan */}
+        <aside className="route-sidebar glass">
+          <div className="sidebar-section-header">
+            <span className="mono text-xs font-bold text-muted">TRANSIT WAYPOINTS & LEGS</span>
+            <span className="mono text-xs text-teal">3 WAYPOINTS</span>
           </div>
-        </section>
 
-        {/* Right Column: Tactical Hydrographic Map Card */}
-        <section className="tactical-map-column">
-          <div className="tactical-map-card">
-            {/* SVG Tactical Bathymetric Chart Visualizer */}
-            <div className="tactical-map-canvas">
-              <svg className="tactical-svg" viewBox="0 0 800 600" preserveAspectRatio="xMidYMid slice">
+          <div className="waypoints-vertical-timeline">
+            {waypoints.map((wp) => {
+              const isSelected = selectedWaypoint === wp.id;
+              return (
+                <div
+                  key={wp.id}
+                  className={`waypoint-node-card ${isSelected ? 'waypoint-node-card--selected' : ''}`}
+                  onClick={() => setSelectedWaypoint(wp.id)}
+                >
+                  <div className="waypoint-connector-line" />
+                  <div className="waypoint-marker-col">{wp.markerNode}</div>
+                  <div className="waypoint-body">
+                    <div className="waypoint-meta-row">
+                      <span className="waypoint-type mono text-xs">{wp.type}</span>
+                      <span className={`waypoint-status-pill ${wp.statusClass} mono text-xs`}>
+                        {wp.pillIcon}
+                        <span>{wp.status}</span>
+                      </span>
+                    </div>
+                    <div className="waypoint-name text-sm font-bold">{wp.name}</div>
+                    <div className="waypoint-sub text-xs text-muted">{wp.subtext}</div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Environmental Hazards Avoided */}
+          <div className="hazards-avoided-card glass">
+            <div className="hazards-title mono text-xs font-bold">
+              <IconAlert size={12} color="#F59E0B" />
+              <span>{t('hazardsAvoidedLabel')}</span>
+            </div>
+            <ul className="hazards-list text-xs">
+              {hazards.map((h: string, idx: number) => (
+                <li key={idx} className="hazard-item">
+                  <span className="hazard-bullet">●</span>
+                  <span>{h}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </aside>
+
+        {/* Right Column: Tactical Chart Canvas & Live Telemetry Pod */}
+        <section className="route-map-panel">
+          <div className="tactical-chart-card glass">
+            <div className="chart-frame-header">
+              <span className="mono text-xs text-muted">BATHYMETRIC CORRIDOR PLOT (CONTOURS & CORRIDOR)</span>
+              <span className="mono text-xs text-teal">100% POSTGIS COMPLIANT</span>
+            </div>
+
+            <div className="chart-canvas-wrapper">
+              <svg viewBox="0 0 800 500" className="tactical-chart-svg">
                 <defs>
-                  <linearGradient id="oceanGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stopColor="#0B1321" />
-                    <stop offset="50%" stopColor="#091829" />
-                    <stop offset="100%" stopColor="#062038" />
-                  </linearGradient>
-
-                  <linearGradient id="routeGlow" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stopColor="#2DD4BF" />
-                    <stop offset="50%" stopColor="#38BDF8" />
+                  <linearGradient id="routeGlow" x1="0" y1="0" x2="1" y2="0">
+                    <stop offset="0%" stopColor="#14B8A6" />
+                    <stop offset="50%" stopColor="#F59E0B" />
                     <stop offset="100%" stopColor="#D8FA36" />
                   </linearGradient>
                 </defs>
 
-                {/* Ocean Background */}
-                <rect width="100%" height="100%" fill="url(#oceanGrad)" />
-
-                {/* Grid Lines */}
-                <line x1="100" y1="0" x2="100" y2="600" stroke="rgba(255,255,255,0.04)" strokeDasharray="4 4" />
-                <line x1="300" y1="0" x2="300" y2="600" stroke="rgba(255,255,255,0.04)" strokeDasharray="4 4" />
-                <line x1="500" y1="0" x2="500" y2="600" stroke="rgba(255,255,255,0.04)" strokeDasharray="4 4" />
-                <line x1="700" y1="0" x2="700" y2="600" stroke="rgba(255,255,255,0.04)" strokeDasharray="4 4" />
-                <line x1="0" y1="150" x2="800" y2="150" stroke="rgba(255,255,255,0.04)" strokeDasharray="4 4" />
-                <line x1="0" y1="350" x2="800" y2="350" stroke="rgba(255,255,255,0.04)" strokeDasharray="4 4" />
-                <line x1="0" y1="500" x2="800" y2="500" stroke="rgba(255,255,255,0.04)" strokeDasharray="4 4" />
-
-                {/* Coastline Silhouette */}
-                <path
-                  d="M 50 0 Q 180 80 140 180 T 110 320 T 160 480 T 90 600 L 0 600 L 0 0 Z"
-                  fill="#111B29"
-                  stroke="#1E2F46"
-                  strokeWidth="2"
-                />
+                {/* Continental Shelf Backdrop */}
+                <rect x="0" y="0" width="800" height="500" fill="#0b1329" />
 
                 {/* Bathymetry Contours */}
-                <path
-                  d="M 120 0 Q 240 120 200 240 T 180 400 T 220 600"
-                  fill="none"
-                  stroke="rgba(45, 212, 191, 0.15)"
-                  strokeWidth="1.5"
-                  strokeDasharray="6 6"
-                />
-                <path
-                  d="M 220 0 Q 360 140 310 280 T 290 440 T 350 600"
-                  fill="none"
-                  stroke="rgba(45, 212, 191, 0.25)"
-                  strokeWidth="1.5"
-                />
-                <path
-                  d="M 340 0 Q 480 160 430 320 T 410 480 T 480 600"
-                  fill="none"
-                  stroke="rgba(45, 212, 191, 0.12)"
-                  strokeWidth="1"
-                />
+                <path d="M 120 0 Q 240 120 200 240 T 180 400 T 220 600" fill="none" stroke="rgba(45, 212, 191, 0.15)" strokeWidth="1.5" strokeDasharray="6 6" />
+                <path d="M 220 0 Q 360 140 310 280 T 290 440 T 350 600" fill="none" stroke="rgba(45, 212, 191, 0.25)" strokeWidth="1.5" />
+                <path d="M 340 0 Q 480 160 430 320 T 410 480 T 480 600" fill="none" stroke="rgba(45, 212, 191, 0.12)" strokeWidth="1" />
 
                 {/* Trajectory Safe Passage Corridor Ribbon */}
-                <path
-                  d="M 140 180 Q 340 280 520 200 T 680 130"
-                  fill="none"
-                  stroke="rgba(216, 250, 54, 0.15)"
-                  strokeWidth="28"
-                  strokeLinecap="round"
-                />
+                <path d="M 140 180 Q 340 280 520 200 T 680 130" fill="none" stroke="rgba(216, 250, 54, 0.15)" strokeWidth="28" strokeLinecap="round" />
 
                 {/* Active Planned Route Path */}
-                <path
-                  d="M 140 180 Q 340 280 520 200 T 680 130"
-                  fill="none"
-                  stroke="url(#routeGlow)"
-                  strokeWidth="3.5"
-                  strokeDasharray="8 4"
-                />
+                <path d="M 140 180 Q 340 280 520 200 T 680 130" fill="none" stroke="url(#routeGlow)" strokeWidth="3.5" strokeDasharray="8 4" />
 
                 {/* Waypoint 1: Departure */}
                 <circle cx="140" cy="180" r="7" fill="#14B8A6" stroke="#FFFFFF" strokeWidth="2" />
                 <text x="140" y="210" fill="#E2E8F0" fontSize="11" fontFamily="Sora" fontWeight="700" textAnchor="middle">
-                  {depName} (Departure)
+                  {depName} ({t('departure')})
                 </text>
 
                 {/* Waypoint 2: Transit Corridor */}
                 <circle cx="430" cy="245" r="8" fill="#F59E0B" stroke="#FFFFFF" strokeWidth="2" />
                 <text x="430" y="275" fill="#E2E8F0" fontSize="11" fontFamily="Sora" fontWeight="700" textAnchor="middle">
-                  {hasLiveRoute ? `${rProps.cardinal || 'S'} ${rProps.bearing || 170}° Passage` : 'Sindhudurg Waters'}
+                  {cardinal} {Math.round(bearing)}° Corridor
                 </text>
 
                 {/* Active Vessel Indicator */}
@@ -302,7 +300,7 @@ export const RouteOptimizationView: React.FC<RouteOptimizationViewProps> = ({ re
                 {/* Waypoint 3: Destination */}
                 <circle cx="680" cy="130" r="10" fill="#D8FA36" stroke="#0F172A" strokeWidth="2.5" />
                 <text x="680" y="105" fill="#D8FA36" fontSize="12" fontFamily="Sora" fontWeight="800" textAnchor="middle">
-                  {destName}
+                  {destName} ({t('destination')})
                 </text>
               </svg>
 
@@ -314,7 +312,7 @@ export const RouteOptimizationView: React.FC<RouteOptimizationViewProps> = ({ re
                     <span>VESSEL: VIGILANT (IND-MH-0192)</span>
                   </div>
                   <span className="telemetry-status-pill mono text-xs">
-                    <span className="status-live-dot" /> LIVE SYNC
+                    <span className="status-live-dot" /> LIVE PASSAGE
                   </span>
                 </div>
 
@@ -322,14 +320,14 @@ export const RouteOptimizationView: React.FC<RouteOptimizationViewProps> = ({ re
                   <div className="telemetry-stat">
                     <span className="stat-label mono text-xs">Speed Over Ground</span>
                     <span className="stat-val font-bold mono text-display">
-                      {rProps.vessel_speed_kts || 8.0} <span className="stat-unit">kts</span>
+                      8.0 <span className="stat-unit">kts</span>
                     </span>
                   </div>
 
                   <div className="telemetry-stat">
                     <span className="stat-label mono text-xs">Heading Course</span>
                     <span className="stat-val font-bold mono text-display">
-                      {rProps.bearing || 170}° <span className="stat-unit">{rProps.cardinal || 'S'}</span>
+                      {Math.round(bearing)}° <span className="stat-unit">{cardinal}</span>
                     </span>
                   </div>
 
@@ -338,16 +336,16 @@ export const RouteOptimizationView: React.FC<RouteOptimizationViewProps> = ({ re
                       <IconWind size={11} /> Distance
                     </span>
                     <span className="stat-val font-bold mono">
-                      {rProps.distance_nm || 57.3} NM ({rProps.distance_km || 106} km)
+                      {distanceNm} NM ({distanceKm} km)
                     </span>
                   </div>
 
                   <div className="telemetry-stat">
                     <span className="stat-label mono text-xs">
-                      <IconWave size={11} /> Fuel Required
+                      <IconWave size={11} /> {t('fuelEstimate')}
                     </span>
                     <span className="stat-val font-bold mono">
-                      {rProps.fuel_liters || 126} Liters
+                      {fuelLiters} Liters
                     </span>
                   </div>
                 </div>

@@ -9,6 +9,7 @@ import {
   IconTree,
 } from '../../components/Icons';
 import type { ActiveNavView } from '../query/Sidebar';
+import { useLocalization } from '../../hooks/useLocalization';
 import './ChatAssistantView.css';
 
 export interface ChatMessage {
@@ -112,6 +113,7 @@ export const ChatAssistantView: React.FC<ChatAssistantViewProps> = ({
   onChangeView,
   currentResponse,
 }) => {
+  const { currentLang, t } = useLocalization();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputQuery, setInputQuery] = useState('');
   const [isThinking, setIsThinking] = useState(false);
@@ -121,6 +123,24 @@ export const ChatAssistantView: React.FC<ChatAssistantViewProps> = ({
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const localizedShortcuts = currentLang === 'hi'
+    ? [
+        { label: 'रत्नागिरी मौसम व सुरक्षा जांचें', prompt: 'क्या कल रत्नागिरी में मौसम मछली पकड़ने के लिए ठीक है?' },
+        { label: 'विशाखापट्टनम चक्रवात जोखिम', prompt: 'विशाखापट्टनम चक्रवात और तेज हवाओं का जोखिम बताएं' },
+        { label: 'सुरक्षित समुद्री गलियारा निकालें', prompt: 'रत्नागिरी से मालवण तक का सबसे सुरक्षित मार्ग क्या है?' },
+      ]
+    : currentLang === 'mr'
+    ? [
+        { label: 'रत्नागिरी हवामान व लाटांची स्थिती', prompt: 'रत्नागिरी किनाऱ्यावर लाटांची स्थिती काय आहे?' },
+        { label: 'मालवणला जाणे सुरक्षित आहे का?', prompt: 'उद्या मालवणला जाणे सुरक्षित आहे का?' },
+        { label: 'सुरक्षित सागरी मार्ग शोधा', prompt: 'मालवण ते रत्नागिरी सुरक्षित सागरी मार्ग दाखवा' },
+      ]
+    : [
+        { label: 'Check Ratnagiri Marine Safety', prompt: 'Is it safe to go fishing tomorrow near Ratnagiri?' },
+        { label: 'Assess Cyclone Fengal risk', prompt: 'Assess Cyclone storm track, wind gusts, and port warnings for Visakhapatnam' },
+        { label: 'Optimize Ratnagiri → Malvan Route', prompt: 'What is the safest route from Ratnagiri to Malvan avoiding protected zones?' },
+      ];
 
   useEffect(() => {
     if (messages.length > 0) {
@@ -359,10 +379,10 @@ export const ChatAssistantView: React.FC<ChatAssistantViewProps> = ({
       {/* 1. Header Bar matching Reference */}
       <header className="v-assistant-header">
         <div className="v-assistant-header__title-group">
-          <h1 className="v-assistant-header__title">AI Assistant</h1>
+          <h1 className="v-assistant-header__title">{t('assistantTitle')}</h1>
           <div className="v-assistant-header__status">
             <span className="v-assistant-status-dot" />
-            <span className="v-assistant-status-text">Connected to Marine Analytics Engine</span>
+            <span className="v-assistant-status-text">{t('assistantConnected')}</span>
           </div>
         </div>
 
@@ -380,7 +400,7 @@ export const ChatAssistantView: React.FC<ChatAssistantViewProps> = ({
               <polyline points="16 6 12 2 8 6" />
               <line x1="12" y1="2" x2="12" y2="15" />
             </svg>
-            <span>Share</span>
+            <span>{t('share')}</span>
           </button>
 
           <button
@@ -402,7 +422,7 @@ export const ChatAssistantView: React.FC<ChatAssistantViewProps> = ({
               <polyline points="7 10 12 15 17 10" />
               <line x1="12" y1="15" x2="12" y2="3" />
             </svg>
-            <span>Export</span>
+            <span>{t('export')}</span>
           </button>
 
           <button
@@ -415,7 +435,7 @@ export const ChatAssistantView: React.FC<ChatAssistantViewProps> = ({
               <line x1="12" y1="5" x2="12" y2="19" />
               <line x1="5" y1="12" x2="19" y2="12" />
             </svg>
-            <span>New Chat</span>
+            <span>{t('newChat')}</span>
           </button>
         </div>
       </header>
@@ -436,7 +456,7 @@ export const ChatAssistantView: React.FC<ChatAssistantViewProps> = ({
                 </div>
 
                 <h2 className="v-assistant-welcome-heading">
-                  What would you<br />like to analyze today?
+                  {t('welcomeAnalyze')}
                 </h2>
               </div>
 
@@ -444,32 +464,17 @@ export const ChatAssistantView: React.FC<ChatAssistantViewProps> = ({
               <div className="v-assistant-bottom-group">
                 {/* Horizontal row of prompt shortcut capsules */}
                 <div className="v-assistant-shortcuts-row">
-                  <button
-                    type="button"
-                    className="v-assistant-shortcut-pill"
-                    onClick={() => handleSendMessage('Assess Cyclone Fengal risk and gale warning zones')}
-                  >
-                    <span className="v-shortcut-badge">V</span>
-                    <span className="v-shortcut-label">Assess Cyclone Fengal risk</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    className="v-assistant-shortcut-pill"
-                    onClick={() => handleSendMessage('Optimize Cochin to Gulf route and safe corridor')}
-                  >
-                    <span className="v-shortcut-badge">V</span>
-                    <span className="v-shortcut-label">Optimize Cochin → Gulf route</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    className="v-assistant-shortcut-pill"
-                    onClick={() => handleSendMessage('Check vessel collision vectors and AIS safety buffers')}
-                  >
-                    <span className="v-shortcut-badge">V</span>
-                    <span className="v-shortcut-label">Check vessel collision vectors</span>
-                  </button>
+                  {localizedShortcuts.map((sc, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      className="v-assistant-shortcut-pill"
+                      onClick={() => handleSendMessage(sc.prompt)}
+                    >
+                      <span className="v-shortcut-badge">V</span>
+                      <span className="v-shortcut-label">{sc.label}</span>
+                    </button>
+                  ))}
                 </div>
 
                 {/* Floating Modern Input Capsule Bar */}
@@ -497,7 +502,7 @@ export const ChatAssistantView: React.FC<ChatAssistantViewProps> = ({
                     type="text"
                     value={inputQuery}
                     onChange={(e) => setInputQuery(e.target.value)}
-                    placeholder="Type a message..."
+                    placeholder={t('typeMessage')}
                     className="v-input-field"
                     disabled={isThinking}
                   />
@@ -727,7 +732,7 @@ export const ChatAssistantView: React.FC<ChatAssistantViewProps> = ({
                     type="text"
                     value={inputQuery}
                     onChange={(e) => setInputQuery(e.target.value)}
-                    placeholder="Type a message..."
+                    placeholder={t('typeMessage')}
                     className="v-input-field"
                     disabled={isThinking}
                   />
@@ -767,7 +772,7 @@ export const ChatAssistantView: React.FC<ChatAssistantViewProps> = ({
         {/* Right Column: AI Insights Timeline & History matching Reference */}
         <aside className="v-assistant-sidebar-card">
           <div className="v-timeline-header">
-            <h2 className="v-timeline-title">AI Insights Timeline</h2>
+            <h2 className="v-timeline-title">{t('timelineTitle')}</h2>
 
             {/* Filter Pills */}
             <div className="v-timeline-filters">
@@ -776,28 +781,28 @@ export const ChatAssistantView: React.FC<ChatAssistantViewProps> = ({
                 className={`v-filter-tab ${selectedTab === 'all' ? 'v-filter-tab--active' : ''}`}
                 onClick={() => setSelectedTab('all')}
               >
-                All
+                {t('tabAll')}
               </button>
               <button
                 type="button"
                 className={`v-filter-tab ${selectedTab === 'alerts' ? 'v-filter-tab--active' : ''}`}
                 onClick={() => setSelectedTab('alerts')}
               >
-                Alerts
+                {t('tabAlerts')}
               </button>
               <button
                 type="button"
                 className={`v-filter-tab ${selectedTab === 'forecast' ? 'v-filter-tab--active' : ''}`}
                 onClick={() => setSelectedTab('forecast')}
               >
-                Forecast
+                {t('tabForecast')}
               </button>
               <button
                 type="button"
                 className={`v-filter-tab ${selectedTab === 'history' ? 'v-filter-tab--active' : ''}`}
                 onClick={() => setSelectedTab('history')}
               >
-                History
+                {t('tabHistory')}
               </button>
             </div>
           </div>

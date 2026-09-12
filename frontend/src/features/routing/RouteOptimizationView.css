@@ -1,326 +1,388 @@
 /* ================================================================
-   Route Optimization & Safe Navigation View Styles
-   Dual-Tone System (Warm Light Workspace + Tactical GIS Map Pod)
+   Route Optimization & Safe Passage View Styles
+   Dual-Tone System: Warm Cream Workspace + Deep Oceanic Hydrographic Chart
    ================================================================ */
 
-.route-opt-view {
+.route-optimization-view {
   flex: 1;
   height: 100%;
-  overflow: hidden;
-  padding: 16px 20px 20px 20px;
-  background: transparent;
-  color: var(--text-light-primary);
   display: flex;
   flex-direction: column;
+  padding: 18px 28px 24px 28px;
+  overflow: hidden;
+  background: transparent;
+  color: var(--text-light-primary);
 }
 
-.route-opt-header {
+/* 1. Header Bar */
+.route-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 14px;
-  gap: 16px;
+  gap: 20px;
+  margin-bottom: 16px;
   flex-shrink: 0;
 }
 
-.route-opt-badge {
-  color: var(--pfz-mid);
-  letter-spacing: 0.08em;
-  margin-bottom: 2px;
-  font-weight: 700;
+.route-header__titles {
+  min-width: 0;
 }
 
-.route-opt-title {
+.route-badge {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--pfz-mid, #0D9488);
+  letter-spacing: 0.08em;
+  margin-bottom: 3px;
+}
+
+.route-title {
   font-family: var(--font-display);
-  font-size: 1.45rem;
+  font-size: 1.55rem;
   font-weight: 800;
-  margin: 0 0 2px 0;
-  color: var(--text-light-primary);
+  margin: 0 0 3px 0;
+  color: var(--text-light-primary, #0F172A);
   letter-spacing: -0.02em;
 }
 
-.route-opt-subtitle {
+.route-subtitle {
   margin: 0;
-  color: var(--text-light-secondary);
-  font-size: 12px;
+  color: var(--text-light-secondary, #334155);
+  font-size: 12.5px;
 }
 
-.route-opt-btn {
-  background: #FFEDD5;
-  border: 1px solid #FDBA74;
-  color: #C2410C;
-  font-family: inherit;
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.04em;
-  padding: 8px 16px;
-  border-radius: var(--radius-pill);
-  cursor: pointer;
+/* Header Action Controls */
+.route-header__actions {
   display: flex;
   align-items: center;
-  gap: 8px;
-  box-shadow: 0 2px 10px rgba(249, 115, 22, 0.15);
-  transition: all 180ms ease;
+  gap: 10px;
+  flex-wrap: wrap;
   flex-shrink: 0;
 }
 
-.route-opt-btn:hover {
-  background: #FED7AA;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 14px rgba(249, 115, 22, 0.25);
+.route-select-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #FFFFFF;
+  border: 1px solid var(--border-light-subtle, rgba(0, 0, 0, 0.08));
+  border-radius: 12px;
+  padding: 4px 10px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.03);
+  height: 38px;
 }
 
-.route-opt-btn--loading {
-  opacity: 0.8;
+.route-select-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-light-muted, #64748B);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.route-port-select {
+  background: transparent;
+  border: none;
+  color: var(--text-light-primary, #0F172A);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  outline: none;
+  cursor: pointer;
+  padding: 2px 4px;
+}
+
+.route-btn-reoptimize {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: linear-gradient(135deg, #FFEDD5 0%, #FED7AA 100%);
+  border: 1px solid #FDBA74;
+  color: #C2410C;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  padding: 8px 18px;
+  border-radius: 9999px;
+  cursor: pointer;
+  box-shadow: 0 3px 12px rgba(249, 115, 22, 0.18);
+  transition: all 180ms cubic-bezier(0.16, 1, 0.3, 1);
+  flex-shrink: 0;
+  height: 38px;
+}
+
+.route-btn-reoptimize:hover {
+  background: linear-gradient(135deg, #FED7AA 0%, #FDBA74 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 5px 16px rgba(249, 115, 22, 0.28);
+}
+
+.route-btn-reoptimize:active {
+  transform: translateY(0);
+}
+
+.route-btn-reoptimize--loading {
+  opacity: 0.75;
   cursor: wait;
 }
 
-/* Two-Column Grid */
-.route-opt-grid {
+/* 2. Main Two-Column Layout */
+.route-content-grid {
   flex: 1;
   display: grid;
   grid-template-columns: 370px 1fr;
-  gap: 16px;
+  gap: 20px;
   min-height: 0;
   height: 100%;
 }
 
-/* 1. Navigation Sequence Column */
-.nav-sequence-column {
+/* Left Column: Waypoint Corridor Sequence & Hazards */
+.route-sidebar {
   height: 100%;
   min-height: 0;
   display: flex;
   flex-direction: column;
-}
-
-.nav-sequence-card {
-  height: 100%;
-  min-height: 0;
+  gap: 14px;
   background: #FFFFFF;
-  border: 1px solid var(--border-light-subtle);
+  border: 1px solid var(--border-light-subtle, rgba(0, 0, 0, 0.08));
   border-radius: 20px;
+  padding: 18px 20px;
   box-shadow: var(--shadow-light-card);
-  padding: 16px 18px;
+  overflow-y: auto;
+}
+
+.sidebar-section-header {
   display: flex;
-  flex-direction: column;
   justify-content: space-between;
-  gap: 12px;
-}
-
-.nav-sequence-title {
-  font-family: var(--font-display);
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: var(--text-light-primary);
-  margin: 0;
-}
-
-.sequence-timeline {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  gap: 8px;
-  flex: 1;
-  padding-left: 4px;
-}
-
-.sequence-timeline__spine {
-  position: absolute;
-  top: 18px;
-  bottom: 24px;
-  left: 19px;
-  width: 2px;
-  background: rgba(0, 0, 0, 0.08);
-  z-index: 1;
-}
-
-.sequence-step {
-  display: flex;
   align-items: center;
-  gap: 12px;
-  position: relative;
-  z-index: 2;
-  cursor: pointer;
+  margin-bottom: 4px;
+  font-size: 10px;
+  letter-spacing: 0.06em;
 }
 
-.sequence-step__marker {
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
+.waypoints-vertical-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  position: relative;
+}
+
+.waypoint-node-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 14px;
   background: #F8FAFC;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: 14px;
+  cursor: pointer;
+  transition: all 180ms ease;
+  position: relative;
+}
+
+.waypoint-node-card:hover {
+  background: #F1F5F9;
+  transform: translateX(2px);
+  border-color: rgba(0, 0, 0, 0.12);
+}
+
+.waypoint-node-card--selected {
+  background: #FFFFFF;
+  border-color: #0D9488;
+  box-shadow: 0 4px 18px rgba(13, 148, 136, 0.12);
+}
+
+.waypoint-marker-col {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #EFF6FF;
   border: 2px solid #CBD5E1;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  transition: all 150ms ease;
-}
-
-.marker-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #64748B;
-  transition: all 150ms ease;
+  margin-top: 2px;
+  transition: all 180ms ease;
 }
 
 .marker-dot--departure {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
   background: #0D9488;
-  box-shadow: 0 0 8px rgba(13, 148, 136, 0.4);
+  box-shadow: 0 0 8px rgba(13, 148, 136, 0.5);
 }
 
-.sequence-step--selected .sequence-step__marker {
-  border-color: #0D9488;
-  background: #CCFBF1;
-  box-shadow: 0 0 12px rgba(13, 148, 136, 0.25);
-}
-
-.sequence-step__content {
+.waypoint-body {
   flex: 1;
-  background: #F8FAFC;
-  border: 1px solid rgba(0, 0, 0, 0.06);
-  border-radius: 14px;
-  padding: 10px 12px;
-  transition: all 150ms ease;
+  min-width: 0;
 }
 
-.sequence-step:hover .sequence-step__content {
-  background: #F1F5F9;
-  border-color: rgba(0, 0, 0, 0.12);
-  transform: translateX(2px);
-}
-
-.sequence-step--selected .sequence-step__content {
-  background: #FFFFFF;
-  border-color: rgba(13, 148, 136, 0.35);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
-}
-
-.sequence-step__header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 2px;
-}
-
-.sequence-step__type {
-  color: var(--text-light-muted);
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-}
-
-.sequence-step__pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 2px 7px;
-  border-radius: var(--radius-pill);
-  font-size: 9px;
-  font-weight: 700;
-}
-
-.status--cleared {
-  background: var(--verdict-safe-bg);
-  color: var(--verdict-safe);
-  border: 1px solid rgba(22, 163, 74, 0.3);
-}
-
-.status--caution {
-  background: var(--verdict-caution-bg);
-  color: var(--verdict-caution);
-  border: 1px solid rgba(217, 119, 6, 0.3);
-}
-
-.status--eta {
-  background: rgba(100, 116, 139, 0.12);
-  color: var(--text-light-secondary);
-}
-
-.sequence-step__name {
-  margin: 0 0 2px 0;
-  font-size: 12.5px;
-  font-weight: 700;
-  color: var(--text-light-primary);
-}
-
-.sequence-step__desc {
-  margin: 0;
-  color: var(--text-light-secondary);
-  font-size: 10.5px;
-  line-height: 1.3;
-}
-
-.route-safety-summary {
-  margin-top: 4px;
-  background: #F8FAFC;
-  border: 1px solid rgba(0, 0, 0, 0.06);
-  border-radius: 12px;
-  padding: 10px 12px;
-}
-
-.route-safety-summary__header {
+.waypoint-meta-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 3px;
 }
 
-.route-safety-summary__text {
-  color: var(--text-light-secondary);
-  font-size: 10.5px;
-  line-height: 1.35;
-  margin: 0;
+.waypoint-type {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-light-muted, #64748B);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
-/* 2. Tactical Hydrographic Map Column */
-.tactical-map-column {
+.waypoint-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  border-radius: 9999px;
+  font-size: 9.5px;
+  font-weight: 700;
+}
+
+.status--cleared {
+  background: rgba(13, 148, 136, 0.12);
+  color: #0D9488;
+  border: 1px solid rgba(13, 148, 136, 0.25);
+}
+
+.status--caution {
+  background: rgba(245, 158, 11, 0.12);
+  color: #D97706;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.status--eta {
+  background: rgba(100, 116, 139, 0.1);
+  color: #475569;
+  border: 1px solid rgba(100, 116, 139, 0.2);
+}
+
+.waypoint-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-light-primary, #0F172A);
+  margin-bottom: 2px;
+}
+
+.waypoint-sub {
+  font-size: 11px;
+  color: var(--text-light-secondary, #475569);
+  line-height: 1.35;
+}
+
+/* Hazards Avoided Card */
+.hazards-avoided-card {
+  background: #FFFBEB;
+  border: 1px solid #FDE68A;
+  border-radius: 14px;
+  padding: 12px 14px;
+  margin-top: auto;
+}
+
+.hazards-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #B45309;
+  font-size: 10.5px;
+  letter-spacing: 0.05em;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+}
+
+.hazards-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.hazard-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: #78350F;
+}
+
+.hazard-bullet {
+  color: #F59E0B;
+  font-size: 8px;
+}
+
+/* 3. Right Column: Tactical Hydrographic Chart & Telemetry Pod */
+.route-map-panel {
   height: 100%;
   min-height: 0;
   position: relative;
+  border-radius: 20px;
+  overflow: hidden;
 }
 
-.tactical-map-card {
+.tactical-chart-card {
+  width: 100%;
   height: 100%;
-  min-height: 0;
-  background: #080E17;
-  border: 1px solid var(--border-light-subtle);
+  position: relative;
+  background: #070E18;
+  border: 1px solid rgba(0, 0, 0, 0.1);
   border-radius: 20px;
   overflow: hidden;
   box-shadow: var(--shadow-light-elevated);
-  position: relative;
+  display: flex;
+  flex-direction: column;
 }
 
-.tactical-map-canvas {
-  position: absolute;
-  inset: 0;
+.chart-frame-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 18px;
+  background: rgba(11, 19, 36, 0.95);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  z-index: 5;
+  flex-shrink: 0;
+}
+
+.chart-canvas-wrapper {
+  position: relative;
+  flex: 1;
   width: 100%;
   height: 100%;
   overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.tactical-svg {
-  position: absolute;
-  inset: 0;
+.tactical-chart-svg {
   width: 100%;
   height: 100%;
+  object-fit: cover;
   display: block;
 }
 
 /* Floating Frosted Glass Live Telemetry Instrument Pod */
 .floating-telemetry-card {
   position: absolute;
-  bottom: 20px;
-  right: 20px;
-  width: 320px;
-  background: rgba(14, 20, 32, 0.76);
-  backdrop-filter: blur(16px) saturate(180%);
-  -webkit-backdrop-filter: blur(16px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  border-radius: 18px;
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.2);
-  padding: 16px;
+  bottom: 18px;
+  right: 18px;
+  width: 330px;
+  background: rgba(11, 18, 32, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 16px;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.5);
+  padding: 14px 16px;
+  z-index: 10;
   color: #FFFFFF;
 }
 
@@ -328,7 +390,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   padding-bottom: 8px;
 }
@@ -337,9 +399,9 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  color: #E2E8F0;
+  color: #93C5FD;
   font-size: 10px;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.05em;
 }
 
 .telemetry-status-pill {
@@ -347,10 +409,10 @@
   align-items: center;
   gap: 5px;
   background: rgba(34, 197, 94, 0.16);
-  color: #22C55E;
+  color: #4ADE80;
   border: 1px solid rgba(34, 197, 94, 0.3);
   padding: 2px 7px;
-  border-radius: var(--radius-pill);
+  border-radius: 9999px;
   font-size: 9px;
   font-weight: 700;
 }
@@ -359,20 +421,20 @@
   width: 5px;
   height: 5px;
   border-radius: 50%;
-  background: #22C55E;
-  box-shadow: 0 0 6px #22C55E;
+  background: #4ADE80;
+  box-shadow: 0 0 6px #4ADE80;
 }
 
 .telemetry-metrics-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 10px;
+  gap: 8px;
 }
 
 .telemetry-stat {
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 12px;
+  border-radius: 10px;
   padding: 8px 10px;
   display: flex;
   flex-direction: column;
@@ -389,11 +451,11 @@
 
 .stat-val {
   color: #FFFFFF;
-  font-size: 14px;
+  font-size: 13.5px;
 }
 
 .stat-val.text-display {
-  font-size: 16px;
+  font-size: 15px;
 }
 
 .stat-unit {

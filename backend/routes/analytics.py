@@ -21,6 +21,7 @@ router = APIRouter(prefix="/api/analytics", tags=["analytics"])
 
 
 @router.get("/historical-trends", response_model=HistoricalTrendReport)
+@router.get("/productivity", response_model=HistoricalTrendReport)
 def get_historical_trends(
     lat: float = Query(16.99, description="Target latitude (e.g. 16.99 for Ratnagiri)"),
     lon: float = Query(73.28, description="Target longitude (e.g. 73.28 for Ratnagiri)"),

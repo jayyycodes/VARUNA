@@ -45,11 +45,15 @@ def a_star_search(
     came_from = {}
     g_score = {start: 0.0}
     f_score = {start: heuristic(start[0], start[1], dest[0], dest[1])}
+    closed_set: Set[Tuple[float, float]] = set()
     
     node_safety_cache = {}
 
     while open_set:
         _, current = heapq.heappop(open_set)
+        if current in closed_set:
+            continue
+        closed_set.add(current)
         
         # If we reached destination or are exceptionally close (within resolution)
         if current == dest or heuristic(current[0], current[1], dest[0], dest[1]) < (resolution * 111 * 0.5):

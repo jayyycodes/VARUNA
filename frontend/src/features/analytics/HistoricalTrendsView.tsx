@@ -1,24 +1,48 @@
-import React, { useState } from 'react';
-import historicalData from '../../fixtures/historical_trends.json';
+import React, { useState, useEffect } from 'react';
+import historicalFallback from '../../fixtures/historical_trends.json';
+import { apiClient } from '../../api/client';
+import { useLocalization } from '../../hooks/useLocalization';
 import { IconBook, IconAlert } from '../../components/Icons';
 import './HistoricalTrendsView.css';
 
 export const HistoricalTrendsView: React.FC = () => {
+  const { t } = useLocalization();
   const [activeMetric, setActiveMetric] = useState<'sst' | 'chlorophyll'>('sst');
+  const [data, setData] = useState<any>(historicalFallback);
+  const [isLive, setIsLive] = useState<boolean>(false);
+
+  useEffect(() => {
+    let isMounted = true;
+    async function loadTrends() {
+      try {
+        const live = await apiClient.fetchHistoricalTrends();
+        if (isMounted && live) {
+          setData(live);
+          setIsLive(true);
+        }
+      } catch (err) {
+        console.warn('Using historical trends fallback:', err);
+      }
+    }
+    loadTrends();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const {
     sector,
     monitoring_period,
     productivity_index,
-    primary_causes,
-    months,
-    sst_baseline_celsius,
-    sst_observed_celsius,
-    chlorophyll_baseline_mg_m3,
-    chlorophyll_observed_mg_m3,
-    statutory_reference,
-    sources,
-  } = historicalData;
+    primary_causes = [],
+    months = [],
+    sst_baseline_celsius = [],
+    sst_observed_celsius = [],
+    chlorophyll_baseline_mg_m3 = [],
+    chlorophyll_observed_mg_m3 = [],
+    statutory_reference = {},
+    sources = [],
+  } = data;
 
   // Chart coordinate mapping
   const width = 640;
@@ -31,10 +55,11 @@ export const HistoricalTrendsView: React.FC = () => {
   const plotH = height - padTop - padBottom;
 
   const getPoints = (values: number[], minVal: number, maxVal: number) => {
+    if (!values || values.length === 0) return '';
     return values
       .map((val, idx) => {
-        const x = padLeft + (idx / (values.length - 1)) * plotW;
-        const y = padTop + plotH - ((val - minVal) / (maxVal - minVal)) * plotH;
+        const x = padLeft + (idx / Math.max(values.length - 1, 1)) * plotW;
+        const y = padTop + plotH - ((val - minVal) / Math.max(maxVal - minVal, 0.001)) * plotH;
         return `${x.toFixed(1)},${y.toFixed(1)}`;
       })
       .join(' ');
@@ -50,17 +75,21 @@ export const HistoricalTrendsView: React.FC = () => {
   const chlBaselinePts = getPoints(chlorophyll_baseline_mg_m3, chlMin, chlMax);
   const chlObservedPts = getPoints(chlorophyll_observed_mg_m3, chlMin, chlMax);
 
+  const actTitle = typeof statutory_reference === 'object' ? statutory_reference.act : String(statutory_reference);
+  const actSection = typeof statutory_reference === 'object' ? statutory_reference.section : '';
+  const actNote = typeof statutory_reference === 'object' ? statutory_reference.regulatory_note : '';
+
   return (
     <div className="trends-view">
       <header className="trends-header">
         <div className="trends-badge mono text-xs">
-          SIH NATIONAL EVALUATION QUERY #7
+          {t('sihQuery7')} {isLive && <span className="ml-2 text-safe">● LIVE API</span>}
         </div>
         <h1 className="trends-title text-display">
-          Coastal Fishery Productivity & Anomaly Analysis
+          {t('trendsTitle')}
         </h1>
         <p className="trends-subtitle text-sm text-muted">
-          Multi-agent historical analysis explaining coastal fish decline via satellite SST anomalies, chlorophyll cycles, and monsoon trawl bans.
+          {t('trendsSubtitle')}
         </p>
 
         <div className="trends-sector-card">
@@ -78,10 +107,10 @@ export const HistoricalTrendsView: React.FC = () => {
       <div className="trends-causes-card glass">
         <div className="causes-title mono text-xs">
           <IconAlert size={14} color="var(--status-caution)" />
-          <span>PRIMARY ENVIRONMENTAL DRIVERS IDENTIFIED</span>
+          <span>{t('environmentalDrivers')}</span>
         </div>
         <ul className="causes-list">
-          {primary_causes.map((cause, i) => (
+          {primary_causes.map((cause: string, i: number) => (
             <li key={i} className="cause-item text-xs">
               <span className="cause-bullet">●</span>
               <span>{cause}</span>
@@ -101,7 +130,7 @@ export const HistoricalTrendsView: React.FC = () => {
               className={`chart-tab ${activeMetric === 'sst' ? 'chart-tab--active' : ''}`}
               onClick={() => setActiveMetric('sst')}
             >
-              Sea Surface Temp (SST Anomaly)
+              {t('sstTab')}
             </button>
             <button
               type="button"
@@ -110,16 +139,16 @@ export const HistoricalTrendsView: React.FC = () => {
               className={`chart-tab ${activeMetric === 'chlorophyll' ? 'chart-tab--active' : ''}`}
               onClick={() => setActiveMetric('chlorophyll')}
             >
-              Chlorophyll-a Bloom Cycle
+              {t('chlTab')}
             </button>
           </div>
 
           <div className="chart-legend mono text-xs">
             <span className="legend-item">
-              <span className="legend-line legend-line--baseline" /> 5-Yr Climatological Normal
+              <span className="legend-line legend-line--baseline" /> 5-Yr Baseline Normal
             </span>
             <span className="legend-item">
-              <span className="legend-line legend-line--observed" /> 2025–2026 Observed Telemetry
+              <span className="legend-line legend-line--observed" /> Satellite Telemetry (GHRSST / Sentinel-3)
             </span>
           </div>
         </div>
@@ -177,8 +206,8 @@ export const HistoricalTrendsView: React.FC = () => {
             />
 
             {/* Month Labels */}
-            {months.map((m, idx) => {
-              const x = padLeft + (idx / (months.length - 1)) * plotW;
+            {months.map((m: string, idx: number) => {
+              const x = padLeft + (idx / Math.max(months.length - 1, 1)) * plotW;
               return (
                 <text
                   key={m}
@@ -201,20 +230,22 @@ export const HistoricalTrendsView: React.FC = () => {
       <div className="trends-statutory-card glass">
         <div className="statutory-header mono text-xs">
           <IconBook size={14} color="var(--status-pfz)" />
-          <span>STATUTORY CORRELATION & GOVERNANCE</span>
+          <span>{t('statutoryBasis')}</span>
         </div>
         <div className="statutory-act text-sm font-bold">
-          {statutory_reference.act} — {statutory_reference.section}
+          {actTitle} {actSection && `— ${actSection}`}
         </div>
-        <p className="statutory-note text-xs text-muted">
-          {statutory_reference.regulatory_note}
-        </p>
+        {actNote && (
+          <p className="statutory-note text-xs text-muted">
+            {actNote}
+          </p>
+        )}
       </div>
 
       {/* Authoritative Sources */}
       <footer className="trends-footer mono text-xs text-muted">
-        <div className="footer-title">Telemetry Sources:</div>
-        {sources.map((s, idx) => (
+        <div className="footer-title">{t('telemetrySources')}:</div>
+        {sources.map((s: string, idx: number) => (
           <div key={idx} className="footer-source">
             ✓ {s}
           </div>

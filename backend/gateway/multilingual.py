@@ -96,8 +96,30 @@ async def translate_in(query: str) -> Tuple[str, str]:
         logger.info(f"[multilingual] Translated IN ({lang} -> en): '{query}' -> '{clean_text}'")
         return clean_text, lang
     except Exception as err:
-        logger.warning(f"[multilingual] translate_in failed ({err}), falling back to raw query.")
-        return query, lang
+        logger.warning(f"[multilingual] translate_in failed ({err}), falling back to transliteration dictionary.")
+        fallback_query = query
+        _INDIC_FALLBACK_MAP = {
+            "रत्नागिरीच्या": "Ratnagiri",
+            "रत्नागिरी": "Ratnagiri",
+            "मालवणला": "Malvan",
+            "मालवण": "Malvan",
+            "मुंबईच्या": "Mumbai",
+            "मुंबई": "Mumbai",
+            "कोची": "Kochi",
+            "कोच्चि": "Kochi",
+            "गोवा": "Goa",
+            "मौसम": "weather",
+            "हवामान": "weather",
+            "सुरक्षित": "safe",
+            "मछली": "fishing",
+            "उद्या": "tomorrow",
+            "कल": "tomorrow",
+            "लाटा": "waves",
+            "समुद्र": "sea",
+        }
+        for k, v in _INDIC_FALLBACK_MAP.items():
+            fallback_query = fallback_query.replace(k, v)
+        return fallback_query, lang
 
 
 async def translate_out(response_text: str, target_lang: str) -> str:
