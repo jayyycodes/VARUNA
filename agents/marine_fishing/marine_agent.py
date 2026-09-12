@@ -15,8 +15,11 @@ from datetime import date, datetime, timezone
 from typing import Any
 
 from backend.schemas.envelope import AgentEnvelope
+from .bathymetry import BathymetryEngine
 from .environmental_client import EnvironmentalClient
 from .geodesic_sampling import sample_pfz_feature
+from .historical_trends import HistoricalTrendsEngine
+from .satellite_raster import SatelliteRasterClient
 from .models import (
     ObservationOutcome,
     PFZBoundingBox,
@@ -131,9 +134,11 @@ class MarineFishingAgent:
         lon: float,
         date_str: str | date,
         query_run_id: str | None = None,
+        vessel_type: str = "all",
     ) -> AgentEnvelope:
         """
-        Fetch oceanographic conditions and ranked PFZ zones for target location & date.
+        Fetch oceanographic conditions and ranked PFZ zones for target location & date,
+        annotated with GEBCO bathymetry depths and artisanal net compatibility.
         """
         if isinstance(date_str, date):
             target_date = date_str
@@ -204,21 +209,24 @@ class MarineFishingAgent:
                         }
                     )
 
-                zones.sort(key=lambda z: z["productivity_score"], reverse=True)
+                # Annotate bathymetry depths & filter for vessel class
+                annotated_zones = BathymetryEngine.filter_and_annotate_zones(zones, vessel_type=vessel_type)
+                annotated_zones.sort(key=lambda z: z["productivity_score"], reverse=True)
                 mean_sst = round(sum(sst_values) / len(sst_values), 1) if sst_values else 28.2
                 mean_chl = round(sum(chl_values) / len(chl_values), 2) if chl_values else 0.75
 
                 payload = {
                     "location": {"lat": lat, "lon": lon},
                     "date": date_formatted,
+                    "vessel_type": vessel_type,
                     "sst_celsius": mean_sst,
                     "chlorophyll_mg_m3": mean_chl,
-                    "pfz_zones": zones,
+                    "pfz_zones": annotated_zones,
                     "ocean_current_speed_knots": 1.2,
                     "ocean_current_direction": "SSE",
                     "advisory_notes": (
-                        f"Active thermal front detected within {zones[0]['distance_km']}km. "
-                        f"Optimal feeding conditions for {', '.join(zones[0]['likely_species'][:2])}."
+                        f"Active thermal front detected within {annotated_zones[0]['distance_km']}km. "
+                        f"Optimal feeding conditions for {', '.join(annotated_zones[0]['likely_species'][:2])}."
                     ),
                 }
 
@@ -230,14 +238,13 @@ class MarineFishingAgent:
                     confidence=0.92,
                     source="INCOIS PFZ WFS + NOAA ACSPO/VIIRS ERDDAP (Live Telemetry)",
                     timestamp=datetime.now(timezone.utc),
-                    thresholds_used={"min_productivity_score": 0.60},
+                    thresholds_used={"min_productivity_score": 0.60, "bathymetry_source": "GEBCO 15 arc-sec"},
                 )
 
         except Exception as exc:
             logger.warning("[marine] Live acquisition encountered error: %s — falling back", exc)
 
         # 3. Graceful fallback: region-calibrated oceanographic profile
-        # Baseline profile for Indian coast based on lat/lon
         base_sst = 28.4
         base_chl = 0.72
         offset_a_lat = 0.08 if lat < 20.0 else -0.08
@@ -283,14 +290,17 @@ class MarineFishingAgent:
             },
         ]
 
-        candidate_zones.sort(key=lambda z: z["productivity_score"], reverse=True)
+        # Apply bathymetric filtering & depth annotation
+        annotated_fallback = BathymetryEngine.filter_and_annotate_zones(candidate_zones, vessel_type=vessel_type)
+        annotated_fallback.sort(key=lambda z: z["productivity_score"], reverse=True)
 
         payload = {
             "location": {"lat": lat, "lon": lon},
             "date": date_formatted,
+            "vessel_type": vessel_type,
             "sst_celsius": base_sst,
             "chlorophyll_mg_m3": base_chl,
-            "pfz_zones": candidate_zones,
+            "pfz_zones": annotated_fallback,
             "ocean_current_speed_knots": 1.1,
             "ocean_current_direction": "SSE",
             "advisory_notes": (
@@ -307,6 +317,63 @@ class MarineFishingAgent:
             confidence=0.85,
             source="INCOIS PFZ Advisory + NOAA GHRSST (Oceanographic Baseline Fallback)",
             timestamp=datetime.now(timezone.utc),
-            thresholds_used={"min_productivity_score": 0.60},
+            thresholds_used={"min_productivity_score": 0.60, "bathymetry_source": "GEBCO 15 arc-sec"},
         )
+
+    async def analyze_historical_trends(
+        self,
+        lat: float = 16.99,
+        lon: float = 73.28,
+        sector_name: str | None = None,
+        query_run_id: str | None = None,
+    ) -> AgentEnvelope:
+        """
+        Analyze multi-year and 12-month fishery productivity trends and environmental anomalies.
+        Directly implements SIH National Target Query #7.
+        """
+        qid = query_run_id or f"trends-{lat:.2f}-{lon:.2f}"
+        report = HistoricalTrendsEngine.get_trend_report(lat=lat, lon=lon, sector_hint=sector_name)
+        return AgentEnvelope(
+            agent="marine_fishing",
+            query_run_id=qid,
+            status="success",
+            data=report.model_dump(mode="json"),
+            confidence=0.94,
+            source="INCOIS PFZ Climatology + Copernicus Sentinel-3 OLCI + NOAA Coral Reef Watch",
+            timestamp=datetime.now(timezone.utc),
+            thresholds_used={"anomaly_window_months": 12, "climatology_baseline_years": 5},
+        )
+
+    async def get_satellite_raster_slice(
+        self,
+        bbox: tuple[float, float, float, float] = (16.0, 72.5, 17.5, 73.5),
+        target_date: str | date | None = None,
+        query_run_id: str | None = None,
+    ) -> AgentEnvelope:
+        """
+        Fetches high-resolution satellite raster matrices (SST & Chlorophyll)
+        and detects oceanographic convergence fronts over the specified bounding box.
+        """
+        if target_date is None:
+            t_date = date.today()
+        elif isinstance(target_date, str):
+            t_date = datetime.strptime(target_date, "%Y-%m-%d").date()
+        else:
+            t_date = target_date
+
+        qid = query_run_id or f"raster-{bbox[0]:.2f}-{bbox[1]:.2f}"
+        client = SatelliteRasterClient()
+        analysis = await client.get_satellite_analysis(bbox=bbox, target_date=t_date)
+
+        return AgentEnvelope(
+            agent="marine_fishing",
+            query_run_id=qid,
+            status="success",
+            data=analysis.model_dump(mode="json"),
+            confidence=0.91,
+            source="NOAA CoastWatch ERDDAP (GHRSST) + ISRO OCM-3 Ocean Color",
+            timestamp=datetime.now(timezone.utc),
+            thresholds_used={"gradient_threshold_deg_c_per_km": 0.04, "high_chl_threshold_mg_m3": 0.80},
+        )
+
 
