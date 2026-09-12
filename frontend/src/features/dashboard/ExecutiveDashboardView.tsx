@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import type { UserResponseV1 } from '../../contracts/userResponse';
 import { FIXTURES } from '../../fixtures';
+import { apiClient } from '../../api/client';
+import { useLocalization } from '../../hooks/useLocalization';
 import {
   IconCheck,
   IconShield,
@@ -25,6 +27,26 @@ export const ExecutiveDashboardView: React.FC<ExecutiveDashboardViewProps> = ({
   onSelectScenario,
   onNavigateView,
 }) => {
+  const { t } = useLocalization();
+  const [fleetCount, setFleetCount] = useState<number>(24);
+  const [alertCount, setAlertCount] = useState<number>(4);
+
+  useEffect(() => {
+    async function loadStats() {
+      try {
+        const [fleet, alerts] = await Promise.all([
+          apiClient.fetchFleetStatus(),
+          apiClient.fetchActiveAlerts(),
+        ]);
+        if (fleet?.active_craft) setFleetCount(fleet.active_craft);
+        if (alerts?.length) setAlertCount(alerts.length);
+      } catch (err) {
+        console.warn('Dashboard live stats fallback:', err);
+      }
+    }
+    loadStats();
+  }, []);
+
   const scenariosList = Object.entries(FIXTURES).filter(
     ([key]) => key !== 'invalid_geometry'
   );
@@ -42,8 +64,8 @@ export const ExecutiveDashboardView: React.FC<ExecutiveDashboardViewProps> = ({
       <div className="exec-left-column">
         {/* 1. Header & Hero Cards Section */}
         <div className="exec-section-header">
-          <h2 className="exec-section-title">Marine Advisory Cards</h2>
-          <span className="exec-section-link" onClick={() => onNavigateView('map')}>View Map View ↗</span>
+          <h2 className="exec-section-title">{t('marineAdvisoryCards')}</h2>
+          <span className="exec-section-link" onClick={() => onNavigateView('map')}>{t('viewMapView')}</span>
         </div>
 
         <div className="exec-cards-row">
@@ -54,24 +76,24 @@ export const ExecutiveDashboardView: React.FC<ExecutiveDashboardViewProps> = ({
               <span className="exec-card__menu">•••</span>
             </div>
             <div className="exec-card__main-val">
-              {verdict === 'SAFE' && 'SAFE TO SAIL'}
-              {verdict === 'CAUTION' && 'GO WITH CAUTION'}
-              {verdict === 'UNSAFE' && 'DO NOT DEPART'}
-              {verdict === 'UNKNOWN' && 'DATA INCOMPLETE'}
+              {verdict === 'SAFE' && t('safe')}
+              {verdict === 'CAUTION' && t('caution')}
+              {verdict === 'UNSAFE' && t('unsafe')}
+              {verdict === 'UNKNOWN' && t('unknown')}
             </div>
             <div className="exec-card__sub-text mono">
               ZONE ID • RATNAGIRI-WZ-04
             </div>
             <div className="exec-card__bottom">
               <span className="exec-card__date mono">VALID: TODAY</span>
-              <span className="exec-card__brand-tag">INCOIS VERIFIED</span>
+              <span className="exec-card__brand-tag">INCOIS / IMD VERIFIED</span>
             </div>
           </div>
 
           {/* Hero Card 2: Pure White Telemetry Card */}
           <div className="exec-card exec-card--light">
             <div className="exec-card__top">
-              <span className="exec-card__chip-light">OCEAN TELEMETRY</span>
+              <span className="exec-card__chip-light">{t('oceanTelemetry')}</span>
               <span className="exec-card__menu-light">•••</span>
             </div>
             <div className="exec-card__main-val-light">
@@ -84,7 +106,7 @@ export const ExecutiveDashboardView: React.FC<ExecutiveDashboardViewProps> = ({
               <span className="exec-card__date-light mono">UPDATED: LIVE</span>
               <div className="exec-card__toggle-pill">
                 <span className="toggle-dot" />
-                <span>Sensors ON</span>
+                <span>{t('sensorsOn')}</span>
               </div>
             </div>
           </div>
@@ -98,7 +120,7 @@ export const ExecutiveDashboardView: React.FC<ExecutiveDashboardViewProps> = ({
             onClick={() => onNavigateView('routing')}
           >
             <span className="pill-icon-circle"><IconRoute size={14} color="#FFFFFF" /></span>
-            <span>Route Optimize</span>
+            <span>{t('routeOptimize')}</span>
           </button>
 
           <button
@@ -107,7 +129,7 @@ export const ExecutiveDashboardView: React.FC<ExecutiveDashboardViewProps> = ({
             onClick={() => onNavigateView('reasoning')}
           >
             <span className="pill-icon-circle pill-icon-circle--dark"><IconShield size={14} color="#FFFFFF" /></span>
-            <span>Rules Engine</span>
+            <span>{t('rulesEngine')}</span>
           </button>
 
           <button
@@ -116,7 +138,7 @@ export const ExecutiveDashboardView: React.FC<ExecutiveDashboardViewProps> = ({
             onClick={() => onNavigateView('fleet')}
           >
             <span className="pill-icon-circle pill-icon-circle--dark"><IconShip size={14} color="#FFFFFF" /></span>
-            <span>Fleet Ops</span>
+            <span>{t('fleetOps')} ({fleetCount})</span>
           </button>
 
           <button
@@ -125,7 +147,7 @@ export const ExecutiveDashboardView: React.FC<ExecutiveDashboardViewProps> = ({
             onClick={() => onNavigateView('trends')}
           >
             <span className="pill-icon-circle pill-icon-circle--dark"><IconWave size={14} color="#FFFFFF" /></span>
-            <span>Fishery Trends</span>
+            <span>{t('fisheryTrends')}</span>
           </button>
 
           <button
@@ -134,23 +156,23 @@ export const ExecutiveDashboardView: React.FC<ExecutiveDashboardViewProps> = ({
             onClick={() => onNavigateView('alerts')}
           >
             <span className="pill-icon-circle pill-icon-circle--dark"><IconAlert size={14} color="#FFFFFF" /></span>
-            <span>Active Alerts</span>
+            <span>{t('activeAlerts')} ({alertCount})</span>
           </button>
         </div>
 
         {/* 3. Recent Maritime Scenarios & Vessel Inquiries Table */}
         <div className="exec-table-section">
           <div className="exec-table-header">
-            <h3 className="exec-table-title">Recent Coastal Scenarios & Queries</h3>
-            <span className="exec-table-subtitle text-xs">Tap any row to evaluate immediate marine safety</span>
+            <h3 className="exec-table-title">{t('recentScenariosTitle')}</h3>
+            <span className="exec-table-subtitle text-xs">{t('tapToEvaluate')}</span>
           </div>
 
           <div className="exec-table-container">
             <div className="exec-table-head-row">
-              <span className="th-sender">Zone / Vessel</span>
-              <span className="th-date">Timestamp</span>
-              <span className="th-status">Safety Verdict</span>
-              <span className="th-coords">Coordinates</span>
+              <span className="th-sender">{t('zoneVessel')}</span>
+              <span className="th-date">{t('timestamp')}</span>
+              <span className="th-status">{t('safetyVerdict')}</span>
+              <span className="th-coords">{t('coordinates')}</span>
             </div>
 
             <div className="exec-table-body">
@@ -205,7 +227,7 @@ export const ExecutiveDashboardView: React.FC<ExecutiveDashboardViewProps> = ({
         <div className="exec-statistic-card">
           <div className="stat-card-top">
             <div className="stat-card-title-wrap">
-              <span className="stat-card-title">Statistic</span>
+              <span className="stat-card-title">{t('statistic')}</span>
               <span className="stat-card-info-icon">ⓘ</span>
             </div>
             <div className="stat-card-dropdown text-xs mono">
@@ -227,7 +249,7 @@ export const ExecutiveDashboardView: React.FC<ExecutiveDashboardViewProps> = ({
                 />
               </svg>
               <div className="stat-donut-center">
-                <span className="stat-donut-label text-xs">Integrity</span>
+                <span className="stat-donut-label text-xs">{t('integrity')}</span>
                 <span className="stat-donut-val mono">{passPercentage}%</span>
               </div>
             </div>
@@ -235,11 +257,11 @@ export const ExecutiveDashboardView: React.FC<ExecutiveDashboardViewProps> = ({
             <div className="stat-donut-legends">
               <div className="stat-legend-item">
                 <span className="legend-box legend-box--blue" />
-                <span className="text-xs">Passed ({passedCount})</span>
+                <span className="text-xs">{t('passedChecks')} ({passedCount})</span>
               </div>
               <div className="stat-legend-item">
                 <span className="legend-box legend-box--dark" />
-                <span className="text-xs">Violations ({failedCount})</span>
+                <span className="text-xs">{t('violations')} ({failedCount})</span>
               </div>
             </div>
           </div>

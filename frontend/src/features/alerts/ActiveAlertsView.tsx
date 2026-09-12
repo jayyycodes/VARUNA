@@ -1,5 +1,7 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import type { UserResponseV1 } from '../../contracts/userResponse';
+import { apiClient } from '../../api/client';
+import { useLocalization } from '../../hooks/useLocalization';
 import './ActiveAlertsView.css';
 
 interface ActiveAlertsViewProps {
@@ -8,64 +10,48 @@ interface ActiveAlertsViewProps {
 }
 
 export const ActiveAlertsView: React.FC<ActiveAlertsViewProps> = ({ response: _response, onSelectScenario }) => {
-  const alerts = [
-    {
-      id: 'alert-cyclone-vizag',
-      type: 'CYCLONE WARNING',
-      severity: 'UNSAFE',
-      region: 'Andhra Pradesh / North Bay of Bengal',
-      headline: 'Severe Cyclonic Storm Warning — Port Warning Signal #8',
-      details: 'Sustained winds 48 kts gusting 65 kts. Significant wave height 5.2 m. Total suspension of all artisanal and mechanized fishing.',
-      authority: 'IMD Cyclone Warning Division & INCOIS',
-      actionScenario: 'unsafe_cyclone',
-      validUntil: '2026-09-09T18:00:00Z',
-    },
-    {
-      id: 'alert-swell-kochi',
-      type: 'HIGH SWELL / KALLAKKADAL',
-      severity: 'CAUTION',
-      region: 'Kerala Coast (Kochi to Vizhinjam)',
-      headline: 'Swell Wave Alert 2.8m — Nearshore Surge',
-      details: 'High period swell waves (14s) breaking near harbour mouths. Small craft advised to stay within 5 NM.',
-      authority: 'INCOIS Coastal Hazard Warning Centre',
-      actionScenario: 'caution_wave',
-      validUntil: '2026-09-08T23:30:00Z',
-    },
-    {
-      id: 'alert-mpa-malvan',
-      type: 'REGULATORY RESTRICTION',
-      severity: 'UNSAFE',
-      region: 'Malvan Marine Sanctuary, Maharashtra',
-      headline: 'Marine Protected Area Core Geofence Active',
-      details: 'Total exclusion no-take zone under Wildlife Protection Act 1972. Fines and gear confiscation for incursions.',
-      authority: 'Maharashtra Forest Dept / Coastal Police',
-      actionScenario: 'geofence_restricted',
-      validUntil: 'Permanent Statutory Notified Zone',
-    },
-    {
-      id: 'alert-stale-telemetry',
-      type: 'DEGRADED SENSOR WARNING',
-      severity: 'UNKNOWN',
-      region: 'Gujarat Coast / Saurashtra Sector',
-      headline: 'Coastal Radar Packet Loss (>6h Data Age)',
-      details: 'Weather observations stale. System clamps verdict to UNKNOWN to prevent reassuring false positives.',
-      authority: 'VARUNA Telemetry Health Guard',
-      actionScenario: 'weather_stale',
-      validUntil: 'Until next buoy uplink sync',
-    },
-  ];
+  const { t } = useLocalization();
+  const [alerts, setAlerts] = useState<any[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+
+  useEffect(() => {
+    let isMounted = true;
+    async function loadAlerts() {
+      setLoading(true);
+      try {
+        const liveAlerts = await apiClient.fetchActiveAlerts();
+        if (isMounted) {
+          setAlerts(liveAlerts);
+        }
+      } catch (err) {
+        console.error('Failed to load active alerts:', err);
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    }
+    loadAlerts();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   return (
     <div className="active-alerts-view">
       <header className="alerts-header">
         <div>
-          <div className="alerts-badge mono text-xs">COASTAL HAZARD BROADCAST</div>
-          <h1 className="alerts-title text-display">Active Marine Alerts & Restrictions</h1>
+          <div className="alerts-badge mono text-xs">{t('coastalHazardBroadcast')}</div>
+          <h1 className="alerts-title text-display">{t('activeAlertsTitle')}</h1>
           <p className="alerts-subtitle text-sm text-muted">
-            Live emergency notices, INCOIS high wave bulletins, IMD cyclone warnings, and MPA boundary geofences.
+            {t('activeAlertsSubtitle')}
           </p>
         </div>
       </header>
+
+      {loading && (
+        <div className="alerts-loading text-center py-6 text-sm text-muted">
+          <span>{t('analyzingDomains')}...</span>
+        </div>
+      )}
 
       {/* Grid of Alert Cards */}
       <div className="alerts-grid">
@@ -91,15 +77,16 @@ export const ActiveAlertsView: React.FC<ActiveAlertsViewProps> = ({ response: _r
               <p className="alert-details text-xs text-muted">{alert.details}</p>
 
               <div className="alert-meta mono text-xs">
-                <div>Authority: <span className="text-foam">{alert.authority}</span></div>
-                <div>Validity: <span className="text-foam">{alert.validUntil}</span></div>
+                <div>{t('authority')}: <span className="text-foam">{alert.authority}</span></div>
+                <div>{t('validity')}: <span className="text-foam">{alert.validUntil}</span></div>
               </div>
 
               <button
+                type="button"
                 className="alert-inspect-btn"
                 onClick={() => onSelectScenario(alert.actionScenario)}
               >
-                Inspect on Map Canvas →
+                {t('evaluateOnMap')}
               </button>
             </article>
           );

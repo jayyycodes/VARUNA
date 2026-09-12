@@ -540,6 +540,238 @@ export class VarunaApiClient {
     }
     return 'safe_complete';
   }
+
+  /**
+   * Fetch live active marine alerts from FastAPI backend with fallback.
+   */
+  async fetchActiveAlerts(): Promise<any[]> {
+    try {
+      const res = await fetch(`${this.apiBaseUrl}/api/alerts`, {
+        headers: { Accept: 'application/json' },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data) && data.length > 0) {
+          return data.map((a: any) => ({
+            id: a.id,
+            type: a.type,
+            severity: a.severity || 'CAUTION',
+            region: a.region,
+            headline: a.headline,
+            details: a.details,
+            authority: a.authority,
+            actionScenario: a.action_scenario || 'caution_wave',
+            validUntil: a.valid_until,
+            affectedPorts: a.affected_ports || [],
+            isLive: true,
+          }));
+        }
+      }
+    } catch (e) {
+      console.warn('Live alerts endpoint unreachable, using fallback:', e);
+    }
+    return [
+      {
+        id: 'alert-cyclone-vizag',
+        type: 'CYCLONE WARNING',
+        severity: 'UNSAFE',
+        region: 'Andhra Pradesh / North Bay of Bengal',
+        headline: 'Severe Cyclonic Storm Warning — Port Warning Signal #8',
+        details: 'Sustained winds 48 kts gusting 65 kts. Significant wave height 5.2 m. Total suspension of all artisanal and mechanized fishing.',
+        authority: 'IMD Cyclone Warning Division & INCOIS',
+        actionScenario: 'unsafe_cyclone',
+        validUntil: '2026-09-12T18:00:00Z',
+        isLive: false,
+      },
+      {
+        id: 'alert-swell-kochi',
+        type: 'HIGH SWELL / KALLAKKADAL',
+        severity: 'CAUTION',
+        region: 'Kerala Coast (Kochi to Vizhinjam)',
+        headline: 'Swell Wave Alert 2.8m — Nearshore Surge',
+        details: 'High period swell waves (14s) breaking near harbour mouths. Small craft advised to stay within 5 NM.',
+        authority: 'INCOIS Coastal Hazard Warning Centre',
+        actionScenario: 'caution_wave',
+        validUntil: '2026-09-13T23:30:00Z',
+        isLive: false,
+      },
+      {
+        id: 'alert-mpa-malvan',
+        type: 'REGULATORY RESTRICTION',
+        severity: 'UNSAFE',
+        region: 'Malvan Marine Sanctuary, Maharashtra',
+        headline: 'Marine Protected Area Core Geofence Active',
+        details: 'Total exclusion no-take zone under Wildlife Protection Act 1972. Fines and gear confiscation for incursions.',
+        authority: 'Maharashtra Forest Dept / Coastal Police',
+        actionScenario: 'geofence_restricted',
+        validUntil: 'Permanent Statutory Notified Zone',
+        isLive: false,
+      },
+      {
+        id: 'alert-lightning-konkan',
+        type: 'CONVECTIVE LIGHTNING ALERT',
+        severity: 'CAUTION',
+        region: 'Konkan Coast (Ratnagiri to Sindhudurg)',
+        headline: 'Severe Thunderstorm & Lightning Activity',
+        details: 'Frequent cloud-to-water lightning strikes detected by MOSDAC. Artisanal craft avoid open sea.',
+        authority: 'ISRO MOSDAC & IMD',
+        actionScenario: 'caution_wave',
+        validUntil: '2026-09-12T21:00:00Z',
+        isLive: false,
+      },
+    ];
+  }
+
+  /**
+   * Fetch live coastal fleet status and vessel positions.
+   */
+  async fetchFleetStatus(): Promise<{
+    active_craft: number;
+    in_pfz_count: number;
+    weather_clear_pct: number;
+    vessels: any[];
+    isLive: boolean;
+  }> {
+    try {
+      const res = await fetch(`${this.apiBaseUrl}/api/fleet`, {
+        headers: { Accept: 'application/json' },
+      });
+      if (res.ok) {
+        const json = await res.json();
+        return { ...json, isLive: true };
+      }
+    } catch (e) {
+      console.warn('Fleet API unreachable, using fallback:', e);
+    }
+    return {
+      active_craft: 24,
+      in_pfz_count: 14,
+      weather_clear_pct: 88.5,
+      isLive: false,
+      vessels: [
+        {
+          id: 'IND-MH-0192',
+          name: 'Matsya Sagar IV',
+          type: 'Mechanized Trawler (14m)',
+          port: 'Mirya Bay, Ratnagiri',
+          coordinates: '17.02° N, 73.18° E',
+          status: 'Operating in PFZ Zone',
+          compliance: 'SAFE (All Clear)',
+          severity: 'safe',
+          fuel: '74%',
+          crew: 6,
+          ais_status: 'Active (Class B AIS)',
+        },
+        {
+          id: 'IND-MH-5510',
+          name: 'Sindhudurg Star',
+          type: 'Artisanal Motor Craft (7.5m)',
+          port: 'Malvan Port',
+          coordinates: '16.02° N, 73.42° E',
+          status: 'Transit near Sanctuary Buffer',
+          compliance: 'SAFE (Clear of MPA Core)',
+          severity: 'safe',
+          fuel: '65%',
+          crew: 3,
+          ais_status: 'Active (VHF Ch 16)',
+        },
+        {
+          id: 'IND-KL-4081',
+          name: 'Samudra Jyoti',
+          type: 'Motorized Gillnetter (9.5m)',
+          port: 'Cochin Harbour',
+          coordinates: '09.92° N, 76.15° E',
+          status: 'Returning to Harbor',
+          compliance: 'CAUTION (Wave Swell 2.6m)',
+          severity: 'caution',
+          fuel: '42%',
+          crew: 4,
+          ais_status: 'Active',
+        },
+        {
+          id: 'IND-AP-8821',
+          name: 'Bay Queen III',
+          type: 'Deep Sea Longliner (16m)',
+          port: 'Visakhapatnam',
+          coordinates: '17.65° N, 83.32° E',
+          status: 'Moored / Harbor Anchor',
+          compliance: 'UNSAFE (Port Signal #8 Active)',
+          severity: 'unsafe',
+          fuel: '90%',
+          crew: 8,
+          ais_status: 'Harbour Transponder Standby',
+        },
+      ],
+    };
+  }
+
+  /**
+   * Fetch historical fishery productivity anomaly analysis (SIH Query #7).
+   */
+  async fetchHistoricalTrends(): Promise<any> {
+    try {
+      const res = await fetch(`${this.apiBaseUrl}/api/analytics/historical-trends`, {
+        headers: { Accept: 'application/json' },
+      });
+      if (res.ok) {
+        return await res.json();
+      }
+    } catch (e) {
+      console.warn('Historical trends API unreachable, using fixture:', e);
+    }
+    return null;
+  }
+
+  /**
+   * Fetch coastal ports catalog for route planning.
+   */
+  async fetchPortsCatalog(): Promise<Array<{ id: string; name: string; lat: number; lon: number }>> {
+    try {
+      const res = await fetch(`${this.apiBaseUrl}/api/route/ports`, {
+        headers: { Accept: 'application/json' },
+      });
+      if (res.ok) {
+        return await res.json();
+      }
+    } catch (e) {
+      console.warn('Ports catalog unreachable, using default ports:', e);
+    }
+    return [
+      { id: 'ratnagiri', name: 'Ratnagiri Harbour', lat: 16.989, lon: 73.284 },
+      { id: 'malvan', name: 'Malvan Port', lat: 16.052, lon: 73.468 },
+      { id: 'mumbai', name: 'Mumbai Sassoon Docks', lat: 18.922, lon: 72.834 },
+      { id: 'alibaug', name: 'Alibaug Port', lat: 18.641, lon: 72.872 },
+      { id: 'goa', name: 'Mormugao Port, Goa', lat: 15.498, lon: 73.827 },
+      { id: 'cochin', name: 'Cochin Fisheries Harbour', lat: 9.967, lon: 76.242 },
+      { id: 'vizhinjam', name: 'Vizhinjam Port', lat: 8.375, lon: 76.991 },
+    ];
+  }
+
+  /**
+   * Compute custom dual-route passage (Safe Corridor vs Direct Baseline).
+   */
+  async planCustomRoute(params: {
+    departure_port?: string;
+    destination_port?: string;
+    start_lat?: number;
+    start_lon?: number;
+    dest_lat?: number;
+    dest_lon?: number;
+    vessel_speed_kts?: number;
+  }): Promise<any> {
+    const res = await fetch(`${this.apiBaseUrl}/api/route/plan`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+      body: JSON.stringify(params),
+    });
+    if (!res.ok) {
+      throw new Error(`Route planning failed with HTTP ${res.status}`);
+    }
+    return await res.json();
+  }
 }
 
 export const apiClient = new VarunaApiClient();
