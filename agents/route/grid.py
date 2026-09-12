@@ -20,12 +20,9 @@ def build_bounding_box(start_lat: float, start_lon: float, dest_lat: float, dest
     lat_diff = max_lat - min_lat
     lon_diff = max_lon - min_lon
     
-    # Handle straight line vertical/horizontal routes by ensuring minimum box dimensions
-    if lat_diff < 0.1: lat_diff = 0.1
-    if lon_diff < 0.1: lon_diff = 0.1
-        
-    pad_lat = lat_diff * padding_pct
-    pad_lon = lon_diff * padding_pct
+    # Handle straight line vertical/horizontal routes by ensuring minimum lateral padding
+    pad_lat = max(lat_diff * padding_pct, 0.35)
+    pad_lon = max(lon_diff * padding_pct, 0.35)
     
     return (
         min_lat - pad_lat,
