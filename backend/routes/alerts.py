@@ -156,3 +156,38 @@ async def get_active_alerts(
             or any(reg_lower in p.lower() for p in a["affected_ports"])
         ]
     return alerts
+
+
+@router.post("/clear-expired")
+async def clear_expired_alerts() -> dict[str, Any]:
+    """
+    Purge expired marine alerts from in-memory CURRENT_ALERTS store.
+    Permanent statutory zones are preserved.
+    """
+    global CURRENT_ALERTS
+    now_utc = datetime.now(timezone.utc)
+    retained = []
+    purged_count = 0
+
+    for alert in CURRENT_ALERTS:
+        valid_until_str = alert.get("valid_until", "")
+        # Preserve permanent alerts
+        if "permanent" in valid_until_str.lower():
+            retained.append(alert)
+            continue
+
+        try:
+            # Parse ISO datetime
+            dt = datetime.fromisoformat(valid_until_str.replace("Z", "+00:00"))
+            if dt > now_utc:
+                retained.append(alert)
+            else:
+                purged_count += 1
+        except Exception:
+            # If date format is non-standard or unparseable, retain by default
+            retained.append(alert)
+
+    CURRENT_ALERTS.clear()
+    CURRENT_ALERTS.extend(retained)
+    return {"status": "success", "purged_count": purged_count, "active_count": len(CURRENT_ALERTS)}
+
