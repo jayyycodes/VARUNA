@@ -358,9 +358,9 @@
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.06);
 }
 
-/* Evidence rail stays white in both themes */
+/* Evidence rail in sunlight mode */
 [data-theme="sunlight"] .map-view-grid .evidence-rail {
-  background: #FFFFFF;
+  background: #FCFDFE;
   border-color: var(--surface-border-light);
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.06);
 }

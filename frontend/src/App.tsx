@@ -14,6 +14,7 @@ import { HistoricalTrendsView } from './features/analytics/HistoricalTrendsView'
 import { ExecutiveDashboardView } from './features/dashboard/ExecutiveDashboardView';
 import { ChatAssistantView } from './features/chat/ChatAssistantView';
 import { ChatAssistantModal } from './features/chat/ChatAssistantModal';
+import { ScenarioDrawer } from './features/map/ScenarioDrawer';
 import { LanguageSelector } from './components/LanguageSelector';
 import { useLocalization } from './hooks/useLocalization';
 import {
@@ -265,6 +266,15 @@ function App() {
 
           {activeView === 'map' && (
             <div className="map-view-grid">
+              {/* Left Test Scenarios Grounding Drawer */}
+              {!isMobile && (
+                <ScenarioDrawer
+                  activeScenarioId={activeScenarioId}
+                  onSelectScenario={executeScenario}
+                  loading={loading}
+                />
+              )}
+
               {/* Center Map Card Canvas */}
               <div className="map-card-wrapper">
                 <VerdictCard
@@ -359,16 +369,18 @@ function App() {
       </div>
 
       {/* Floating AI Agent Launcher Button (Claude / Grok Style) */}
-      <button
-        type="button"
-        className="floating-ai-launcher-btn"
-        onClick={() => setChatModalOpen(true)}
-        title="Ask VARUNA AI Copilot (⌘J)"
-      >
-        <IconCopilotBot size={17} className="launcher-sparkle-icon" color="#D8FA36" />
-        <span>{t('askVarunaAI')}</span>
-        <span className="mono text-xs" style={{ opacity: 0.7 }}>⌘J</span>
-      </button>
+      {activeView !== 'chat' && (
+        <button
+          type="button"
+          className="floating-ai-launcher-btn"
+          onClick={() => setChatModalOpen(true)}
+          title="Ask VARUNA AI Copilot (⌘J)"
+        >
+          <IconCopilotBot size={17} className="launcher-sparkle-icon" color="#D8FA36" />
+          <span>{t('askVarunaAI')}</span>
+          <span className="mono text-xs" style={{ opacity: 0.7 }}>⌘J</span>
+        </button>
+      )}
 
       {/* Conversational Marine AI Assistant Modal */}
       <ChatAssistantModal

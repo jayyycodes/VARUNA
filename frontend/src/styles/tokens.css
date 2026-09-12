@@ -121,19 +121,20 @@
 [data-theme="sunlight"] {
   --canvas-dark:          #181B22;
   --sidebar-pod:          #181B22;
-  --sidebar-subpanel:     #FFFFFF;
-  --sidebar-card:         #FFFFFF;
-  --sidebar-card-hover:   #F1F5F9;
-  --sidebar-card-active:  #E2E8F0;
+  --sidebar-subpanel:     #F8FAFC;
+  --sidebar-card:         #F1F5F9;
+  --sidebar-card-hover:   #FFFFFF;
+  --sidebar-card-active:  #EBF2FE;
 
-  --canvas-light:         #EFF2F7;    /* Modern soft daylight canvas matching reference */
-  --surface-white:        #FFFFFF;
-  --surface-subtle-gray:  #F8FAFC;
-  --surface-border-light: rgba(15, 23, 42, 0.07);
+  --canvas-light:         #EBF0F5;    /* Soft daylight canvas */
+  --surface-white:        #F8FAFC;    /* Refined slightly grey-tinted card surface */
+  --surface-card:         #F8FAFC;
+  --surface-subtle-gray:  #F1F5F9;    /* Sub-containers inside cards */
+  --surface-border-light: rgba(15, 23, 42, 0.09);
 
   /* Refined High-End Shadows */
-  --shadow-light-card:    0 14px 38px rgba(15, 23, 42, 0.04), 0 2px 8px rgba(15, 23, 42, 0.02);
-  --shadow-light-elevated:0 24px 50px rgba(15, 23, 42, 0.07), 0 4px 12px rgba(15, 23, 42, 0.03);
+  --shadow-light-card:    0 10px 30px rgba(15, 23, 42, 0.04), 0 2px 6px rgba(15, 23, 42, 0.02);
+  --shadow-light-elevated:0 20px 44px rgba(15, 23, 42, 0.06), 0 4px 12px rgba(15, 23, 42, 0.03);
 
   /* Verified AAA Text on Light Canvas */
   --text-light-primary:   #0F172A;    /* Deep slate black */
@@ -159,7 +160,7 @@
   --status-unsafe-bg:      #FEE2E2; /* Red 100 tint */
   --status-unknown-bg:     #F1F5F9; /* Slate 100 tint */
 
-  --glass-bg:              rgba(255, 255, 255, 0.96);
-  --glass-border:          rgba(15, 23, 42, 0.07);
+  --glass-bg:              rgba(248, 250, 252, 0.96);
+  --glass-border:          rgba(15, 23, 42, 0.09);
 }
 

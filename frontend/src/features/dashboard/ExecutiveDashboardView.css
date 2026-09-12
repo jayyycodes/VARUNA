@@ -135,11 +135,11 @@
   color: #FFFFFF;
 }
 
-/* Light Card (Pure White) */
+/* Light Card (Subtle Off-White / Soft Grey) */
 .exec-card--light {
-  background: #FFFFFF;
+  background: #FCFDFE;
   color: #0F172A;
-  border: 1px solid rgba(15, 23, 42, 0.08);
+  border: 1px solid rgba(15, 23, 42, 0.09);
 }
 
 .exec-card__chip-light {
@@ -206,8 +206,8 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  background: #FFFFFF;
-  border: 1px solid rgba(15, 23, 42, 0.08);
+  background: #FCFDFE;
+  border: 1px solid rgba(15, 23, 42, 0.09);
   border-radius: var(--radius-pill);
   padding: 8px 18px;
   color: #0F172A;
@@ -220,6 +220,7 @@
 }
 
 .exec-action-pill:hover {
+  background: #FFFFFF;
   transform: translateY(-1px);
   box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06);
 }
@@ -247,8 +248,8 @@
 
 /* Table Section */
 .exec-table-section {
-  background: #FFFFFF;
-  border: 1px solid rgba(15, 23, 42, 0.08);
+  background: #FCFDFE;
+  border: 1px solid rgba(15, 23, 42, 0.09);
   border-radius: 26px;
   padding: 20px 24px;
   box-shadow: 0 14px 38px rgba(15, 23, 42, 0.04), 0 2px 8px rgba(15, 23, 42, 0.02);
@@ -423,8 +424,8 @@
 }
 
 .exec-statistic-card {
-  background: #FFFFFF;
-  border: 1px solid rgba(15, 23, 42, 0.08);
+  background: #FCFDFE;
+  border: 1px solid rgba(15, 23, 42, 0.09);
   border-radius: 28px;
   padding: 24px;
   box-shadow: 0 20px 48px rgba(15, 23, 42, 0.06), 0 4px 12px rgba(15, 23, 42, 0.02);
@@ -458,7 +459,7 @@
 }
 
 .stat-card-dropdown {
-  background: #F8FAFC;
+  background: #F1F5F9;
   border: 1px solid rgba(15, 23, 42, 0.08);
   border-radius: var(--radius-pill);
   padding: 4px 10px;
@@ -565,13 +566,16 @@
   gap: 12px;
   padding: 8px 10px;
   border-radius: 14px;
+  background: #F1F5F9;
+  border: 1px solid rgba(15, 23, 42, 0.06);
   cursor: pointer;
   transition: all 150ms ease;
 }
 
 .stat-item-row:hover {
-  background: #F8FAFC;
+  background: #FFFFFF;
   transform: translateX(2px);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04);
 }
 
 .stat-item-icon-wrap {
