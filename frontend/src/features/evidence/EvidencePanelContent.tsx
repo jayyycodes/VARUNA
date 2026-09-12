@@ -13,6 +13,7 @@ import {
   IconAlert,
   IconExternalLink,
 } from '../../components/Icons';
+import { useLocalization } from '../../hooks/useLocalization';
 import './EvidencePanelContent.css';
 
 interface EvidencePanelContentProps {
@@ -28,6 +29,7 @@ export const EvidencePanelContent: React.FC<EvidencePanelContentProps> = ({
   selectedClaimId: _selectedClaimId,
 }) => {
   const [activeTab, setActiveTab] = useState<'rules' | 'freshness' | 'citations'>('rules');
+  const { t } = useLocalization();
 
   if (!response) {
     return (
@@ -35,13 +37,17 @@ export const EvidencePanelContent: React.FC<EvidencePanelContentProps> = ({
         <div className="evidence-empty-icon">
           <IconShield size={36} color="#94A3B8" />
         </div>
-        <p className="text-sm">Submit a marine query or select a scenario to inspect deterministic rule traces, data freshness, and legal citations.</p>
+        <p className="text-sm">{t('emptyEvidence')}</p>
       </div>
     );
   }
 
   const { evidence_panel, citations, claims, decision_status } = response;
   const { rule_trace, data_freshness, missing_inputs } = evidence_panel;
+
+  const passedCount = rule_trace.filter((r) => r.passed).length;
+  const failedCount = rule_trace.length - passedCount;
+  const passPercentage = rule_trace.length > 0 ? Math.round((passedCount / rule_trace.length) * 100) : 100;
 
   // Check if any claim is unverified / insufficient evidence
   const unverifiedClaims = claims.filter(
@@ -50,13 +56,49 @@ export const EvidencePanelContent: React.FC<EvidencePanelContentProps> = ({
 
   return (
     <div className="evidence-panel-inner">
+      {/* Modern Statistic Donut Card (Matching Reference UI) */}
+      <div className="evidence-donut-card">
+        <div className="donut-card-header">
+          <span className="donut-card-title">Safety Metric ⓘ</span>
+          <span className="donut-card-period text-xs mono">Real-Time Evaluation</span>
+        </div>
+        <div className="donut-card-body">
+          <div className="donut-chart-container">
+            <svg className="donut-chart-svg" viewBox="0 0 100 100">
+              <circle className="donut-ring-bg" cx="50" cy="50" r="38" />
+              <circle
+                className="donut-ring-progress"
+                cx="50"
+                cy="50"
+                r="38"
+                strokeDasharray={`${(passedCount / Math.max(rule_trace.length, 1)) * 238.76} 238.76`}
+              />
+            </svg>
+            <div className="donut-chart-center">
+              <span className="donut-center-label text-xs">Passed</span>
+              <span className="donut-center-val mono">{passPercentage}%</span>
+            </div>
+          </div>
+          <div className="donut-legend">
+            <div className="donut-legend-item">
+              <span className="donut-legend-dot donut-legend-dot--safe" />
+              <span className="text-xs">{t('passed')}: {passedCount}</span>
+            </div>
+            <div className="donut-legend-item">
+              <span className="donut-legend-dot donut-legend-dot--unsafe" />
+              <span className="text-xs">{t('breach')}: {failedCount}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* 1. Tab Navigation */}
       <nav className="evidence-nav" aria-label="Evidence categories">
         <button
           className={`evidence-nav__btn ${activeTab === 'rules' ? 'evidence-nav__btn--active' : ''}`}
           onClick={() => setActiveTab('rules')}
         >
-          Rules & Checks
+          {t('rulesAndChecks')}
           {rule_trace.length > 0 && <span className="evidence-nav__badge">{rule_trace.length}</span>}
         </button>
 
@@ -64,7 +106,7 @@ export const EvidencePanelContent: React.FC<EvidencePanelContentProps> = ({
           className={`evidence-nav__btn ${activeTab === 'freshness' ? 'evidence-nav__btn--active' : ''}`}
           onClick={() => setActiveTab('freshness')}
         >
-          Freshness
+          {t('freshness')}
           {data_freshness.length > 0 && <span className="evidence-nav__badge">{data_freshness.length}</span>}
         </button>
 
@@ -72,7 +114,7 @@ export const EvidencePanelContent: React.FC<EvidencePanelContentProps> = ({
           className={`evidence-nav__btn ${activeTab === 'citations' ? 'evidence-nav__btn--active' : ''}`}
           onClick={() => setActiveTab('citations')}
         >
-          Citations
+          {t('citations')}
           {citations.length > 0 && <span className="evidence-nav__badge">{citations.length}</span>}
         </button>
       </nav>
@@ -82,14 +124,14 @@ export const EvidencePanelContent: React.FC<EvidencePanelContentProps> = ({
         {activeTab === 'rules' && (
           <div className="evidence-section">
             <div className="evidence-section__header">
-              <span className="mono text-xs text-muted">DETERMINISTIC EVALUATION ENGINE</span>
+              <span className="mono text-xs text-muted">{t('deterministicEngine')}</span>
             </div>
 
             {rule_trace.length === 0 ? (
               <div className="evidence-note text-xs">
                 {decision_status === 'indeterminate'
-                  ? 'No rule traces could be executed due to missing critical sensors.'
-                  : 'No active rule threshold breaches recorded for this query.'}
+                  ? t('noRuleTracesIndeterminate')
+                  : t('noRuleTraces')}
               </div>
             ) : (
               <div className="rule-trace-list">
@@ -111,11 +153,11 @@ export const EvidencePanelContent: React.FC<EvidencePanelContentProps> = ({
                         >
                           {isPassed ? (
                             <>
-                              <IconCheck size={11} color="#FFFFFF" /> PASSED
+                              <IconCheck size={11} color="#FFFFFF" /> {t('passed')}
                             </>
                           ) : (
                             <>
-                              <IconCross size={11} color="#FFFFFF" /> BREACH
+                              <IconCross size={11} color="#FFFFFF" /> {t('breach')}
                             </>
                           )}
                         </span>
@@ -128,9 +170,9 @@ export const EvidencePanelContent: React.FC<EvidencePanelContentProps> = ({
                         <table className="rule-card__table">
                           <thead>
                             <tr>
-                              <th>Measured</th>
-                              <th>Op</th>
-                              <th>Threshold</th>
+                              <th>{t('measured')}</th>
+                              <th>{t('op')}</th>
+                              <th>{t('threshold')}</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -150,8 +192,8 @@ export const EvidencePanelContent: React.FC<EvidencePanelContentProps> = ({
                       <p className="rule-card__explanation text-xs">{item.explanation}</p>
 
                       <div className="rule-card__footer mono text-xs text-muted">
-                        <span>Rule: {item.rule_id}</span>
-                        <span>Ver: {item.threshold_version}</span>
+                        <span>{t('rule')}: {item.rule_id}</span>
+                        <span>{t('version')}: {item.threshold_version}</span>
                       </div>
                     </article>
                   );
@@ -164,7 +206,7 @@ export const EvidencePanelContent: React.FC<EvidencePanelContentProps> = ({
               <div className="missing-inputs-box">
                 <div className="missing-inputs-header">
                   <span className="missing-inputs-badge mono text-xs">
-                    <IconAlert size={12} color="#FFFFFF" /> MISSING INPUTS ({missing_inputs.length})
+                    <IconAlert size={12} color="#FFFFFF" /> {t('missingInputs')} ({missing_inputs.length})
                   </span>
                 </div>
                 <div className="missing-inputs-list">
@@ -173,7 +215,7 @@ export const EvidencePanelContent: React.FC<EvidencePanelContentProps> = ({
                       <div className="missing-param font-bold mono">{m.parameter}</div>
                       <div className="missing-impact text-muted">{m.impact}</div>
                       {m.fallback_used && (
-                        <div className="missing-fallback text-xs">Fallback: {m.fallback_used}</div>
+                        <div className="missing-fallback text-xs">{t('fallback')}: {m.fallback_used}</div>
                       )}
                     </div>
                   ))}
@@ -187,7 +229,7 @@ export const EvidencePanelContent: React.FC<EvidencePanelContentProps> = ({
         {activeTab === 'freshness' && (
           <div className="evidence-section">
             <div className="evidence-section__header">
-              <span className="mono text-xs text-muted">TELEMETRY SOURCES & SENSOR TIMELINESS</span>
+              <span className="mono text-xs text-muted">{t('telemetrySources')}</span>
             </div>
 
             <div className="freshness-list">
@@ -212,13 +254,13 @@ export const EvidencePanelContent: React.FC<EvidencePanelContentProps> = ({
                     </div>
 
                     <div className="freshness-card__domain mono text-xs text-muted">
-                      Domain: {item.domain}
+                      {t('domain')}: {item.domain}
                     </div>
 
                     <div className="freshness-card__timestamps mono text-xs">
-                      <div>Observed: {new Date(item.observed_at).toLocaleTimeString()}</div>
-                      <div>Retrieved: {new Date(item.retrieved_at).toLocaleTimeString()}</div>
-                      {item.valid_to && <div>Valid to: {new Date(item.valid_to).toLocaleTimeString()}</div>}
+                      <div>{t('observed')}: {new Date(item.observed_at).toLocaleTimeString()}</div>
+                      <div>{t('retrieved')}: {new Date(item.retrieved_at).toLocaleTimeString()}</div>
+                      {item.valid_to && <div>{t('validTo')}: {new Date(item.valid_to).toLocaleTimeString()}</div>}
                     </div>
                   </div>
                 );
@@ -231,28 +273,28 @@ export const EvidencePanelContent: React.FC<EvidencePanelContentProps> = ({
         {activeTab === 'citations' && (
           <div className="evidence-section">
             <div className="evidence-section__header">
-              <span className="mono text-xs text-muted">AUTHORITATIVE LEGAL & ADVISORY CITATIONS</span>
+              <span className="mono text-xs text-muted">{t('legalCitations')}</span>
             </div>
 
             {/* Unverified / Insufficient Evidence Fallback */}
             {unverifiedClaims.length > 0 && (
               <div className="unverified-citation-banner" role="alert">
                 <div className="unverified-header">
-                  <span className="unverified-tag mono text-xs">NOT VERIFIED</span>
-                  <span className="text-xs text-muted">RAG Grounding Guard</span>
+                  <span className="unverified-tag mono text-xs">{t('notVerified')}</span>
+                  <span className="text-xs text-muted">{t('ragGroundingGuard')}</span>
                 </div>
                 <p className="unverified-copy text-sm font-bold">
-                  We could not verify this from the available official sources.
+                  {t('unverifiedCopy')}
                 </p>
                 <p className="text-xs text-muted">
-                  VARUNA strictly refuses to synthesize legal permissions without direct statutory citations.
+                  {t('unverifiedExplain')}
                 </p>
               </div>
             )}
 
             {citations.length === 0 && unverifiedClaims.length === 0 ? (
               <div className="evidence-note text-xs">
-                No statutory or regulatory document citations attached to this operational query.
+                {t('noCitations')}
               </div>
             ) : (
               <div className="citations-list">
@@ -265,7 +307,7 @@ export const EvidencePanelContent: React.FC<EvidencePanelContentProps> = ({
                     <div className="citation-card__excerpt-box">
                       {c.source_language && c.source_language !== 'en-IN' && (
                         <span className="lang-tag mono text-xs">
-                          ORIGINAL [{c.source_language.toUpperCase()}]
+                          {t('original')} [{c.source_language.toUpperCase()}]
                         </span>
                       )}
                       <blockquote className="citation-excerpt text-xs font-italic">
@@ -275,7 +317,7 @@ export const EvidencePanelContent: React.FC<EvidencePanelContentProps> = ({
 
                     <div className="citation-card__footer">
                       <span className="mono text-xs text-muted">
-                        Published: {new Date(c.published_at).toLocaleDateString()}
+                        {t('published')}: {new Date(c.published_at).toLocaleDateString()}
                       </span>
                       {c.url && (
                         <a
@@ -284,7 +326,7 @@ export const EvidencePanelContent: React.FC<EvidencePanelContentProps> = ({
                           rel="noopener noreferrer"
                           className="citation-link text-xs mono"
                         >
-                          Source Doc <IconExternalLink size={11} />
+                          {t('sourceDoc')} <IconExternalLink size={11} />
                         </a>
                       )}
                     </div>

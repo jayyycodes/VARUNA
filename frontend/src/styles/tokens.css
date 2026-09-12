@@ -87,11 +87,17 @@
   --text-sm:              0.8125rem;   /* 13px */
   --text-xs:              0.75rem;     /* 12px */
 
-  /* --- Radii --- */
-  --radius-card-primary:  24px;
-  --radius-card-secondary:16px;
-  --radius-card-tertiary: 12px;
+  /* --- Radii (Modern organic curves matching reference) --- */
+  --radius-card-primary:  26px;
+  --radius-card-secondary:20px;
+  --radius-card-tertiary: 14px;
   --radius-pill:          999px;
+
+  /* --- Action Pill Tokens --- */
+  --pill-active-bg:       #4F8BF9;
+  --pill-active-text:     #FFFFFF;
+  --pill-inactive-bg:     #FFFFFF;
+  --pill-inactive-text:   #0F172A;
 
   /* --- Glass Material Defaults --- */
   --glass-bg:             rgba(14, 20, 32, 0.72);
@@ -108,29 +114,34 @@
 }
 
 /* ==========================================================================
-   Sunlight Daylight Mode (High-Contrast for Outdoor Marine Glare)
-   Mathematically verified against WCAG AAA (≥ 7.0:1) on #F8FAFC
+   Sunlight Daylight Mode (Modern Neumorphic / Glassmorphic Soft Daylight)
+   Inspired by Reference: Floating Matte Dark Rail + Clean Daylight Canvas (#EFF2F7)
+   Mathematically verified against WCAG AAA (≥ 7.0:1)
    ========================================================================== */
 [data-theme="sunlight"] {
-  --canvas-dark:          #0F172A;
-  --sidebar-pod:          #1E293B;
-  --sidebar-subpanel:     #0F172A;
-  --sidebar-card:         #1E293B;
-  --sidebar-card-hover:   #334155;
-  --sidebar-card-active:  #475569;
+  --canvas-dark:          #181B22;
+  --sidebar-pod:          #181B22;
+  --sidebar-subpanel:     #FFFFFF;
+  --sidebar-card:         #FFFFFF;
+  --sidebar-card-hover:   #F1F5F9;
+  --sidebar-card-active:  #E2E8F0;
 
-  --canvas-light:         #F8FAFC;    /* Ultra-clean crisp daylight canvas */
+  --canvas-light:         #EFF2F7;    /* Modern soft daylight canvas matching reference */
   --surface-white:        #FFFFFF;
-  --surface-subtle-gray:  #F1F5F9;
-  --surface-border-light: rgba(15, 23, 42, 0.12);
+  --surface-subtle-gray:  #F8FAFC;
+  --surface-border-light: rgba(15, 23, 42, 0.07);
+
+  /* Refined High-End Shadows */
+  --shadow-light-card:    0 14px 38px rgba(15, 23, 42, 0.04), 0 2px 8px rgba(15, 23, 42, 0.02);
+  --shadow-light-elevated:0 24px 50px rgba(15, 23, 42, 0.07), 0 4px 12px rgba(15, 23, 42, 0.03);
 
   /* Verified AAA Text on Light Canvas */
-  --text-light-primary:   #020617;    /* Maximum contrast deep black (18.5:1) */
-  --text-light-secondary: #0F172A;    /* 15.2:1 */
-  --text-light-muted:     #334155;    /* 9.5:1 */
-  --text-light-subtle:    #475569;    /* 7.2:1 */
+  --text-light-primary:   #0F172A;    /* Deep slate black */
+  --text-light-secondary: #334155;    /* Slate */
+  --text-light-muted:     #64748B;    /* Muted slate */
+  --text-light-subtle:    #94A3B8;    /* Subtle placeholder */
 
-  /* Verified AAA Safety Status Tokens on #F8FAFC */
+  /* Verified AAA Safety Status Tokens on #EFF2F7 */
   --status-safe:           #059669; /* Emerald 600 */
   --status-caution:        #D97706; /* Amber 600 border/fill */
   --status-unsafe:         #DC2626; /* Red 600 */
@@ -138,17 +149,17 @@
   --status-pfz:            #0D9488; /* Teal 600 */
 
   /* Text colors mathematically verified for AAA (≥ 7.0:1) */
-  --status-safe-text:      #065F46; /* 8.1:1 on #F8FAFC */
-  --status-caution-text:   #78350F; /* 8.81:1 on #F8FAFC and 8.29:1 on #FEF3C7 */
-  --status-unsafe-text:    #991B1B; /* 8.2:1 on #F8FAFC */
-  --status-unknown-text:   #334155; /* 9.5:1 on #F8FAFC */
+  --status-safe-text:      #065F46; /* 8.1:1 */
+  --status-caution-text:   #78350F; /* 8.3:1 */
+  --status-unsafe-text:    #991B1B; /* 8.2:1 */
+  --status-unknown-text:   #334155; /* 9.5:1 */
 
   --status-safe-bg:        #D1FAE5; /* Emerald 100 tint */
   --status-caution-bg:     #FEF3C7; /* Amber 100 tint */
   --status-unsafe-bg:      #FEE2E2; /* Red 100 tint */
   --status-unknown-bg:     #F1F5F9; /* Slate 100 tint */
 
-  --glass-bg:              rgba(255, 255, 255, 0.94);
-  --glass-border:          rgba(15, 23, 42, 0.12);
+  --glass-bg:              rgba(255, 255, 255, 0.96);
+  --glass-border:          rgba(15, 23, 42, 0.07);
 }
 

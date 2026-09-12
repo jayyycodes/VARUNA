@@ -122,7 +122,7 @@ export const FishermanQuickView: React.FC<FishermanQuickViewProps> = ({
 
         <div className="fisherman-status-text">
           <div className="fisherman-status-badge mono text-xs">
-            {verdict} STATUS
+            {verdict} {t('verdictStatus')}
           </div>
           <h2 className="fisherman-status-title text-display" style={{ color: config.textColor }}>
             {config.title}
@@ -157,7 +157,7 @@ export const FishermanQuickView: React.FC<FishermanQuickViewProps> = ({
       {/* Recommended Action Pill */}
       {action && (
         <div className="fisherman-action-callout">
-          <span className="action-tag text-xs mono">ACTION:</span>
+          <span className="action-tag text-xs mono">{t('action')}:</span>
           <p className="action-text text-sm font-bold">{action}</p>
         </div>
       )}
@@ -171,7 +171,7 @@ export const FishermanQuickView: React.FC<FishermanQuickViewProps> = ({
           </div>
           <div className="tile-value text-display">{waveVal}</div>
           <div className="tile-status text-xs text-muted">
-            {waveRule && !waveRule.passed ? 'High Swell' : 'Safe Height'}
+            {waveRule && !waveRule.passed ? t('highSwell') : t('safeHeight')}
           </div>
         </div>
 
@@ -182,7 +182,7 @@ export const FishermanQuickView: React.FC<FishermanQuickViewProps> = ({
           </div>
           <div className="tile-value text-display">{windVal}</div>
           <div className="tile-status text-xs text-muted">
-            {windRule && !windRule.passed ? 'Squall Warning' : 'Normal Breeze'}
+            {windRule && !windRule.passed ? t('squallWarning') : t('normalBreeze')}
           </div>
         </div>
 
@@ -205,7 +205,7 @@ export const FishermanQuickView: React.FC<FishermanQuickViewProps> = ({
           <div className="tile-value text-display" style={{ fontSize: '15px' }}>
             {nearestZoneText}
           </div>
-          <div className="tile-status text-xs text-muted">Productive Sector</div>
+          <div className="tile-status text-xs text-muted">{t('productiveSector')}</div>
         </div>
       </div>
 

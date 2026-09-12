@@ -300,3 +300,62 @@
   font-weight: 700;
   color: #FFFFFF;
 }
+
+/* ================================================================
+   SUNLIGHT MODE OVERRIDES FOR VERDICTCARD (Modern Rounded Elevated Card)
+   ================================================================ */
+[data-theme="sunlight"] .verdict-card {
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 24px;
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.08), 0 2px 8px rgba(15, 23, 42, 0.03);
+  color: #0F172A;
+}
+
+[data-theme="sunlight"] .verdict-card__hero-verdict {
+  color: #0F172A;
+}
+
+[data-theme="sunlight"] .verdict-card__headline {
+  color: #0F172A;
+}
+
+[data-theme="sunlight"] .verdict-card__action {
+  color: #334155;
+  background: #F8FAFC;
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  border-radius: 12px;
+  padding: 8px 12px;
+}
+
+[data-theme="sunlight"] .verdict-card__reasons-header {
+  color: #64748B;
+}
+
+[data-theme="sunlight"] .verdict-card__reason-item {
+  color: #334155;
+  background: #F8FAFC;
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  border-radius: 10px;
+}
+
+[data-theme="sunlight"] .verdict-card__reason-item:hover {
+  background: #F1F5F9;
+  border-color: rgba(15, 23, 42, 0.14);
+}
+
+[data-theme="sunlight"] .verdict-card__inspect-btn {
+  background: #F1F5F9;
+  color: #0F172A;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 999px;
+}
+
+[data-theme="sunlight"] .verdict-card__inspect-btn:hover {
+  background: #E2E8F0;
+  color: #0F172A;
+}
+
+[data-theme="sunlight"] .verdict-card__bold-text {
+  color: #0F172A;
+}

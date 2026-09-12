@@ -1,6 +1,7 @@
 import React from 'react';
 import type { UserResponseV1 } from '../../contracts/userResponse';
 import { IconInfo, IconAlert } from '../../components/Icons';
+import { useLocalization } from '../../hooks/useLocalization';
 import './VerdictCard.css';
 
 import { FishermanQuickView } from './FishermanQuickView';
@@ -37,13 +38,14 @@ const renderFormattedText = (text?: string | null) => {
 export const VerdictCard: React.FC<VerdictCardProps> = ({
   response,
   loading = false,
-  loadingMessage = 'Checking weather, marine conditions, and boundaries...',
+  loadingMessage,
   error = null,
   mode = 'command',
   onInspectDetails,
   onSelectReason,
   onRetry,
 }) => {
+  const { t } = useLocalization();
   // 1. Loading State
   if (loading) {
     return (
@@ -56,10 +58,10 @@ export const VerdictCard: React.FC<VerdictCardProps> = ({
       >
         <div className="verdict-card__loading-header">
           <div className="verdict-card__pulse-spinner" />
-          <span className="verdict-card__status-text text-sm mono">ANALYZING DOMAINS</span>
+          <span className="verdict-card__status-text text-sm mono">{t('analyzingDomains')}</span>
         </div>
-        <p className="verdict-card__headline text-verdict">Assessing Maritime Risk...</p>
-        <p className="verdict-card__action text-sm">{loadingMessage}</p>
+        <p className="verdict-card__headline text-verdict">{t('assessingRisk')}</p>
+        <p className="verdict-card__action text-sm">{loadingMessage || t('loadingMessage')}</p>
         <div className="verdict-card__skeleton-bar" />
       </div>
     );
@@ -75,13 +77,13 @@ export const VerdictCard: React.FC<VerdictCardProps> = ({
         data-verdict="UNKNOWN"
       >
         <div className="verdict-card__status">
-          <span className="verdict-card__badge verdict-card__badge--unknown">SYSTEM ERROR</span>
+          <span className="verdict-card__badge verdict-card__badge--unknown">{t('systemError')}</span>
         </div>
-        <p className="verdict-card__headline text-verdict">Unable to Complete Assessment</p>
+        <p className="verdict-card__headline text-verdict">{t('unableToAssess')}</p>
         <p className="verdict-card__action text-sm">{error}</p>
         {onRetry && (
           <button className="verdict-card__retry-btn" onClick={onRetry}>
-            Retry Assessment
+            {t('retryAssessment')}
           </button>
         )}
       </div>
@@ -99,11 +101,11 @@ export const VerdictCard: React.FC<VerdictCardProps> = ({
       >
         <div className="verdict-card__status">
           <div className="verdict-card__indicator verdict-card__indicator--idle" />
-          <span className="verdict-card__label text-sm">System Ready</span>
+          <span className="verdict-card__label text-sm">{t('systemReady')}</span>
         </div>
-        <p className="verdict-card__headline text-verdict">Coastal Marine Intelligence</p>
+        <p className="verdict-card__headline text-verdict">{t('coastalIntelligence')}</p>
         <p className="verdict-card__action text-sm">
-          Select a coastal scenario or enter coordinates to evaluate weather, wave swell, and regulatory compliance.
+          {t('idleHint')}
         </p>
       </div>
     );
@@ -152,7 +154,7 @@ export const VerdictCard: React.FC<VerdictCardProps> = ({
 
         <div className="verdict-card__hero-meta">
           <span className="verdict-card__confidence-pill mono text-xs">
-            CONFIDENCE: <span className="confidence-value">{summary.confidence_band.toUpperCase()}</span>
+            {t('confidence')}: <span className="confidence-value">{summary.confidence_band.toUpperCase()}</span>
           </span>
           {isDegraded && (
             <span
@@ -170,7 +172,7 @@ export const VerdictCard: React.FC<VerdictCardProps> = ({
 
       {/* 3. Operational Action / Directive Box */}
       <div className="verdict-card__action-box">
-        <div className="verdict-card__action-label mono text-xs">DIRECTIVE</div>
+        <div className="verdict-card__action-label mono text-xs">{t('directive')}</div>
         <p className="verdict-card__action text-sm">{renderFormattedText(summary.action)}</p>
       </div>
 
@@ -187,7 +189,7 @@ export const VerdictCard: React.FC<VerdictCardProps> = ({
       {/* 5. Tappable Headline Reasons (Linked directly to Rule Traces / Evidence) */}
       {headlineClaims.length > 0 && (
         <div className="verdict-card__reasons-section">
-          <div className="verdict-card__reasons-label mono text-xs">KEY FACTORS (TAP TO INSPECT)</div>
+          <div className="verdict-card__reasons-label mono text-xs">{t('keyFactors')}</div>
           <div className="verdict-card__reasons-list">
             {headlineClaims.map((claim) => (
               <button
@@ -214,7 +216,7 @@ export const VerdictCard: React.FC<VerdictCardProps> = ({
             <IconAlert size={14} color="#F59E0B" />
           </span>
           <div className="degradation-content text-xs">
-            <strong>Degraded Mode:</strong> {degradation.reason}
+            <strong>{t('degradedMode')}:</strong> {degradation.reason}
           </div>
         </div>
       )}

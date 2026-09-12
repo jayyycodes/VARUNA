@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FIXTURES } from '../../fixtures';
+import { useLocalization } from '../../hooks/useLocalization';
 import {
   IconMap,
   IconTree,
@@ -15,10 +15,10 @@ import {
 } from '../../components/Icons';
 import './Sidebar.css';
 
-export type ActiveNavView = 'map' | 'routing' | 'chat' | 'reasoning' | 'alerts' | 'fleet' | 'trends';
+export type ActiveNavView = 'overview' | 'map' | 'routing' | 'chat' | 'reasoning' | 'alerts' | 'fleet' | 'trends';
 
 interface SidebarProps {
-  onSelectScenario: (fixtureId: string) => void;
+  onSelectScenario?: (fixtureId: string) => void;
   onSubmitQuery: (text: string) => void;
   onOpenChat?: () => void;
   activeScenarioId?: string | null;
@@ -30,10 +30,8 @@ interface SidebarProps {
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
-  onSelectScenario,
   onSubmitQuery,
   onOpenChat,
-  activeScenarioId,
   loading = false,
   activeView,
   onChangeView,
@@ -45,6 +43,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const handleToggle = onToggleCollapse || (() => setInternalCollapsed(!internalCollapsed));
 
   const [inputText, setInputText] = useState('');
+  const { t } = useLocalization();
   const [history, setHistory] = useState<Array<{ id: string; text: string; time: string }>>([
     {
       id: 'h1',
@@ -74,24 +73,47 @@ export const Sidebar: React.FC<SidebarProps> = ({
     setInputText('');
   };
 
-  const scenariosList = Object.entries(FIXTURES).filter(
-    ([key]) => key !== 'invalid_geometry'
-  );
-
   return (
     <aside className={`dual-sidebar ${isCollapsed ? 'dual-sidebar--collapsed' : ''}`}>
       {/* 1. Leftmost Deep Obsidian Icon Bar */}
       <div className="icon-bar">
-        <div className="icon-bar__brand" title="VARUNA Marine Intelligence">
+        <button
+          type="button"
+          className="icon-bar__brand"
+          title={isCollapsed ? 'Open Marine Scenarios Drawer' : 'Close Sidebar Drawer'}
+          onClick={handleToggle}
+          aria-label={isCollapsed ? 'Open Marine Scenarios Drawer' : 'Close Sidebar Drawer'}
+          aria-expanded={!isCollapsed}
+        >
           <IconLogoStarburst size={22} color="#FFFFFF" />
-        </div>
+        </button>
+        {!isCollapsed && (
+          <div className="icon-bar__wordmark">
+            <span className="wordmark-symbol">◈</span> VARUNA
+          </div>
+        )}
 
         <nav className="icon-bar__nav" aria-label="Main navigation">
+          {/* 2x2 Grid Icon (Dashboard Overview matching reference) */}
+          <button
+            type="button"
+            className={`icon-bar__btn ${activeView === 'overview' ? 'icon-bar__btn--active' : ''}`}
+            onClick={() => onChangeView('overview')}
+            title="Executive Dashboard Overview"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="3" width="7" height="7" rx="1.5" />
+              <rect x="14" y="3" width="7" height="7" rx="1.5" />
+              <rect x="14" y="14" width="7" height="7" rx="1.5" />
+              <rect x="3" y="14" width="7" height="7" rx="1.5" />
+            </svg>
+          </button>
+
           <button
             type="button"
             className={`icon-bar__btn ${activeView === 'map' ? 'icon-bar__btn--active' : ''}`}
             onClick={() => onChangeView('map')}
-            title="Map & Overview"
+            title="Interactive Map & Tactical Canvas"
           >
             <IconMap size={18} />
           </button>
@@ -164,35 +186,19 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
       </div>
 
-      {/* 2. Sub-Sidebar Scenarios Pod */}
+      {/* 2. Sub-Sidebar Features & Platform Navigation Pod */}
       {!isCollapsed && (
         <div className="sub-sidebar">
-          {/* Top Quick Stats Grid (Inspired by Reference) */}
-          <div className="sub-sidebar__stats-grid">
-            <div className="stat-pill">
-              <span className="stat-pill__label text-xs">Total</span>
-              <span className="stat-pill__value mono">9</span>
-            </div>
-            <div className="stat-pill stat-pill--safe">
-              <span className="stat-pill__label text-xs">Safe</span>
-              <span className="stat-pill__value mono">1</span>
-            </div>
-            <div className="stat-pill stat-pill--caution">
-              <span className="stat-pill__label text-xs">Caution</span>
-              <span className="stat-pill__value mono">2</span>
-            </div>
-            <div className="stat-pill stat-pill--unsafe">
-              <span className="stat-pill__label text-xs">High Risk</span>
-              <span className="stat-pill__value mono">6</span>
-            </div>
-          </div>
-
+          {/* Sleek Features Header */}
           <div className="sub-sidebar__header">
-            <h2 className="sub-sidebar__title">Scenarios</h2>
-            <span className="sub-sidebar__subtitle text-xs">Grounding & Test Suite</span>
+            <div className="sub-sidebar__title-row">
+              <h2 className="sub-sidebar__title">Platform Features</h2>
+              <span className="sub-sidebar__badge mono text-xs">8 Services</span>
+            </div>
+            <span className="sub-sidebar__subtitle text-xs">VARUNA Marine Intelligence</span>
           </div>
 
-          {/* Clean Search Input */}
+          {/* Clean Search / Filter Input */}
           <form className="sub-sidebar__search" onSubmit={handleSearchSubmit}>
             <IconSearch size={14} className="sub-sidebar__search-icon" />
             <input
@@ -200,48 +206,109 @@ export const Sidebar: React.FC<SidebarProps> = ({
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
               className="sub-sidebar__input"
-              placeholder="Search coastal scenario..."
+              placeholder="Search features or query..."
               disabled={loading}
-              aria-label="Search scenario"
+              aria-label="Search features or query"
             />
           </form>
 
-          {/* Scenario Cards */}
+          {/* Feature Navigation Items (All Pages) */}
           <div className="sub-sidebar__scenarios">
-            {scenariosList.map(([key, item]) => {
-              const isActive = activeScenarioId === key;
-              const verdict = item.expectedVerdict;
-              const verdictClass = `tag--${verdict.toLowerCase()}`;
-
-              return (
+            {[
+              {
+                id: 'overview' as ActiveNavView,
+                tag: 'COMMAND',
+                meta: 'OVERVIEW',
+                tagClass: 'tag--safe',
+                title: 'Marine Intelligence Command',
+                desc: 'Executive dashboard, real-time safety cards, and vessel advisory.',
+              },
+              {
+                id: 'map' as ActiveNavView,
+                tag: 'MAP',
+                meta: 'TACTICAL',
+                tagClass: 'tag--safe',
+                title: 'Tactical Ocean Map & Canvas',
+                desc: 'Interactive geospatial chart, safety zones, and evidence rail grounding.',
+              },
+              {
+                id: 'routing' as ActiveNavView,
+                tag: 'PASSAGE',
+                meta: 'AI ROUTING',
+                tagClass: 'tag--caution',
+                title: 'Route Optimization & Safe Passage',
+                desc: 'LangGraph safety-aware pathfinding and hazard avoidance waypoints.',
+              },
+              {
+                id: 'chat' as ActiveNavView,
+                tag: 'COPILOT',
+                meta: 'AI AGENT',
+                tagClass: 'tag--safe',
+                title: 'VARUNA Copilot — Marine AI Intelligence',
+                desc: 'Conversational advisory, multilingual voice queries, and RAG search.',
+              },
+              {
+                id: 'reasoning' as ActiveNavView,
+                tag: 'RULES',
+                meta: 'DETERMINISTIC',
+                tagClass: 'tag--safe',
+                title: 'Agentic Reasoning & Rule Engine',
+                desc: 'Transparent rule evaluations, sensor threshold checks, and confidence breakdown.',
+              },
+              {
+                id: 'alerts' as ActiveNavView,
+                tag: 'WARNINGS',
+                meta: 'EMERGENCY',
+                tagClass: 'tag--unsafe',
+                title: 'Active Marine Alerts',
+                desc: 'INCOIS high wave swell advisories and IMD cyclone warning bulletins.',
+              },
+              {
+                id: 'fleet' as ActiveNavView,
+                tag: 'HARBOR',
+                meta: 'FLEET OPS',
+                tagClass: 'tag--safe',
+                title: 'Fleet Operations & Harbor Monitoring',
+                desc: 'Real-time vessel registry, port dispatch, and active craft tracking.',
+              },
+              {
+                id: 'trends' as ActiveNavView,
+                tag: 'QUERY #7',
+                meta: 'ANALYTICS',
+                tagClass: 'tag--caution',
+                title: 'Fishery Trends & Environmental Anomalies',
+                desc: '12-month SST anomaly curves and coastal productivity analytics.',
+              },
+            ]
+              .filter(
+                (item) =>
+                  !inputText.trim() ||
+                  item.title.toLowerCase().includes(inputText.toLowerCase()) ||
+                  item.desc.toLowerCase().includes(inputText.toLowerCase()) ||
+                  item.tag.toLowerCase().includes(inputText.toLowerCase())
+              )
+              .map((item) => (
                 <button
-                  key={key}
+                  key={item.id}
                   type="button"
-                  className={`scenario-item ${isActive ? 'scenario-item--active' : ''}`}
-                  onClick={() => {
-                    onChangeView('map');
-                    onSelectScenario(key);
-                  }}
-                  disabled={loading}
+                  className={`scenario-item ${activeView === item.id ? 'scenario-item--active' : ''}`}
+                  onClick={() => onChangeView(item.id)}
                 >
                   <div className="scenario-item__top">
-                    <span className={`scenario-item__verdict mono text-xs ${verdictClass}`}>
-                      {verdict}
+                    <span className={`scenario-item__verdict mono text-xs ${item.tagClass}`}>
+                      {item.tag}
                     </span>
-                    <span className="scenario-item__meta mono text-xs">COASTAL</span>
+                    <span className="scenario-item__meta mono text-xs">{item.meta}</span>
                   </div>
-                  <h4 className="scenario-item__name text-xs font-bold">
-                    {item.name.replace(/^\d+\.\s*/, '')}
-                  </h4>
-                  <p className="scenario-item__desc text-xs text-muted">{item.description}</p>
+                  <h4 className="scenario-item__name text-xs font-bold">{item.title}</h4>
+                  <p className="scenario-item__desc text-xs text-muted">{item.desc}</p>
                 </button>
-              );
-            })}
+              ))}
           </div>
 
-          {/* Recent Queries */}
+          {/* Recent Inquiries Footer */}
           <div className="sub-sidebar__history">
-            <div className="sub-sidebar__history-title mono text-xs">RECENT QUERIES</div>
+            <div className="sub-sidebar__history-title mono text-xs">{t('recentQueries')}</div>
             <div className="sub-sidebar__history-list">
               {history.map((h) => (
                 <button
@@ -262,16 +329,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
       )}
 
-      {/* Collapse/Expand Tab Pill */}
-      <button
-        type="button"
-        className="dual-sidebar__toggle"
-        onClick={handleToggle}
-        title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-        aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-      >
-        {isCollapsed ? <IconChevronRight size={14} /> : <IconChevronLeft size={14} />}
-      </button>
+      {/* Collapse/Expand Tab Pill — only visible on Map view */}
+      {activeView === 'map' && (
+        <button
+          type="button"
+          className="dual-sidebar__toggle"
+          onClick={handleToggle}
+          title={isCollapsed ? 'Expand scenario drawer' : 'Collapse scenario drawer'}
+          aria-label={isCollapsed ? 'Expand scenario drawer' : 'Collapse scenario drawer'}
+        >
+          {isCollapsed ? <IconChevronRight size={14} /> : <IconChevronLeft size={14} />}
+        </button>
+      )}
     </aside>
   );
 };

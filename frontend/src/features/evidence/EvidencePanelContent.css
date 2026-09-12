@@ -464,3 +464,136 @@
   margin: 0 0 6px 0;
   line-height: 1.3;
 }
+
+/* ================================================================
+   STATISTIC DONUT CARD (Matching Reference UI Floating Right Card)
+   ================================================================ */
+.evidence-donut-card {
+  margin: 14px 16px 6px 16px;
+  background: #F8FAFC;
+  border: 1px solid var(--border-light-subtle);
+  border-radius: 20px;
+  padding: 14px 16px;
+  box-shadow: var(--shadow-light-card);
+}
+
+.donut-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.donut-card-title {
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-light-primary);
+}
+
+.donut-card-period {
+  font-size: 10px;
+  color: var(--text-light-muted);
+}
+
+.donut-card-body {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  gap: 14px;
+}
+
+.donut-chart-container {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  flex-shrink: 0;
+}
+
+.donut-chart-svg {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.donut-ring-bg {
+  fill: transparent;
+  stroke: #E2E8F0;
+  stroke-width: 9;
+}
+
+.donut-ring-progress {
+  fill: transparent;
+  stroke: #4F8BF9;
+  stroke-width: 9;
+  stroke-linecap: round;
+  transition: stroke-dasharray 0.6s ease;
+}
+
+.donut-chart-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.donut-center-label {
+  font-size: 8.5px;
+  color: var(--text-light-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 2px;
+}
+
+.donut-center-val {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--text-light-primary);
+}
+
+.donut-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+}
+
+.donut-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--text-light-secondary);
+}
+
+.donut-legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.donut-legend-dot--safe {
+  background: #4F8BF9;
+  box-shadow: 0 0 6px rgba(79, 139, 249, 0.4);
+}
+
+.donut-legend-dot--unsafe {
+  background: #0F172A;
+}
+
+[data-theme="sunlight"] .evidence-donut-card {
+  background: #F8FAFC;
+  border-color: rgba(15, 23, 42, 0.08);
+}
+
+[data-theme="sunlight"] .donut-ring-bg {
+  stroke: #E2E8F0;
+}
+
+[data-theme="sunlight"] .donut-ring-progress {
+  stroke: #4F8BF9;
+}

@@ -11,6 +11,7 @@ import { ActiveAlertsView } from './features/alerts/ActiveAlertsView';
 import { FleetOpsView } from './features/fleet/FleetOpsView';
 import { RouteOptimizationView } from './features/routing/RouteOptimizationView';
 import { HistoricalTrendsView } from './features/analytics/HistoricalTrendsView';
+import { ExecutiveDashboardView } from './features/dashboard/ExecutiveDashboardView';
 import { ChatAssistantView } from './features/chat/ChatAssistantView';
 import { ChatAssistantModal } from './features/chat/ChatAssistantModal';
 import { LanguageSelector } from './components/LanguageSelector';
@@ -19,8 +20,6 @@ import {
   IconMapPin,
   IconSearch,
   IconCopilotBot,
-  IconSun,
-  IconMoon,
   IconAnchor,
   IconBook,
 } from './components/Icons';
@@ -31,8 +30,8 @@ function App() {
   const isMobile = useIsMobile();
   const { currentLang, setLanguage, t } = useLocalization();
 
-  // Active Main View: 'map' | 'routing' | 'chat' | 'reasoning' | 'alerts' | 'fleet' | 'trends'
-  const [activeView, setActiveView] = useState<ActiveNavView>('map');
+  // Active Main View: 'overview' | 'map' | 'routing' | 'chat' | 'reasoning' | 'alerts' | 'fleet' | 'trends'
+  const [activeView, setActiveView] = useState<ActiveNavView>('overview');
 
   // Mode: Persona split with device-aware default (Mobile => Fisherman, Desktop => Command)
   const [mode, setMode] = useState<'fisherman' | 'command'>(() => {
@@ -51,25 +50,10 @@ function App() {
     } catch {}
   };
 
-  // Sunlight Daylight vs Dark Mode
-  const [theme, setTheme] = useState<'dark' | 'sunlight'>(() => {
-    try {
-      const saved = localStorage.getItem('varuna_theme') as 'dark' | 'sunlight';
-      if (saved && (saved === 'dark' || saved === 'sunlight')) return saved;
-    } catch {}
-    return 'dark';
-  });
-
+  // Lock default theme to Sunlight Light Mode
   useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme);
-    try {
-      localStorage.setItem('varuna_theme', theme);
-    } catch {}
-  }, [theme]);
-
-  const toggleTheme = () => {
-    setTheme((prev) => (prev === 'dark' ? 'sunlight' : 'dark'));
-  };
+    document.documentElement.setAttribute('data-theme', 'sunlight');
+  }, []);
 
   // Primary State
   const [response, setResponse] = useState<UserResponseV1 | null>(null);
@@ -88,7 +72,7 @@ function App() {
   // Panel Toggles
   const [bottomSheetOpen, setBottomSheetOpen] = useState<boolean>(false);
   const [railCollapsed, setRailCollapsed] = useState<boolean>(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(true);
 
   // Bug 6 fix: preserve the last-submitted query so users can see what result is active.
   const [activeQuery, setActiveQuery] = useState<string | null>(null);
@@ -186,28 +170,45 @@ function App() {
         <header className="dashboard-topbar">
           <div className="dashboard-topbar__left">
             <h1 className="dashboard-topbar__title">
-              {activeView === 'map' && 'Marine Intelligence Command'}
-              {activeView === 'routing' && 'Route Optimization & Safe Passage'}
-              {activeView === 'chat' && 'VARUNA Copilot — Marine AI Intelligence'}
-              {activeView === 'reasoning' && 'Agentic Reasoning'}
-              {activeView === 'alerts' && 'Active Marine Alerts'}
-              {activeView === 'fleet' && 'Fleet Operations'}
-              {activeView === 'trends' && 'Fishery Trends & Anomalies (SIH Query #7)'}
+              {activeView === 'overview' && 'Marine Intelligence Command'}
+              {activeView === 'map' && t('pageMapTitle')}
+              {activeView === 'routing' && t('pageRoutingTitle')}
+              {activeView === 'chat' && t('pageChatTitle')}
+              {activeView === 'reasoning' && t('pageReasoningTitle')}
+              {activeView === 'alerts' && t('pageAlertsTitle')}
+              {activeView === 'fleet' && t('pageFleetTitle')}
+              {activeView === 'trends' && t('pageTrendsTitle')}
             </h1>
+
             {/* Bug 6 fix: show active query as breadcrumb so user retains context after submit */}
             {activeQuery && !activeScenarioId ? (
               <div className="dashboard-topbar__location-pill mono text-xs" style={{ gap: 6 }}>
                 <IconSearch size={11} color="#64748B" />
-                <span style={{ color: '#94A3B8', maxWidth: 280, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <span style={{ color: '#64748B', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {activeQuery}
                 </span>
               </div>
             ) : (
               <div className="dashboard-topbar__location-pill mono text-xs">
                 <IconMapPin size={13} color="#64748B" />
-                <span>Arabian Sea & Bay of Bengal • Today ({new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })})</span>
+                <span>{t('locationContext')}</span>
               </div>
             )}
+          </div>
+
+          {/* Centered Pill Search Bar (Compact size matching control buttons) */}
+          <div className="topbar-search-pill">
+            <IconSearch size={13} className="topbar-search-pill__icon" />
+            <input
+              type="text"
+              className="topbar-search-pill__input"
+              placeholder="Search..."
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && e.currentTarget.value.trim()) {
+                  handleQuerySubmit(e.currentTarget.value.trim());
+                }
+              }}
+            />
           </div>
 
           <div className="dashboard-topbar__right">
@@ -232,24 +233,6 @@ function App() {
               <span>{mode === 'fisherman' ? t('fishermanMode') : t('commandMode')}</span>
             </button>
 
-            {/* Sunlight High-Contrast Daylight Mode Toggle */}
-            <button
-              type="button"
-              className={`topbar-control-btn ${theme === 'sunlight' ? 'topbar-control-btn--active' : ''}`}
-              onClick={toggleTheme}
-              role="switch"
-              aria-checked={theme === 'sunlight'}
-              aria-label="Toggle Sunlight High-Contrast Daylight Mode"
-              title={theme === 'sunlight' ? 'Switch to Dark Mode' : 'Switch to Sunlight Daylight Mode'}
-            >
-              {theme === 'sunlight' ? (
-                <IconSun size={14} color="#D97706" />
-              ) : (
-                <IconMoon size={14} />
-              )}
-              <span>{theme === 'sunlight' ? t('sunlightMode') : t('darkMode')}</span>
-            </button>
-
             {/* Topbar AI Copilot Trigger Button */}
             <button
               type="button"
@@ -258,18 +241,28 @@ function App() {
               title="Open VARUNA Copilot Page"
             >
               <IconCopilotBot size={15} color="#D8FA36" />
-              <span>Ask Copilot</span>
+              <span>{t('askCopilot')}</span>
             </button>
 
             <div className="topbar-telemetry-pill mono text-xs">
               <span className="telemetry-live-dot" />
-              LIVE
+              {t('live')}
             </div>
           </div>
         </header>
 
         {/* Dashboard Main Workspace */}
         <main className="dashboard-workspace" role="main">
+          {/* View 0: Executive Dashboard (Matching Reference Mockup Layout) */}
+          {activeView === 'overview' && (
+            <ExecutiveDashboardView
+              response={response}
+              activeScenarioId={activeScenarioId}
+              onSelectScenario={executeScenario}
+              onNavigateView={setActiveView}
+            />
+          )}
+
           {activeView === 'map' && (
             <div className="map-view-grid">
               {/* Center Map Card Canvas */}
@@ -373,7 +366,7 @@ function App() {
         title="Ask VARUNA AI Copilot (⌘J)"
       >
         <IconCopilotBot size={17} className="launcher-sparkle-icon" color="#D8FA36" />
-        <span>Ask VARUNA AI</span>
+        <span>{t('askVarunaAI')}</span>
         <span className="mono text-xs" style={{ opacity: 0.7 }}>⌘J</span>
       </button>
 
