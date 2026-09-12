@@ -30,8 +30,8 @@ from pydantic import BaseModel, Field
 
 from agents.planner.planner_agent import PlannerAgent
 from backend.routes.alerts import router as alerts_router
-from backend.routes.fleet import router as fleet_router
 from backend.routes.analytics import router as analytics_router
+from backend.routes.fleet import router as fleet_router
 from backend.routes.route_planner import router as route_router
 
 # ── Logging ──────────────────────────────────────────────────────────
