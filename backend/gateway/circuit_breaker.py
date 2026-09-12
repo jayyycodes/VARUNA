@@ -134,6 +134,10 @@ class CircuitBreakerRegistry:
         self.register("groq_llm", failure_threshold=3, recovery_timeout=20.0)
         self.register("cerebras_llm", failure_threshold=3, recovery_timeout=20.0)
         self.register("geofencing_postgis", failure_threshold=3, recovery_timeout=15.0)
+        self.register("imd_rsmc", failure_threshold=3, recovery_timeout=120.0)
+        self.register("incois_buoy", failure_threshold=3, recovery_timeout=45.0)
+        self.register("incois_osf", failure_threshold=3, recovery_timeout=60.0)
+        self.register("mosdac_lightning", failure_threshold=3, recovery_timeout=90.0)
 
     def register(
         self,
