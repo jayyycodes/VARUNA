@@ -113,29 +113,64 @@ class VectorStoreManager:
         if not query.strip():
             return []
 
-        # 1. Try ChromaDB semantic search
+        # 1. Try ChromaDB semantic search with hybrid lexical re-ranking
         if self._collection is not None:
             try:
+                candidate_k = min(max(top_k * 4, 12), self._collection.count() or top_k)
                 results = self._collection.query(
                     query_texts=[query],
-                    n_results=min(top_k, self._collection.count() or top_k),
+                    n_results=candidate_k,
                 )
                 if results and results.get("documents") and results["documents"][0]:
                     docs = results["documents"][0]
                     metas = results["metadatas"][0] if results.get("metadatas") else [{}] * len(docs)
                     distances = results["distances"][0] if results.get("distances") else [0.2] * len(docs)
 
-                    matched = []
+                    q_lower = query.lower()
+                    q_tokens = set(re.findall(r"\w+", q_lower))
+
+                    candidates = []
                     for doc_text, meta, dist in zip(docs, metas, distances):
-                        # Convert distance to normalized relevance score (higher is better)
-                        score = max(0.5, round(1.0 - (dist / 2.0), 2)) if isinstance(dist, (int, float)) else 0.85
-                        matched.append({
+                        # Dense semantic score (0.0 to 1.0)
+                        dense_score = max(0.0, 1.0 - (dist / 2.0)) if isinstance(dist, (int, float)) else 0.70
+
+                        # Sparse / Lexical state & entity alignment boost
+                        source_text = meta.get("source", "").lower()
+                        doc_lower = doc_text.lower()
+
+                        lexical_boost = 0.0
+
+                        # Check state alignment
+                        coastal_entities = [
+                            "kerala", "karnataka", "maharashtra", "tamil nadu", "goa",
+                            "gujarat", "odisha", "orissa", "andhra", "bengal",
+                            "monsoon", "foreign", "turtle", "gahirmatha", "schedule i"
+                        ]
+                        for entity in coastal_entities:
+                            if entity in q_lower:
+                                if entity in source_text:
+                                    lexical_boost += 0.45
+                                elif entity in doc_lower:
+                                    lexical_boost += 0.25
+
+                        # Term overlap bonus
+                        doc_tokens = set(re.findall(r"\w+", doc_lower))
+                        overlap = len(q_tokens.intersection(doc_tokens))
+                        overlap_score = min(0.15, (overlap / max(len(q_tokens), 1)) * 0.20)
+
+                        final_score = dense_score + lexical_boost + overlap_score
+
+                        candidates.append({
                             "source": meta.get("source", "Official Gazette"),
                             "chunk": doc_text,
-                            "relevance_score": min(score, 0.98),
+                            "relevance_score": min(0.98, round(dense_score + min(lexical_boost, 0.25), 2)),
                             "metadata": meta,
+                            "_rank_score": final_score,
                         })
-                    return matched
+
+                    # Sort by hybrid composite rank score
+                    candidates.sort(key=lambda x: x["_rank_score"], reverse=True)
+                    return candidates[:top_k]
             except Exception as e:
                 logger.warning(f"ChromaDB search failed ({e}); falling back to memory ranker.")
 
