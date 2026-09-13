@@ -13,6 +13,7 @@ import asyncio
 import logging
 import os
 from datetime import datetime, timezone
+import time
 from typing import Any, Optional
 
 import httpx
@@ -146,7 +147,8 @@ def get_regional_climatology(lat: float, lon: float, date_str: str) -> dict[str,
         "cyclone_alert": None,
         "visibility_km": 10.0 if rain_prob < 50.0 else 7.0,
         "forecast_summary": f"Regional climatology estimate for Indian waters (Month {month}). Wave {wave_h}m, Wind {wind_spd} km/h.",
-    }
+    }# Module-level in-memory cache fallback (key -> (expiry_timestamp, json_str))
+_IN_MEMORY_WEATHER_CACHE: dict[str, tuple[float, str]] = {}
 
 
 class WeatherAgent:
@@ -227,8 +229,18 @@ class WeatherAgent:
         cache_key = f"varuna:weather:{lat:.2f}:{lon:.2f}:{date}"
 
         # -------------------------------------------------------------
-        # 1. Tier 1: Check Active Redis Cache (TTL 1 hr)
+        # 1. Tier 1: Check In-Memory & Redis Cache (TTL 1 hr)
         # -------------------------------------------------------------
+        now_ts = time.time()
+        if not self.redis and cache_key in _IN_MEMORY_WEATHER_CACHE:
+            exp, cached_json = _IN_MEMORY_WEATHER_CACHE[cache_key]
+            if now_ts < exp:
+                logger.info(f"[weather_agent] In-memory cache hit for {cache_key}")
+                env = AgentEnvelope.model_validate_json(cached_json)
+                if query_run_id:
+                    env.query_run_id = query_run_id
+                return env
+
         if self.redis:
             try:
                 cached = self.redis.get(cache_key)
@@ -239,6 +251,7 @@ class WeatherAgent:
                     envelope = AgentEnvelope.model_validate_json(cached)
                     if query_run_id:
                         envelope.query_run_id = query_run_id
+                    _IN_MEMORY_WEATHER_CACHE[cache_key] = (now_ts + 3600, cached)
                     return envelope
             except Exception as e:
                 logger.warning(f"[weather_agent] Redis cache read failed: {e}")
@@ -338,6 +351,9 @@ class WeatherAgent:
                 },
             )
 
+            # Save to in-memory cache (1h TTL)
+            _IN_MEMORY_WEATHER_CACHE[cache_key] = (time.time() + 3600, envelope.model_dump_json())
+
             # Cache successful response in Redis
             if self.redis:
                 try:
@@ -361,6 +377,15 @@ class WeatherAgent:
             # -------------------------------------------------------------
             # 3. Tier 2: Check Stale Cache Fallback
             # -------------------------------------------------------------
+            if cache_key in _IN_MEMORY_WEATHER_CACHE:
+                _, stale_val = _IN_MEMORY_WEATHER_CACHE[cache_key]
+                stale_env = AgentEnvelope.model_validate_json(stale_val)
+                stale_env.status = "degraded"
+                stale_env.confidence = 0.70
+                stale_env.source = "Weather Agent Stale Cache (Live API Unreachable)"
+                stale_env.error_message = f"Live telemetry failed ({live_err}); serving cached forecast."
+                return stale_env
+
             if self.redis:
                 try:
                     stale_val = self.redis.get(f"stale:{cache_key}")

@@ -25,8 +25,16 @@ OFFICIAL_DOCUMENT_NAMES: dict[str, str] = {
     "ind85258": "Orissa Marine Fishing Regulation Rules, 1983",
     "ind85259": "Orissa Marine Fisheries Notification, 2005",
     "maharashtra_mfra_1981": "Maharashtra Marine Fishing Regulation Act, 1981",
-    "dahdf_monsoon_ban_notification": "DAHDF Notification — Uniform Monsoon Ban",
+    "ind22415": "Andhra Pradesh Marine Fishing (Regulation) Act, 1994",
+    "the-gujarat-fisheries-act-2003": "Gujarat Fisheries Act, 2003",
+    "gujarat_fisheries_act_2003": "Gujarat Fisheries Act, 2003",
+    "andhra_pradesh_mfra_1994": "Andhra Pradesh Marine Fishing (Regulation) Act, 1994",
+    "west bengal marine fishing regulation act, 1993": "West Bengal Marine Fishing Regulation Act, 1993",
+    "west_bengal_mfra_1993": "West Bengal Marine Fishing Regulation Act, 1993",
+    "8_indiawildlifeprotectionactandtheoceans": "Wildlife Protection Act and Marine Habitats",
+    "append1_0": "Wildlife Protection Act 1972, Schedule I",
     "wildlife_protection_act_marine_schedule1": "Wildlife Protection Act 1972, Schedule I",
+    "dahdf_monsoon_ban_notification": "DAHDF Notification — Uniform Monsoon Ban",
     "incois_imd_marine_advisory_protocol": "INCOIS & IMD Marine Advisory Protocol",
 }
 

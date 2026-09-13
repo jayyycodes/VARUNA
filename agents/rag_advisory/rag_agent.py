@@ -172,6 +172,8 @@ INDIC_TERM_MAP: dict[str, str] = {
     "ट्रॉलर": "trawler mechanized vessel",
     "महाराष्ट्र": "maharashtra",
     "केरळ": "kerala",
+    "केरल": "kerala",
+    "कर्नाटक": "karnataka",
     "तामिळनाडू": "tamil nadu",
     "तामिलनाडु": "tamil nadu",
     "गोवा": "goa",
@@ -198,27 +200,26 @@ class RAGAdvisoryAgent:
         if self.use_vector_store:
             try:
                 self.vector_store = VectorStoreManager()
-                # If vector store is empty, seed statutory baseline and ingest official documents
-                if self.vector_store.count() == 0:
-                    base_data = Path(__file__).resolve().parent.parent.parent / "data"
-                    processor = DocumentProcessor()
-                    all_chunks: list[DocumentChunk] = []
+                base_data = Path(__file__).resolve().parent.parent.parent / "data"
+                processor = DocumentProcessor()
+                all_chunks: list[DocumentChunk] = []
 
-                    # 1. Seed baseline statutory corpus
-                    for idx, c in enumerate(CORPUS, 1):
-                        all_chunks.append(
-                            DocumentChunk(
-                                chunk_id=f"statutory_corpus::c{idx}",
-                                source=c["source"],
-                                chunk=c["chunk"],
-                                section=c["source"],
-                                keywords=c.get("keywords", []),
-                                page_number=1,
-                                metadata={"type": "statutory_baseline"},
-                            )
+                # 1. Always prepare baseline statutory corpus (9 states + national laws)
+                for idx, c in enumerate(CORPUS, 1):
+                    all_chunks.append(
+                        DocumentChunk(
+                            chunk_id=f"statutory_corpus::c{idx}",
+                            source=c["source"],
+                            chunk=c["chunk"],
+                            section=c["source"],
+                            keywords=c.get("keywords", []),
+                            page_number=1,
+                            metadata={"type": "statutory_baseline"},
                         )
+                    )
 
-                    # 2. Process all official documents from rag_documents and rag_data
+                # 2. If vector store has fewer records than base corpus, ingest full documents and seed
+                if self.vector_store.count() < len(CORPUS):
                     for folder_name in ["rag_documents", "rag_data"]:
                         docs_dir = base_data / folder_name
                         if docs_dir.exists():
@@ -228,6 +229,9 @@ class RAGAdvisoryAgent:
                     if all_chunks:
                         self.vector_store.add_chunks(all_chunks)
                         logger.info(f"Loaded {len(all_chunks)} regulatory chunks into RAG vector store.")
+                else:
+                    # Keep baseline in memory cache for offline resilience
+                    self.vector_store._memory_chunks.extend(all_chunks)
             except Exception as e:
                 logger.warning(f"Could not initialize VectorStoreManager: {e}. Using statutory CORPUS.")
                 self.vector_store = None
