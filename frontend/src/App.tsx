@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import type { UserResponseV1 } from './contracts/userResponse';
 import { apiClient } from './api/client';
 import { Sidebar } from './features/query/Sidebar';
 import type { ActiveNavView } from './features/query/Sidebar';
@@ -17,7 +17,9 @@ import { ChatAssistantView } from './features/chat/ChatAssistantView';
 import { ChatAssistantModal } from './features/chat/ChatAssistantModal';
 import { ScenarioDrawer } from './features/map/ScenarioDrawer';
 import { LanguageSelector } from './components/LanguageSelector';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { useLocalization } from './hooks/useLocalization';
+import { useAppStore } from './store/useAppStore';
 import {
   IconMapPin,
   IconSearch,
@@ -42,57 +44,61 @@ const NAV_ACCENTS: Record<ActiveNavView, { accent: string; accentText: string }>
 function App() {
   const isMobile = useIsMobile();
   const { currentLang, setLanguage, t } = useLocalization();
+  const navigate = useNavigate();
+  const location = useLocation();
 
-  // Active Main View: 'overview' | 'map' | 'routing' | 'chat' | 'reasoning' | 'alerts' | 'fleet' | 'trends'
-  const [activeView, setActiveView] = useState<ActiveNavView>('overview');
+  // Route-driven active view
+  const currentPath = location.pathname.replace('/', '') || 'overview';
+  const activeView: ActiveNavView = (
+    ['overview', 'map', 'routing', 'chat', 'reasoning', 'alerts', 'fleet', 'trends'].includes(currentPath)
+      ? currentPath
+      : 'overview'
+  ) as ActiveNavView;
 
-  // Mode: Persona split with device-aware default (Mobile => Fisherman, Desktop => Command)
-  const [mode, setMode] = useState<'fisherman' | 'command'>(() => {
-    try {
-      const saved = localStorage.getItem('varuna_ui_mode') as 'fisherman' | 'command';
-      if (saved && (saved === 'fisherman' || saved === 'command')) return saved;
-    } catch {}
-    return isMobile ? 'fisherman' : 'command';
-  });
-
-  const toggleMode = () => {
-    const next = mode === 'fisherman' ? 'command' : 'fisherman';
-    setMode(next);
-    try {
-      localStorage.setItem('varuna_ui_mode', next);
-    } catch {}
+  const setActiveView = (view: ActiveNavView) => {
+    navigate(`/${view === 'overview' ? '' : view}`);
   };
+
+  // Centralized Zustand App Store
+  const {
+    response,
+    loading,
+    error,
+    activeQuery,
+    activeScenarioId,
+    selectedEvidenceId,
+    selectedClaimId,
+    selectedFeatureId,
+    bottomSheetOpen,
+    railCollapsed,
+    sidebarCollapsed,
+    mode,
+    setResponse,
+    setLoading,
+    setError,
+    setActiveQuery,
+    setActiveScenarioId,
+    setSelectedEvidenceId,
+    setSelectedClaimId,
+    setSelectedFeatureId,
+    setBottomSheetOpen,
+    setRailCollapsed,
+    setSidebarCollapsed,
+    toggleMode,
+  } = useAppStore();
+
+  const [chatModalOpen, setChatModalOpen] = useState<boolean>(false);
 
   // Lock default theme to Sunlight Light Mode
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', 'sunlight');
   }, []);
 
-  // Primary State
-  const [response, setResponse] = useState<UserResponseV1 | null>(null);
-  const [activeScenarioId, setActiveScenarioId] = useState<string | null>('safe_complete');
-  const [loading, setLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
-
-  // Conversational AI Copilot Modal State (Quick toggle)
-  const [chatModalOpen, setChatModalOpen] = useState<boolean>(false);
-
-  // Selection & Navigation State
-  const [selectedEvidenceId, setSelectedEvidenceId] = useState<string | null>(null);
-  const [selectedClaimId, setSelectedClaimId] = useState<string | null>(null);
-  const [selectedFeatureId, setSelectedFeatureId] = useState<string | null>(null);
-
-  // Panel Toggles
-  const [bottomSheetOpen, setBottomSheetOpen] = useState<boolean>(false);
-  const [railCollapsed, setRailCollapsed] = useState<boolean>(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(false);
-
-  // Bug 6 fix: preserve the last-submitted query so users can see what result is active.
-  const [activeQuery, setActiveQuery] = useState<string | null>(null);
-
   // Load initial demo scenario on mount
   useEffect(() => {
-    executeScenario('safe_complete');
+    if (!response) {
+      executeScenario('safe_complete');
+    }
   }, []);
 
   const executeScenario = async (fixtureId: string) => {
@@ -102,7 +108,7 @@ function App() {
     setSelectedEvidenceId(null);
     setSelectedClaimId(null);
     setSelectedFeatureId(null);
-    setActiveQuery(null); // Clear live query breadcrumb when returning to a scenario
+    setActiveQuery(null);
 
     try {
       const result = await apiClient.submitQuery({ text: '' }, fixtureId);
@@ -126,8 +132,7 @@ function App() {
     try {
       const result = await apiClient.submitQuery({ text: queryText.trim() });
       setResponse(result.response);
-      setActiveScenarioId(null); // Custom query
-      // Bug 6 fix: preserve submitted query for breadcrumb context instead of wiping it
+      setActiveScenarioId(null);
       setActiveQuery(queryText.trim());
     } catch (err: any) {
       console.error('Query execution error:', err);
@@ -142,11 +147,9 @@ function App() {
     if (evidenceId) {
       setSelectedEvidenceId(evidenceId);
     }
-    // If on mobile, expand the bottom sheet so user immediately sees the evidence
     if (isMobile) {
       setBottomSheetOpen(true);
     }
-    // If desktop rail is collapsed, expand it
     if (railCollapsed) {
       setRailCollapsed(false);
     }
@@ -162,7 +165,7 @@ function App() {
         railCollapsed ? 'app-container--rail-collapsed' : ''
       }`}
     >
-      {/* 1. Left Dual-Sidebar (Icon Rail + Scenario List) */}
+      {/* 1. Left Single Expanding Matte Sidebar */}
       {!isMobile && (
         <Sidebar
           onSelectScenario={executeScenario}
@@ -193,11 +196,18 @@ function App() {
               {activeView === 'trends' && t('pageTrendsTitle')}
             </h1>
 
-            {/* Bug 6 fix: show active query as breadcrumb so user retains context after submit */}
             {activeQuery && !activeScenarioId ? (
               <div className="dashboard-topbar__location-pill mono" style={{ gap: 5 }}>
                 <IconSearch size={11} color="#64748B" />
-                <span style={{ color: '#64748B', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <span
+                  style={{
+                    color: '#64748B',
+                    maxWidth: 200,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
                   {activeQuery}
                 </span>
               </div>
@@ -209,7 +219,7 @@ function App() {
             )}
           </div>
 
-          {/* Centered Pill Search Bar (Compact size matching control buttons) */}
+          {/* Centered Pill Search Bar */}
           <div className="topbar-search-pill">
             <IconSearch size={12} className="topbar-search-pill__icon" />
             <input
@@ -265,8 +275,8 @@ function App() {
           role="main"
           style={
             {
-              '--panel-accent': NAV_ACCENTS[activeView].accent,
-              '--panel-accent-text': NAV_ACCENTS[activeView].accentText,
+              '--panel-accent': NAV_ACCENTS[activeView]?.accent || '#FFFFFF',
+              '--panel-accent-text': NAV_ACCENTS[activeView]?.accentText || '#0F172A',
             } as React.CSSProperties
           }
         >
@@ -279,121 +289,176 @@ function App() {
               exit={{ opacity: 0, y: -4 }}
               transition={{
                 duration: 0.25,
-                delay: 0.2,
+                delay: 0.15,
                 ease: [0.22, 1, 0.36, 1],
               }}
             >
-              {/* View 0: Executive Dashboard (Matching Reference Mockup Layout) */}
-              {activeView === 'overview' && (
-                <ExecutiveDashboardView
-                  response={response}
-                  activeScenarioId={activeScenarioId}
-                  onSelectScenario={executeScenario}
-                  onNavigateView={setActiveView}
+              <Routes>
+                {/* 1. Overview Dashboard */}
+                <Route
+                  path="/"
+                  element={
+                    <ErrorBoundary name="Executive Dashboard">
+                      <ExecutiveDashboardView
+                        response={response}
+                        activeScenarioId={activeScenarioId}
+                        onSelectScenario={executeScenario}
+                        onNavigateView={setActiveView}
+                      />
+                    </ErrorBoundary>
+                  }
                 />
-              )}
-
-              {activeView === 'map' && (
-                <div className="map-view-grid">
-                  {/* Left Test Scenarios Grounding Drawer */}
-                  {!isMobile && (
-                    <ScenarioDrawer
-                      activeScenarioId={activeScenarioId}
-                      onSelectScenario={executeScenario}
-                      loading={loading}
-                    />
-                  )}
-
-                  {/* Center Map Card Canvas */}
-                  <div className="map-card-wrapper">
-                    <VerdictCard
-                      response={response}
-                      loading={loading}
-                      error={error}
-                      mode={mode}
-                      onInspectDetails={() => {
-                        if (isMobile) {
-                          setBottomSheetOpen(true);
-                        } else {
-                          setRailCollapsed(false);
-                        }
-                      }}
-                      onSelectReason={handleSelectReason}
-                      onRetry={() => executeScenario(activeScenarioId || 'safe_complete')}
-                    />
-
-                    <MapCanvas
-                      response={response}
-                      selectedFeatureId={selectedFeatureId}
-                      onSelectFeature={handleSelectFeature}
-                    />
-                  </div>
-
-                  {/* Right Evidence Rail */}
-                  {!isMobile && (
-                    <EvidenceRail
-                      response={response}
-                      selectedEvidenceId={selectedEvidenceId}
-                      selectedClaimId={selectedClaimId}
-                      onSelectFeature={handleSelectFeature}
-                      isCollapsed={railCollapsed}
-                      onToggleCollapse={() => setRailCollapsed(!railCollapsed)}
-                    />
-                  )}
-
-                  {/* Mobile Bottom Sheet */}
-                  {isMobile && (
-                    <BottomSheet
-                      isOpen={bottomSheetOpen}
-                      onToggle={() => setBottomSheetOpen(!bottomSheetOpen)}
-                      response={response}
-                      selectedEvidenceId={selectedEvidenceId}
-                      selectedClaimId={selectedClaimId}
-                      onSelectFeature={handleSelectFeature}
-                    />
-                  )}
-                </div>
-              )}
-
-              {/* View 2: Route Optimization & Safe Passage */}
-              {activeView === 'routing' && (
-                <RouteOptimizationView response={response} />
-              )}
-
-              {/* View 3: VARUNA AI Copilot Conversational Page */}
-              {activeView === 'chat' && (
-                <ChatAssistantView
-                  onSelectScenario={executeScenario}
-                  onChangeView={setActiveView}
-                  currentResponse={response}
+                <Route
+                  path="/overview"
+                  element={
+                    <ErrorBoundary name="Executive Dashboard">
+                      <ExecutiveDashboardView
+                        response={response}
+                        activeScenarioId={activeScenarioId}
+                        onSelectScenario={executeScenario}
+                        onNavigateView={setActiveView}
+                      />
+                    </ErrorBoundary>
+                  }
                 />
-              )}
 
-              {/* View 4: Agentic Reasoning */}
-              {activeView === 'reasoning' && (
-                <AgenticReasoningView response={response} />
-              )}
+                {/* 2. Tactical Ocean Map */}
+                <Route
+                  path="/map"
+                  element={
+                    <ErrorBoundary name="Tactical Ocean Map">
+                      <div className="map-view-grid">
+                        {!isMobile && (
+                          <ScenarioDrawer
+                            activeScenarioId={activeScenarioId}
+                            onSelectScenario={executeScenario}
+                            loading={loading}
+                          />
+                        )}
 
-              {/* View 5: Active Alerts */}
-              {activeView === 'alerts' && (
-                <ActiveAlertsView
-                  response={response}
-                  onSelectScenario={(scenarioId) => {
-                    setActiveView('map');
-                    executeScenario(scenarioId);
-                  }}
+                        <div className="map-card-wrapper">
+                          <VerdictCard
+                            response={response}
+                            loading={loading}
+                            error={error}
+                            mode={mode}
+                            onInspectDetails={() => {
+                              if (isMobile) {
+                                setBottomSheetOpen(true);
+                              } else {
+                                setRailCollapsed(false);
+                              }
+                            }}
+                            onSelectReason={handleSelectReason}
+                            onRetry={() => executeScenario(activeScenarioId || 'safe_complete')}
+                          />
+
+                          <MapCanvas
+                            response={response}
+                            selectedFeatureId={selectedFeatureId}
+                            onSelectFeature={handleSelectFeature}
+                          />
+                        </div>
+
+                        {!isMobile && (
+                          <EvidenceRail
+                            response={response}
+                            selectedEvidenceId={selectedEvidenceId}
+                            selectedClaimId={selectedClaimId}
+                            onSelectFeature={handleSelectFeature}
+                            isCollapsed={railCollapsed}
+                            onToggleCollapse={() => setRailCollapsed(!railCollapsed)}
+                          />
+                        )}
+
+                        {isMobile && (
+                          <BottomSheet
+                            isOpen={bottomSheetOpen}
+                            onToggle={() => setBottomSheetOpen(!bottomSheetOpen)}
+                            response={response}
+                            selectedEvidenceId={selectedEvidenceId}
+                            selectedClaimId={selectedClaimId}
+                            onSelectFeature={handleSelectFeature}
+                          />
+                        )}
+                      </div>
+                    </ErrorBoundary>
+                  }
                 />
-              )}
 
-              {/* View 6: Fleet Operations */}
-              {activeView === 'fleet' && (
-                <FleetOpsView />
-              )}
+                {/* 3. Route Optimization & Safe Passage */}
+                <Route
+                  path="/routing"
+                  element={
+                    <ErrorBoundary name="Route Optimization">
+                      <RouteOptimizationView response={response} />
+                    </ErrorBoundary>
+                  }
+                />
 
-              {/* View 7: Fishery Trends & Environmental Anomalies (SIH Query #7) */}
-              {activeView === 'trends' && (
-                <HistoricalTrendsView />
-              )}
+                {/* 4. VARUNA Copilot Page */}
+                <Route
+                  path="/chat"
+                  element={
+                    <ErrorBoundary name="VARUNA AI Copilot">
+                      <ChatAssistantView
+                        onSelectScenario={executeScenario}
+                        onChangeView={setActiveView}
+                        currentResponse={response}
+                      />
+                    </ErrorBoundary>
+                  }
+                />
+
+                {/* 5. Agentic Reasoning */}
+                <Route
+                  path="/reasoning"
+                  element={
+                    <ErrorBoundary name="Agentic Reasoning">
+                      <AgenticReasoningView response={response} />
+                    </ErrorBoundary>
+                  }
+                />
+
+                {/* 6. Active Alerts */}
+                <Route
+                  path="/alerts"
+                  element={
+                    <ErrorBoundary name="Active Alerts">
+                      <ActiveAlertsView
+                        response={response}
+                        onSelectScenario={(scenarioId) => {
+                          setActiveView('map');
+                          executeScenario(scenarioId);
+                        }}
+                      />
+                    </ErrorBoundary>
+                  }
+                />
+
+                {/* 7. Fleet Operations */}
+                <Route
+                  path="/fleet"
+                  element={
+                    <ErrorBoundary name="Fleet Operations">
+                      <FleetOpsView />
+                    </ErrorBoundary>
+                  }
+                />
+
+                {/* 8. Fishery Trends & Environmental Analytics */}
+                <Route
+                  path="/trends"
+                  element={
+                    <ErrorBoundary name="Fishery Analytics">
+                      <HistoricalTrendsView />
+                    </ErrorBoundary>
+                  }
+                />
+
+                {/* Fallback route */}
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
             </motion.div>
           </AnimatePresence>
         </main>
