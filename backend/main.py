@@ -13,18 +13,19 @@ Endpoints:
 Interactive docs: http://localhost:8000/docs
 """
 
+from datetime import datetime, timezone
 import logging
 import os
+from pathlib import Path
 import sys
 import uuid
-from pathlib import Path
 
 # ── Ensure project root is in sys.path ─────────────────────────────────
 ROOT_DIR = Path(__file__).resolve().parent.parent
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
-from fastapi import FastAPI
+from fastapi import FastAPI, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
@@ -71,6 +72,63 @@ app.include_router(route_router)
 planner = PlannerAgent()
 
 
+def log_query_execution_to_supabase(
+    query_run_id: str,
+    intent: str,
+    status: str,
+    started_at: datetime,
+    completed_at: datetime,
+    risk_verdict: dict | None = None,
+):
+    """Asynchronously persist query execution trace and risk verdict to Supabase audit tables."""
+    try:
+        import psycopg2
+        from psycopg2.extras import Json
+        host = os.getenv("POSTGRES_HOST")
+        if not host:
+            return
+
+        conn = psycopg2.connect(
+            host=host,
+            port=int(os.getenv("POSTGRES_PORT", "5432")),
+            dbname=os.getenv("POSTGRES_DB"),
+            user=os.getenv("POSTGRES_USER"),
+            password=os.getenv("POSTGRES_PASSWORD"),
+            connect_timeout=3,
+        )
+        with conn.cursor() as cur:
+            # 1. Upsert into query_runs
+            cur.execute(
+                """
+                INSERT INTO query_runs (id, intent, status, started_at, completed_at)
+                VALUES (%s, %s, %s, %s, %s)
+                ON CONFLICT (id) DO UPDATE 
+                SET intent = EXCLUDED.intent, status = EXCLUDED.status, completed_at = EXCLUDED.completed_at;
+                """,
+                (query_run_id, intent, status, started_at, completed_at)
+            )
+
+            # 2. Insert into risk_verdicts if verdict is present
+            if risk_verdict and isinstance(risk_verdict, dict) and "verdict" in risk_verdict:
+                verdict_str = str(risk_verdict.get("verdict", "CAUTION"))
+                rule_trace = risk_verdict.get("rules_fired") or risk_verdict.get("rule_trace") or risk_verdict
+                verdict_id = str(uuid.uuid4())
+                cur.execute(
+                    """
+                    INSERT INTO risk_verdicts (id, query_run_id, verdict, rule_trace, created_at)
+                    VALUES (%s, %s, %s, %s, %s)
+                    ON CONFLICT DO NOTHING;
+                    """,
+                    (verdict_id, query_run_id, verdict_str, Json(rule_trace), completed_at)
+                )
+
+        conn.commit()
+        conn.close()
+        logger.debug(f"[supabase_audit] Logged query_run {query_run_id[:8]} to Supabase.")
+    except Exception as e:
+        logger.warning(f"[supabase_audit] Supabase query_runs log skipped: {e}")
+
+
 # ── Request / Response Schemas ────────────────────────────────────────
 
 class ChatRequest(BaseModel):
@@ -112,8 +170,9 @@ class ChatResponse(BaseModel):
 
 # ── Core Query Handler ───────────────────────────────────────────────
 
-async def process_query_pipeline(req: ChatRequest) -> ChatResponse:
-    """Helper to dispatch queries to LangGraph planner."""
+async def process_query_pipeline(req: ChatRequest, background_tasks: BackgroundTasks) -> ChatResponse:
+    """Helper to dispatch queries to LangGraph planner and enqueue audit logging."""
+    started_at = datetime.now(timezone.utc)
     cid = req.get_session_id()
     uid = req.user_id or "anonymous"
     q = req.get_query_text()
@@ -126,27 +185,40 @@ async def process_query_pipeline(req: ChatRequest) -> ChatResponse:
         user_id=uid,
     )
 
+    completed_at = datetime.now(timezone.utc)
+    qid = result.get("query_run_id") or str(uuid.uuid4())
+
+    background_tasks.add_task(
+        log_query_execution_to_supabase,
+        query_run_id=qid,
+        intent=result.get("intent", "general_query"),
+        status=result.get("status", "SUCCESS"),
+        started_at=started_at,
+        completed_at=completed_at,
+        risk_verdict=result.get("risk_verdict"),
+    )
+
     return ChatResponse(**result)
 
 
 # ── Endpoints ────────────────────────────────────────────────────────
 
 @app.post("/chat", response_model=ChatResponse)
-async def chat(req: ChatRequest):
+async def chat(req: ChatRequest, background_tasks: BackgroundTasks):
     """Primary chat endpoint connecting directly to LangGraph planner."""
-    return await process_query_pipeline(req)
+    return await process_query_pipeline(req, background_tasks)
 
 
 @app.post("/v1/query", response_model=ChatResponse)
-async def v1_query(req: ChatRequest):
+async def v1_query(req: ChatRequest, background_tasks: BackgroundTasks):
     """V1 REST query endpoint alias."""
-    return await process_query_pipeline(req)
+    return await process_query_pipeline(req, background_tasks)
 
 
 @app.post("/v1/chat", response_model=ChatResponse)
-async def v1_chat(req: ChatRequest):
+async def v1_chat(req: ChatRequest, background_tasks: BackgroundTasks):
     """V1 Chat endpoint alias."""
-    return await process_query_pipeline(req)
+    return await process_query_pipeline(req, background_tasks)
 
 
 @app.get("/health")
