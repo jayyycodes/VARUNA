@@ -18,10 +18,10 @@ class GeofencingAgent:
             self.db_pool = db_pool
         else:
             host = os.getenv("POSTGRES_HOST", "127.0.0.1")
-            port = int(os.getenv("POSTGRES_PORT", "5433"))
-            db = os.getenv("POSTGRES_DB", "varuna")
-            user = os.getenv("POSTGRES_USER", "varuna")
-            password = os.getenv("POSTGRES_PASSWORD", "varuna_dev")
+            port = int(os.getenv("POSTGRES_PORT", "5432"))
+            db = os.getenv("POSTGRES_DB", "postgres")
+            user = os.getenv("POSTGRES_USER", "postgres")
+            password = os.getenv("POSTGRES_PASSWORD", "")
             try:
                 self.db_pool = psycopg2.pool.SimpleConnectionPool(1, 10, dbname=db, user=user, password=password, host=host, port=port)
             except Exception:
