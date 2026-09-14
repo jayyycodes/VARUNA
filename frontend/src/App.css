@@ -371,3 +371,112 @@
 .topbar-ai-btn {
   transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease;
 }
+
+/* ================================================================
+   Mobile Layout & Shell Reflow (Checkpoint 1)
+   ================================================================ */
+@media (max-width: 768px) {
+  .app-container {
+    padding: 0;
+    margin: 0;
+    width: 100vw;
+    height: 100dvh;
+    max-height: 100dvh;
+    background: var(--canvas-light, #EFF1EA);
+  }
+
+  [data-theme="dark"] .app-container {
+    background: #0B0F17;
+  }
+
+  .dashboard-content {
+    border-radius: 0;
+    border: none;
+    box-shadow: none;
+    width: 100vw;
+    height: 100dvh;
+  }
+
+  .dashboard-topbar {
+    height: 52px;
+    padding: 0 12px;
+    gap: 8px;
+    width: 100%;
+    box-sizing: border-box;
+    overflow: visible;
+    z-index: 100;
+  }
+
+  .dashboard-topbar__left {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+  }
+
+  .dashboard-topbar__title {
+    font-size: clamp(0.8rem, 3.7vw, 0.98rem);
+    font-weight: 800;
+    flex: 1;
+    min-width: 0;
+    max-width: none;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    letter-spacing: -0.01em;
+  }
+
+  .dashboard-topbar__location-pill {
+    display: none; /* Keep mobile topbar clean and uncluttered */
+  }
+
+  .topbar-search-pill {
+    display: none; /* Search is accessible in assistant/overview */
+  }
+
+  .dashboard-topbar__right {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+    margin-left: auto;
+  }
+
+  .topbar-control-btn span,
+  .topbar-ai-btn span {
+    display: none; /* Icon-only on narrow mobile viewports */
+  }
+
+  .topbar-control-btn {
+    padding: 4px 8px;
+    min-height: 28px;
+  }
+
+  .topbar-ai-btn {
+    display: none; /* Assistant is directly accessible via primary mobile tab bar */
+  }
+
+  .dashboard-workspace {
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .map-view-grid {
+    padding: 0 0 80px 0;
+    gap: 0;
+    flex-direction: column;
+    height: 100%;
+  }
+
+  .map-card-wrapper {
+    border-radius: 0;
+    border: none;
+    height: 100%;
+  }
+
+  .map-view-grid .evidence-rail {
+    display: none; /* Handled by BottomSheet on mobile */
+  }
+}
+

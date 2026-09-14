@@ -1,0 +1,274 @@
+/* ================================================================
+   VARUNA — Floating Capsule Mobile Bottom Tab Bar
+   Non-negotiable rule: Active tab = Brand Navy accent (#0A1F33 / #1E293B),
+   NEVER verdict (safe/caution/unsafe) or PFZ teal color.
+   ================================================================ */
+
+/* Hide completely on PC / Desktop viewports */
+@media (min-width: 769px) {
+  .mobile-floating-tabbar,
+  .mobile-more-scrim,
+  .mobile-more-sheet {
+    display: none !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+  }
+}
+
+.mobile-floating-tabbar {
+  position: fixed;
+  bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+  left: 16px;
+  right: 16px;
+  max-width: 440px;
+  margin: 0 auto;
+  height: 58px;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  border-radius: var(--radius-pill, 9999px);
+  box-shadow: 0 12px 36px -6px rgba(15, 23, 42, 0.22), 0 4px 12px rgba(15, 23, 42, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  padding: 4px 6px;
+  z-index: 1500;
+  box-sizing: border-box;
+}
+
+[data-theme="dark"] .mobile-floating-tabbar {
+  background: rgba(15, 23, 42, 0.92);
+  border-color: rgba(255, 255, 255, 0.14);
+  box-shadow: 0 16px 40px -4px rgba(0, 0, 0, 0.65), 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+.tabbar-btn {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 3px 2px;
+  color: #64748B;
+  transition: color 150ms ease;
+  z-index: 2;
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.tabbar-btn--active {
+  color: #FFFFFF !important;
+}
+
+.tabbar-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3;
+}
+
+.tabbar-label {
+  font-family: var(--font-body, 'Manrope', sans-serif);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  z-index: 3;
+  line-height: 1.1;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  padding: 0 2px;
+}
+
+/* Active Pill: Brand Navy Accent (#0A1F33 in light mode / #1E293B in dark) */
+.tabbar-active-pill {
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  left: 2px;
+  right: 2px;
+  background: #0A1F33; /* Brand Navy */
+  border-radius: var(--radius-pill, 9999px);
+  z-index: 1;
+  box-shadow: 0 4px 14px rgba(10, 31, 51, 0.35);
+}
+
+[data-theme="dark"] .tabbar-active-pill {
+  background: #1E293B;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
+}
+
+/* -------------------------------------------------------------
+   More Action Sheet & Backdrop Scrim
+   ------------------------------------------------------------- */
+.mobile-more-scrim {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(15, 23, 42, 0.5);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: 1400;
+}
+
+.mobile-more-sheet {
+  position: fixed;
+  bottom: calc(78px + env(safe-area-inset-bottom, 0px));
+  left: 16px;
+  right: 16px;
+  max-width: 440px;
+  margin: 0 auto;
+  background: #FFFFFF;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  border-radius: 24px;
+  padding: 16px 18px 18px 18px;
+  box-shadow: 0 20px 50px -10px rgba(15, 23, 42, 0.35);
+  z-index: 1450;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-sizing: border-box;
+}
+
+[data-theme="dark"] .mobile-more-sheet {
+  background: #0F172A;
+  border-color: rgba(255, 255, 255, 0.14);
+  color: #FFFFFF;
+}
+
+.more-sheet-handle {
+  width: 36px;
+  height: 4px;
+  background: #CBD5E1;
+  border-radius: 999px;
+  margin: 0 auto 4px auto;
+}
+
+[data-theme="dark"] .more-sheet-handle {
+  background: #475569;
+}
+
+.more-sheet-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+  padding-bottom: 8px;
+}
+
+[data-theme="dark"] .more-sheet-header {
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+
+.more-sheet-title {
+  font-family: var(--font-display, 'Sora', sans-serif);
+  font-size: 14px;
+  font-weight: 700;
+  color: #0F172A;
+}
+
+[data-theme="dark"] .more-sheet-title {
+  color: #F8FAFC;
+}
+
+.more-sheet-close {
+  background: transparent;
+  border: none;
+  font-size: 14px;
+  color: #94A3B8;
+  cursor: pointer;
+  padding: 4px;
+}
+
+.more-items-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.more-item-btn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: #F8FAFC;
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  cursor: pointer;
+  text-align: left;
+  transition: all 140ms ease;
+  color: #0F172A;
+}
+
+[data-theme="dark"] .more-item-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.08);
+  color: #F8FAFC;
+}
+
+.more-item-btn:hover,
+.more-item-btn:active {
+  background: #F1F5F9;
+  transform: translateX(2px);
+}
+
+[data-theme="dark"] .more-item-btn:hover,
+[data-theme="dark"] .more-item-btn:active {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.more-item-btn--active {
+  background: #0A1F33 !important;
+  color: #FFFFFF !important;
+  border-color: #0A1F33;
+}
+
+[data-theme="dark"] .more-item-btn--active {
+  background: #1E293B !important;
+  color: #FFFFFF !important;
+  border-color: #3B82F6;
+}
+
+.more-item-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.05);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.more-item-btn--active .more-item-icon {
+  background: rgba(255, 255, 255, 0.18);
+  color: #FFFFFF;
+}
+
+.more-item-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.more-item-label {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.more-item-desc {
+  font-size: 11px;
+  opacity: 0.7;
+}

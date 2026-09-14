@@ -127,9 +127,9 @@ export class VarunaApiClient {
   }
 
   /**
-   * Conversational Copilot Query Handler
+   * Conversational Copilot Query Handler — submits to /api/chat or falls back to scenario
    */
-  async submitChatQuery(query: string, locale?: string): Promise<{
+  async submitChatQuery(query: string, locale: string = 'en'): Promise<{
     text: string;
     thinking: string[];
     verdict?: 'SAFE' | 'CAUTION' | 'UNSAFE';
@@ -146,18 +146,28 @@ export class VarunaApiClient {
       target: string;
     }>;
   }> {
+    if (this.mockMode) {
+      return this.getMockChatResponse(query);
+    }
+
     try {
-      const res = await fetch(`${this.apiBaseUrl}/chat`, {
+      const res = await fetch(`${this.apiBaseUrl}/api/chat`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Accept: 'application/json',
         },
-        body: JSON.stringify({ query, text: query, locale: locale || 'en-IN' }),
+        body: JSON.stringify({
+          query,
+          text: query,
+          message: query,
+          locale: locale || 'en-IN',
+          language: locale || 'en',
+        }),
       });
 
       if (res.ok) {
-        const json = (await res.json()) as LiveChatResponse;
+        const json: LiveChatResponse = await res.json();
         const vRaw = json.risk_verdict?.verdict?.toUpperCase();
         let verdict: 'SAFE' | 'CAUTION' | 'UNSAFE' | undefined = (vRaw === 'SAFE' || vRaw === 'CAUTION' || vRaw === 'UNSAFE') ? vRaw as 'SAFE' | 'CAUTION' | 'UNSAFE' : undefined;
 
@@ -185,9 +195,10 @@ export class VarunaApiClient {
 
         // Extract live metrics from risk reasons and response text
         const textToSearch = `${json.text || ''} ${(json.risk_verdict?.reasons || []).join(' ')}`;
-        const waveMatch = textToSearch.match(/(\d+\.?\d*)\s*m\b/i);
-        const windMatch = textToSearch.match(/(\d+\.?\d*)\s*(?:km\/h|kts?|knots?)/i);
-        const pfzCount = json.map_data?.features?.filter((f: any) => f.properties?.type === 'pfz_zone')?.length || 3;
+        const waveMatch = textToSearch.match(/(\d+\.?\d*)\s*m\b/i)?.[1];
+        const windMatch = textToSearch.match(/(\d+\.?\d*)\s*(?:km\/h|kts?|knots?)/i)?.[1];
+        const windUnit = textToSearch.match(/kts?|knots?/i) ? 'kts' : 'km/h';
+        const pfzCount = json.map_data?.features?.filter((f: any) => f.properties?.type === 'pfz_zone')?.length;
 
         return {
           text: json.text || 'Operational conditions verified.',
@@ -195,10 +206,10 @@ export class VarunaApiClient {
           verdict,
           scenarioSyncId: this.matchFixtureForQuery(query),
           metrics: {
-            wave: waveMatch ? `${waveMatch[1]}m Hsig` : '0.9m Hsig',
-            wind: windMatch ? `${windMatch[1]} km/h` : '12 kts',
-            pfz: `${pfzCount} Active Zones`,
-            confidence: json.risk_verdict?.confidence ? `${Math.round(json.risk_verdict.confidence * 100)}%` : '98%',
+            wave: waveMatch ? `${waveMatch}m Hsig` : '0.9m Hsig',
+            wind: windMatch ? `${windMatch} ${windUnit}` : '12 kts',
+            pfz: pfzCount ? `${pfzCount} Active Zones` : (json.risk_verdict?.verdict === 'SAFE' ? 'Active Zones' : 'Check Conditions'),
+            confidence: json.risk_verdict?.confidence ? `${Math.round(json.risk_verdict.confidence * 100)}%` : (json.status === 'success' ? 'Live Data' : '98%'),
           },
           actions: [
             { label: 'Inspect Marine Command Map', actionType: 'view', target: 'map' },

@@ -345,10 +345,16 @@
   justify-content: space-between;
   align-items: center;
   padding: 12px 18px;
-  background: rgba(11, 19, 36, 0.95);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(11, 19, 36, 0.98);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
   z-index: 5;
   flex-shrink: 0;
+}
+
+.chart-header-title {
+  color: #F8FAFC !important;
+  font-weight: 700;
+  letter-spacing: 0.04em;
 }
 
 .chart-canvas-wrapper {
@@ -356,16 +362,88 @@
   flex: 1;
   width: 100%;
   height: 100%;
+  min-height: 300px;
   overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
+  background: #040D18;
+  cursor: grab;
+  user-select: none;
+}
+
+.chart-canvas-wrapper--dragging {
+  cursor: grabbing !important;
+}
+
+/* Interactive Map Overlay Controls */
+.chart-map-controls {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(11, 18, 32, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 9999px;
+  padding: 4px 8px;
+  z-index: 20;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+.chart-ctrl-btn {
+  width: 28px !important;
+  height: 28px !important;
+  min-width: 28px !important;
+  min-height: 28px !important;
+  max-width: 28px !important;
+  max-height: 28px !important;
+  aspect-ratio: 1 / 1 !important;
+  border-radius: 50% !important;
+  flex: 0 0 28px !important;
+  flex-shrink: 0 !important;
+  align-self: center !important;
+  background: rgba(255, 255, 255, 0.12) !important;
+  border: 1px solid rgba(255, 255, 255, 0.25) !important;
+  color: #FFFFFF !important;
+  font-size: 14px !important;
+  font-weight: 700 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer !important;
+  transition: all 140ms ease !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  box-sizing: border-box !important;
+  line-height: 1 !important;
+  outline: none !important;
+}
+
+.chart-ctrl-btn:hover {
+  background: #0284C7;
+  border-color: #38BDF8;
+  transform: scale(1.08);
+}
+
+.chart-ctrl-btn--reset {
+  font-size: 13px;
+}
+
+.chart-drag-hint {
+  font-size: 10px;
+  color: #94A3B8;
+  padding: 0 4px;
+  letter-spacing: 0.02em;
 }
 
 .tactical-chart-svg {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
   display: block;
 }
 
@@ -463,3 +541,104 @@
   color: #94A3B8;
   font-weight: 500;
 }
+
+/* ================================================================
+   Mobile Single-Column Reflow (Checkpoint 1)
+   ================================================================ */
+@media (max-width: 768px) {
+  .route-optimization-view {
+    padding: 14px 14px 90px 14px;
+    overflow-y: auto;
+    display: block;
+    height: 100%;
+  }
+
+  .route-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+
+  .route-title {
+    font-size: 1.35rem;
+  }
+
+  .route-header__actions {
+    width: 100%;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .route-select-group {
+    width: 100%;
+    justify-content: space-between;
+    box-sizing: border-box;
+  }
+
+  .route-btn-reoptimize {
+    width: 100%;
+    justify-content: center;
+    box-sizing: border-box;
+  }
+
+  .route-content-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    height: auto;
+    min-height: auto;
+  }
+
+  .route-sidebar {
+    height: auto;
+    max-height: none;
+    overflow: visible;
+  }
+
+  .route-map-panel {
+    width: 100%;
+    height: auto;
+    min-height: auto;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .tactical-chart-card {
+    width: 100%;
+    height: auto;
+    display: flex;
+    flex-direction: column;
+    border-radius: 18px;
+  }
+
+  .chart-canvas-wrapper {
+    width: 100%;
+    height: 250px;
+    min-height: 250px;
+    max-height: 280px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .tactical-chart-svg {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+  }
+
+  .floating-telemetry-card {
+    position: static;
+    width: 100%;
+    margin: 0;
+    border-radius: 0 0 18px 18px;
+    border-top: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: none;
+    background: rgba(11, 18, 32, 0.95);
+    padding: 12px 14px;
+    box-sizing: border-box;
+  }
+}
+
