@@ -28,9 +28,10 @@ def calibrate():
         ) ON CONFLICT DO NOTHING;
     """)
 
-    # 3. Create view mapping for legacy services
+    # 3. Create view mapping for legacy services with security_invoker = true
     cur.execute("""
-        CREATE OR REPLACE VIEW restricted_zones AS
+        CREATE OR REPLACE VIEW restricted_zones 
+        WITH (security_invoker = true) AS
         SELECT id, name, boundary_type AS zone_type, geom::geometry AS geom, source, now() AS created_at 
         FROM maritime_boundaries 
         WHERE boundary_type IN ('EEZ', 'IMBL') AND name NOT LIKE '%Indian Exclusive%'

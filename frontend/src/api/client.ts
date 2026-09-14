@@ -126,9 +126,9 @@ export class VarunaApiClient {
   }
 
   /**
-   * Conversational Copilot Query Handler
+   * Conversational Copilot Query Handler — submits to /api/chat or falls back to scenario
    */
-  async submitChatQuery(query: string): Promise<{
+  async submitChatQuery(query: string, language: string = 'en'): Promise<{
     text: string;
     thinking: string[];
     verdict?: 'SAFE' | 'CAUTION' | 'UNSAFE';
@@ -145,18 +145,19 @@ export class VarunaApiClient {
       target: string;
     }>;
   }> {
+    if (this.mockMode) {
+      return this.getMockChatResponse(query);
+    }
+
     try {
-      const res = await fetch(`${this.apiBaseUrl}/chat`, {
+      const res = await fetch(`${this.apiBaseUrl}/api/chat`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Accept: 'application/json',
-        },
-        body: JSON.stringify({ query, text: query }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: query, language }),
       });
 
       if (res.ok) {
-        const json = (await res.json()) as LiveChatResponse;
+        const json: LiveChatResponse = await res.json();
         const vRaw = json.risk_verdict?.verdict?.toUpperCase();
         const verdict = (vRaw === 'SAFE' || vRaw === 'CAUTION' || vRaw === 'UNSAFE') ? vRaw : undefined;
 
@@ -167,16 +168,20 @@ export class VarunaApiClient {
           `Synthesizer: Response formatted with real-time operational context`,
         ];
 
+        const waveMatch = json.text?.match(/(\d+\.?\d*)\s*m\b/)?.[1];
+        const windMatch = json.text?.match(/(\d+\.?\d*)\s*(?:km\/h|kts?|knots?)/i)?.[1];
+        const windUnit = json.text?.match(/kts?|knots?/i) ? 'kts' : 'km/h';
+
         return {
           text: json.text || 'Operational conditions verified.',
           thinking,
           verdict,
           scenarioSyncId: this.matchFixtureForQuery(query),
           metrics: {
-            wave: '1.2m Hsig',
-            wind: '14 kts NW',
-            pfz: 'High Confidence',
-            confidence: '94%',
+            wave: waveMatch ? `${waveMatch}m Hsig` : 'N/A',
+            wind: windMatch ? `${windMatch} ${windUnit}` : 'N/A',
+            pfz: json.risk_verdict?.verdict === 'SAFE' ? 'Active Zones' : 'Check Conditions',
+            confidence: json.status === 'success' ? 'Live Data' : 'Estimated',
           },
           actions: [
             { label: 'Inspect Marine Command Map', actionType: 'view', target: 'map' },

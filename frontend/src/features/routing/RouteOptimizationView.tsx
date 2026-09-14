@@ -22,6 +22,12 @@ export const RouteOptimizationView: React.FC<RouteOptimizationViewProps> = ({ re
   const [isOptimizing, setIsOptimizing] = useState(false);
   const [selectedWaypoint, setSelectedWaypoint] = useState<string>('transit');
 
+  // Interactive Chart Pan & Zoom State
+  const [pan, setPan] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState<number>(1);
+  const [isDragging, setIsDragging] = useState<boolean>(false);
+  const [dragStart, setDragStart] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+
   // Custom route state
   const [departurePort, setDeparturePort] = useState<string>('ratnagiri');
   const [destinationPort, setDestinationPort] = useState<string>('malvan');
@@ -48,6 +54,27 @@ export const RouteOptimizationView: React.FC<RouteOptimizationViewProps> = ({ re
     }
     loadPorts();
   }, []);
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    setIsDragging(true);
+    setDragStart({ x: e.clientX - pan.x, y: e.clientY - pan.y });
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging) return;
+    setPan({ x: e.clientX - dragStart.x, y: e.clientY - dragStart.y });
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  const handleZoomIn = () => setZoom((prev) => Math.min(prev + 0.2, 2.5));
+  const handleZoomOut = () => setZoom((prev) => Math.max(prev - 0.2, 0.6));
+  const handleResetView = () => {
+    setPan({ x: 0, y: 0 });
+    setZoom(1);
+  };
 
   const handleInitiateOptimization = async () => {
     setIsOptimizing(true);
@@ -248,63 +275,212 @@ export const RouteOptimizationView: React.FC<RouteOptimizationViewProps> = ({ re
         <section className="route-map-panel">
           <div className="tactical-chart-card glass">
             <div className="chart-frame-header">
-              <span className="mono text-xs text-muted">BATHYMETRIC CORRIDOR PLOT (CONTOURS & CORRIDOR)</span>
+              <span className="mono text-xs chart-header-title">BATHYMETRIC CORRIDOR PLOT (CONTOURS & CORRIDOR)</span>
               <span className="mono text-xs text-teal">100% POSTGIS COMPLIANT</span>
             </div>
 
-            <div className="chart-canvas-wrapper">
-              <svg viewBox="0 0 800 500" className="tactical-chart-svg">
+            <div
+              className={`chart-canvas-wrapper ${isDragging ? 'chart-canvas-wrapper--dragging' : ''}`}
+              onMouseDown={handleMouseDown}
+              onMouseMove={handleMouseMove}
+              onMouseUp={handleMouseUp}
+              onMouseLeave={handleMouseUp}
+            >
+              {/* Interactive Map Overlay Controls */}
+              <div className="chart-map-controls">
+                <button
+                  type="button"
+                  className="chart-ctrl-btn"
+                  onClick={handleZoomIn}
+                  title="Zoom In"
+                  aria-label="Zoom In"
+                >
+                  +
+                </button>
+                <button
+                  type="button"
+                  className="chart-ctrl-btn"
+                  onClick={handleZoomOut}
+                  title="Zoom Out"
+                  aria-label="Zoom Out"
+                >
+                  −
+                </button>
+                <button
+                  type="button"
+                  className="chart-ctrl-btn chart-ctrl-btn--reset"
+                  onClick={handleResetView}
+                  title="Reset View"
+                  aria-label="Reset View"
+                >
+                  ⟲
+                </button>
+                <span className="chart-drag-hint mono text-xs">
+                  ✋ Drag to pan
+                </span>
+              </div>
+
+              <svg viewBox="0 0 800 440" className="tactical-chart-svg" preserveAspectRatio="xMidYMid meet">
                 <defs>
-                  <linearGradient id="routeGlow" x1="0" y1="0" x2="1" y2="0">
-                    <stop offset="0%" stopColor="#14B8A6" />
-                    <stop offset="50%" stopColor="#F59E0B" />
-                    <stop offset="100%" stopColor="#D8FA36" />
+                  <linearGradient id="routeGradient" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0%" stopColor="#2DD4BF" />
+                    <stop offset="50%" stopColor="#38BDF8" />
+                    <stop offset="100%" stopColor="#F59E0B" />
                   </linearGradient>
+                  <linearGradient id="oceanShade" x1="0" y1="0" x2="1" y2="0">
+                    <stop offset="0%" stopColor="#040D18" />
+                    <stop offset="60%" stopColor="#081829" />
+                    <stop offset="100%" stopColor="#0E243A" />
+                  </linearGradient>
+                  <pattern id="hazardHatch" width="8" height="8" patternTransform="rotate(45 0 0)" patternUnits="userSpaceOnUse">
+                    <line x1="0" y1="0" x2="0" y2="8" stroke="rgba(239, 68, 68, 0.4)" strokeWidth="2" />
+                  </pattern>
+                  <filter id="corridorGlow" x="-20%" y="-20%" width="140%" height="140%">
+                    <feGaussianBlur stdDeviation="6" result="blur" />
+                    <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                  </filter>
                 </defs>
 
-                {/* Continental Shelf Backdrop */}
-                <rect x="0" y="0" width="800" height="500" fill="#0b1329" />
+                {/* Oceanic Bathymetric Background */}
+                <rect x="0" y="0" width="800" height="440" fill="url(#oceanShade)" />
 
-                {/* Bathymetry Contours */}
-                <path d="M 120 0 Q 240 120 200 240 T 180 400 T 220 600" fill="none" stroke="rgba(45, 212, 191, 0.15)" strokeWidth="1.5" strokeDasharray="6 6" />
-                <path d="M 220 0 Q 360 140 310 280 T 290 440 T 350 600" fill="none" stroke="rgba(45, 212, 191, 0.25)" strokeWidth="1.5" />
-                <path d="M 340 0 Q 480 160 430 320 T 410 480 T 480 600" fill="none" stroke="rgba(45, 212, 191, 0.12)" strokeWidth="1" />
+                {/* Pan & Zoom Interactive SVG Layer */}
+                <g
+                  transform={`translate(${pan.x}, ${pan.y}) scale(${zoom})`}
+                  style={{ transformOrigin: '400px 220px', transition: isDragging ? 'none' : 'transform 0.12s ease-out' }}
+                >
+                  {/* Nautical Coordinate Grid Lines */}
+                  <line x1="0" y1="110" x2="800" y2="110" stroke="rgba(255,255,255,0.04)" strokeDasharray="4 4" />
+                  <line x1="0" y1="220" x2="800" y2="220" stroke="rgba(255,255,255,0.04)" strokeDasharray="4 4" />
+                  <line x1="0" y1="330" x2="800" y2="330" stroke="rgba(255,255,255,0.04)" strokeDasharray="4 4" />
+                  <line x1="200" y1="0" x2="200" y2="440" stroke="rgba(255,255,255,0.04)" strokeDasharray="4 4" />
+                  <line x1="400" y1="0" x2="400" y2="440" stroke="rgba(255,255,255,0.04)" strokeDasharray="4 4" />
+                  <line x1="600" y1="0" x2="600" y2="440" stroke="rgba(255,255,255,0.04)" strokeDasharray="4 4" />
 
-                {/* Trajectory Safe Passage Corridor Ribbon */}
-                <path d="M 140 180 Q 340 280 520 200 T 680 130" fill="none" stroke="rgba(216, 250, 54, 0.15)" strokeWidth="28" strokeLinecap="round" />
+                  <text x="14" y="24" fill="#64748B" fontSize="9" fontFamily="monospace">17°00'N 73°10'E</text>
+                  <text x="14" y="426" fill="#64748B" fontSize="9" fontFamily="monospace">16°00'N 73°30'E</text>
 
-                {/* Active Planned Route Path */}
-                <path d="M 140 180 Q 340 280 520 200 T 680 130" fill="none" stroke="url(#routeGlow)" strokeWidth="3.5" strokeDasharray="8 4" />
+                  {/* Simulated Coastal Landmass (Konkan / Maharashtra Coast) */}
+                  <path
+                    d="M 680 0 Q 640 100 660 180 T 630 300 T 670 440 L 800 440 L 800 0 Z"
+                    fill="#112233"
+                    stroke="#2DD4BF"
+                    strokeWidth="1.5"
+                  />
+                  <text x="740" y="220" fill="#475569" fontSize="10" fontFamily="Sora" fontWeight="700" letterSpacing="0.1em" textAnchor="middle">
+                    COASTLINE
+                  </text>
 
-                {/* Waypoint 1: Departure */}
-                <circle cx="140" cy="180" r="7" fill="#14B8A6" stroke="#FFFFFF" strokeWidth="2" />
-                <text x="140" y="210" fill="#E2E8F0" fontSize="11" fontFamily="Sora" fontWeight="700" textAnchor="middle">
-                  {depName} ({t('departure')})
-                </text>
+                  {/* Bathymetry Contours */}
+                  {/* 10m Shoal Contour */}
+                  <path d="M 610 0 Q 580 120 600 220 T 570 340 T 620 440" fill="none" stroke="rgba(56, 189, 248, 0.2)" strokeWidth="1" strokeDasharray="3 3" />
+                  <text x="595" y="60" fill="#38BDF8" opacity="0.6" fontSize="8" fontFamily="monospace">10m</text>
 
-                {/* Waypoint 2: Transit Corridor */}
-                <circle cx="430" cy="245" r="8" fill="#F59E0B" stroke="#FFFFFF" strokeWidth="2" />
-                <text x="430" y="275" fill="#E2E8F0" fontSize="11" fontFamily="Sora" fontWeight="700" textAnchor="middle">
-                  {cardinal} {Math.round(bearing)}° Corridor
-                </text>
+                  {/* 20m Depth Contour */}
+                  <path d="M 520 0 Q 480 130 500 230 T 470 350 T 520 440" fill="none" stroke="rgba(45, 212, 191, 0.3)" strokeWidth="1.2" />
+                  <text x="495" y="80" fill="#2DD4BF" opacity="0.7" fontSize="8" fontFamily="monospace">20m DEPTH</text>
 
-                {/* Active Vessel Indicator */}
-                <g transform="translate(430, 245)">
-                  <circle cx="0" cy="0" r="18" fill="none" stroke="#38BDF8" strokeWidth="1.5">
-                    <animate attributeName="r" values="8;24;8" dur="2.5s" repeatCount="indefinite" />
-                    <animate attributeName="opacity" values="1;0;1" dur="2.5s" repeatCount="indefinite" />
-                  </circle>
-                  <circle cx="0" cy="0" r="4" fill="#38BDF8" />
+                  {/* 50m Deep Trench Contour */}
+                  <path d="M 360 0 Q 310 140 330 250 T 290 370 T 340 440" fill="none" stroke="rgba(14, 165, 233, 0.25)" strokeWidth="1.2" strokeDasharray="6 4" />
+                  <text x="330" y="100" fill="#0EA5E9" opacity="0.6" fontSize="8" fontFamily="monospace">50m DEEP WATER</text>
+
+                  {/* Environmental / Regulatory Hazard Avoidance Zones */}
+                  {/* 1. Malvan Sanctuary Core (Avoided) */}
+                  <g>
+                    <polygon
+                      points="500,240 560,220 580,290 510,300"
+                      fill="url(#hazardHatch)"
+                      stroke="#EF4444"
+                      strokeWidth="1.5"
+                      strokeDasharray="4 2"
+                    />
+                    <rect x="490" y="258" width="84" height="16" rx="4" fill="rgba(15, 23, 42, 0.85)" />
+                    <text x="532" y="270" fill="#F87171" fontSize="8" fontFamily="Sora" fontWeight="700" textAnchor="middle">
+                      SANCTUARY (AVOIDED)
+                    </text>
+                  </g>
+
+                  {/* 2. Angria Bank Shoal Clearance */}
+                  <g>
+                    <circle cx="260" cy="180" r="32" fill="rgba(245, 158, 11, 0.12)" stroke="#F59E0B" strokeWidth="1" strokeDasharray="3 3" />
+                    <text x="260" y="184" fill="#FBBF24" fontSize="8" fontFamily="monospace" textAnchor="middle">
+                      SHOAL HAZARD
+                    </text>
+                  </g>
+
+                  {/* Safe Passage Wide Corridor Buffer Ribbon */}
+                  <path
+                    d="M 160 80 Q 260 170 370 210 T 520 330"
+                    fill="none"
+                    stroke="rgba(45, 212, 191, 0.18)"
+                    strokeWidth="32"
+                    strokeLinecap="round"
+                  />
+
+                  {/* High Contrast Optimized Route Path */}
+                  <path
+                    d="M 160 80 Q 260 170 370 210 T 520 330"
+                    fill="none"
+                    stroke="url(#routeGradient)"
+                    strokeWidth="4"
+                    strokeLinecap="round"
+                    strokeDasharray="10 5"
+                    filter="url(#corridorGlow)"
+                  />
+
+                  {/* Direct Baseline (Sub-optimal direct line for contrast) */}
+                  <line x1="160" y1="80" x2="520" y2="330" stroke="rgba(239, 68, 68, 0.35)" strokeWidth="1.5" strokeDasharray="3 3" />
+                  <text x="290" y="190" fill="#F87171" opacity="0.6" fontSize="8" fontFamily="monospace" transform="rotate(35 290 190)">
+                    DIRECT (HAZARD INTERSECT)
+                  </text>
+
+                  {/* Waypoint 1: Departure Port */}
+                  <g transform="translate(160, 80)">
+                    <circle cx="0" cy="0" r="14" fill="rgba(45, 212, 191, 0.2)" />
+                    <circle cx="0" cy="0" r="7" fill="#2DD4BF" stroke="#FFFFFF" strokeWidth="2" />
+                    <rect x="-65" y="-32" width="130" height="20" rx="6" fill="rgba(15, 23, 42, 0.88)" stroke="#2DD4BF" strokeWidth="1" />
+                    <text x="0" y="-18" fill="#FFFFFF" fontSize="9.5" fontFamily="Sora" fontWeight="700" textAnchor="middle">
+                      ⚓ {depName}
+                    </text>
+                  </g>
+
+                  {/* Waypoint 2: Mid Passage Transit & Active Vessel */}
+                  <g transform="translate(370, 210)">
+                    {/* Outer Pulsing Vessel Radar Ring */}
+                    <circle cx="0" cy="0" r="22" fill="none" stroke="#38BDF8" strokeWidth="1.5">
+                      <animate attributeName="r" values="10;28;10" dur="2.4s" repeatCount="indefinite" />
+                      <animate attributeName="opacity" values="1;0;1" dur="2.4s" repeatCount="indefinite" />
+                    </circle>
+                    <circle cx="0" cy="0" r="8" fill="#38BDF8" stroke="#FFFFFF" strokeWidth="2" />
+                    <rect x="-60" y="16" width="120" height="20" rx="6" fill="rgba(15, 23, 42, 0.9)" stroke="#38BDF8" strokeWidth="1" />
+                    <text x="0" y="30" fill="#38BDF8" fontSize="9" fontFamily="Sora" fontWeight="700" textAnchor="middle">
+                      🚢 VIGILANT ({Math.round(bearing)}°)
+                    </text>
+                  </g>
+
+                  {/* Waypoint 3: Destination Port */}
+                  <g transform="translate(520, 330)">
+                    <circle cx="0" cy="0" r="14" fill="rgba(245, 158, 11, 0.25)" />
+                    <circle cx="0" cy="0" r="8" fill="#F59E0B" stroke="#FFFFFF" strokeWidth="2" />
+                    <rect x="-65" y="16" width="130" height="20" rx="6" fill="rgba(15, 23, 42, 0.88)" stroke="#F59E0B" strokeWidth="1" />
+                    <text x="0" y="30" fill="#FBBF24" fontSize="9.5" fontFamily="Sora" fontWeight="700" textAnchor="middle">
+                      🏁 {destName}
+                    </text>
+                  </g>
+
+                  {/* Compass Rose Mini */}
+                  <g transform="translate(730, 60)">
+                    <circle cx="0" cy="0" r="22" fill="rgba(15, 23, 42, 0.6)" stroke="rgba(255,255,255,0.15)" strokeWidth="1" />
+                    <polygon points="0,-18 4,-4 0,0 -4,-4" fill="#EF4444" />
+                    <polygon points="0,18 4,4 0,0 -4,4" fill="#94A3B8" />
+                    <polygon points="18,0 4,4 0,0 4,-4" fill="#94A3B8" />
+                    <polygon points="-18,0 -4,4 0,0 -4,-4" fill="#94A3B8" />
+                    <text x="0" y="-7" fill="#FFFFFF" fontSize="8" fontFamily="Sora" fontWeight="800" textAnchor="middle">N</text>
+                  </g>
                 </g>
-
-                {/* Waypoint 3: Destination */}
-                <circle cx="680" cy="130" r="10" fill="#D8FA36" stroke="#0F172A" strokeWidth="2.5" />
-                <text x="680" y="105" fill="#D8FA36" fontSize="12" fontFamily="Sora" fontWeight="800" textAnchor="middle">
-                  {destName} ({t('destination')})
-                </text>
               </svg>
 
-              {/* Floating Frosted Glass Live Telemetry Instrument Pod */}
+              {/* Live Telemetry Instrument Pod */}
               <div className="floating-telemetry-card glass">
                 <div className="telemetry-card__top">
                   <div className="telemetry-card__title mono text-xs font-bold">

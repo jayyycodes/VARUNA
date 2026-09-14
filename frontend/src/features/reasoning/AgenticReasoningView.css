@@ -378,3 +378,59 @@
   font-style: italic;
   margin-bottom: 12px;
 }
+
+/* ================================================================
+   Mobile Single-Column Reflow (Checkpoint 1)
+   ================================================================ */
+@media (max-width: 768px) {
+  .agentic-reasoning-view {
+    padding: 14px 14px 90px 14px;
+  }
+
+  .reasoning-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 14px;
+    margin-bottom: 18px;
+  }
+
+  .reasoning-title {
+    font-size: 1.35rem;
+  }
+
+  .reasoning-tabs {
+    width: 100%;
+    justify-content: center;
+    box-sizing: border-box;
+  }
+
+  .reasoning-tab {
+    flex: 1;
+    text-align: center;
+  }
+
+  .timeline-container {
+    padding-left: 0;
+    max-width: 100%;
+  }
+
+  .timeline-spine {
+    display: none;
+  }
+
+  .timeline-node {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .timeline-node-card {
+    border-radius: 16px;
+    padding: 14px;
+  }
+
+  .telemetry-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+}
+

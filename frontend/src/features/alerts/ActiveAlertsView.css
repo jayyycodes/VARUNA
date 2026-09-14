@@ -164,3 +164,31 @@
   transform: translateY(-1px);
   box-shadow: 0 4px 14px rgba(15, 23, 42, 0.25);
 }
+
+/* ================================================================
+   Mobile Single-Column Reflow (Checkpoint 1)
+   ================================================================ */
+@media (max-width: 768px) {
+  .active-alerts-view {
+    padding: 16px 16px 90px 16px;
+  }
+
+  .alerts-header {
+    margin-bottom: 18px;
+  }
+
+  .alerts-title {
+    font-size: 1.35rem;
+  }
+
+  .alerts-grid {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .alert-card {
+    padding: 16px;
+    border-radius: 16px;
+  }
+}
+
