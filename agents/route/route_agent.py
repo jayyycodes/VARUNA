@@ -23,6 +23,7 @@ from agents.route.pathfinding import a_star_search, heuristic
 from pathlib import Path
 from shapely.geometry import LineString, Point, shape
 from shapely.ops import unary_union
+from shapely.prepared import prep
 
 logger = logging.getLogger("varuna.route")
 
@@ -388,20 +389,70 @@ class RouteAgent:
             return self._generate_fallback_corridor(start_lat, start_lon, dest_lat, dest_lon, dist_km)
 
         try:
+            # Step 1: Coarse Pass & Resolution Setup
+            coarse_res = calculate_resolution(dist_km)
+            bbox = build_bounding_box(start_lat, start_lon, dest_lat, dest_lon, padding_pct=0.20)
+            min_lat, max_lat, min_lon, max_lon = bbox
+
+            # ── Spatial Bounding Box Pre-Caching ───────────────────────
+            # Pre-fetch all restricted geometries intersecting the route bbox in a SINGLE
+            # PostGIS query, eliminating hundreds of individual network roundtrips during A*.
+            restricted_polys = []
+            try:
+                with conn.cursor() as cur:
+                    cur.execute("""
+                        SELECT name, ST_AsGeoJSON(geom) 
+                        FROM restricted_zones 
+                        WHERE ST_Intersects(geom, ST_MakeEnvelope(%s, %s, %s, %s, 4326));
+                    """, (min_lon, min_lat, max_lon, max_lat))
+                    rows = cur.fetchall()
+                    for r in rows:
+                        if r[1]:
+                            try:
+                                restricted_polys.append(shape(json.loads(r[1])))
+                            except Exception:
+                                pass
+            except Exception as q_err:
+                logger.warning(f"[route] Spatial bbox pre-cache query failed: {q_err}")
+
+            prep_restricted = prep(unary_union(restricted_polys)) if restricted_polys else None
+            coastline_geom = get_coastline_geometry()
+            prep_coastline = prep(coastline_geom) if coastline_geom else None
+
+            # Check if running against live DB connection with cursor
+            use_in_memory_spatial = hasattr(conn, "cursor") and not isinstance(conn, str)
+            point_safety_cache: dict[tuple[float, float], bool] = {}
+
             def is_safe(lat: float, lon: float) -> bool:
+                key = (round(lat, 4), round(lon, 4))
+                if key in point_safety_cache:
+                    return point_safety_cache[key]
+
+                if use_in_memory_spatial:
+                    pt = Point(lon, lat)
+                    if prep_coastline and prep_coastline.contains(pt):
+                        point_safety_cache[key] = False
+                        return False
+                    if prep_restricted and prep_restricted.contains(pt):
+                        point_safety_cache[key] = False
+                        return False
+                    point_safety_cache[key] = True
+                    return True
+
                 status_val, _, _ = check_geofence(conn, lat, lon)
-                return status_val != "restricted" # Treat warnings as passable, restricted as wall
+                safe = (status_val != "restricted")
+                point_safety_cache[key] = safe
+                return safe
 
             start = (start_lat, start_lon)
             dest = (dest_lat, dest_lon)
             
-            # Step 1: Coarse Pass
-            coarse_res = calculate_resolution(dist_km)
-            bbox = build_bounding_box(start_lat, start_lon, dest_lat, dest_lon, padding_pct=0.15)
-            
             coarse_path = a_star_search(start, dest, coarse_res, bbox, is_safe)
             
             if not coarse_path:
+                if use_in_memory_spatial:
+                    logger.info("[route] Coarse A* returned no path; engaging hydrodynamic deflected corridor fallback.")
+                    return self._generate_fallback_corridor(start_lat, start_lon, dest_lat, dest_lon, dist_km)
                 return {
                     "route_status": "restricted",
                     "route_geometry": None,
