@@ -48,10 +48,10 @@ MODELS: dict[str, str] = {
     "risk_explain": os.getenv("RISK_EXPLAIN_MODEL",  "openai/gpt-oss-120b"),
     "rag":          os.getenv("RAG_MODEL",           "qwen/qwen3.8-27b"),
     "synthesizer":  os.getenv("SYNTHESIZER_MODEL",   "openai/gpt-oss-120b"),
-    "default":      os.getenv("FALLBACK_MODEL",      "openai/gpt-oss-120b"),
+    "default":      os.getenv("FALLBACK_MODEL",      "openai/gpt-oss-20b"),
 }
 
-FALLBACK_MODEL: str = os.getenv("FALLBACK_MODEL", "openai/gpt-oss-120b")
+FALLBACK_MODEL: str = os.getenv("FALLBACK_MODEL", "openai/gpt-oss-20b")
 
 
 def _clean_model_name(raw_model: str) -> tuple[str, str]:

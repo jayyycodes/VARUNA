@@ -366,7 +366,43 @@ class RouteAgent:
                     break
 
             if not deflected:
-                warnings.append("Fallback corridor line intersects coastline; maximum seaward deflection reached")
+                # Check for cross-peninsular voyage (Arabian Sea <-> Bay of Bengal across Indian subcontinent)
+                is_west_start = (start_lon < 77.5 and start_lat >= 8.5)
+                is_east_start = (start_lon > 78.5 and start_lat >= 8.5)
+                is_west_dest = (dest_lon < 77.5 and dest_lat >= 8.5)
+                is_east_dest = (dest_lon > 78.5 and dest_lat >= 8.5)
+
+                if (is_west_start and is_east_dest) or (is_east_start and is_west_dest):
+                    logger.info("[route] Cross-peninsular voyage detected. Generating Cape Comorin / Dondra Head circumnavigation corridor...")
+                    warnings.append("Applied maritime circumnavigation route around Cape Comorin & Dondra Head deep water corridor")
+                    if is_west_start:
+                        via_points = [
+                            (start_lat, start_lon),
+                            (7.50, 77.30),  # South of Cape Comorin (open ocean)
+                            (5.50, 80.50),  # South of Dondra Head, Sri Lanka (open ocean)
+                            (8.50, 82.00),  # Bay of Bengal approach
+                            (dest_lat, dest_lon),
+                        ]
+                    else:
+                        via_points = [
+                            (start_lat, start_lon),
+                            (8.50, 82.00),  # Bay of Bengal departure
+                            (5.50, 80.50),  # South of Dondra Head, Sri Lanka
+                            (7.50, 77.30),  # South of Cape Comorin
+                            (dest_lat, dest_lon),
+                        ]
+                    multi_leg_coords = []
+                    for i in range(len(via_points) - 1):
+                        p_from = via_points[i]
+                        p_to = via_points[i + 1]
+                        leg = generate_waypoints(p_from[0], p_from[1], p_to[0], p_to[1], num_steps=6, max_arc=0.0)
+                        if i > 0:
+                            multi_leg_coords.extend(leg[1:])
+                        else:
+                            multi_leg_coords.extend(leg)
+                    coords = multi_leg_coords
+                else:
+                    warnings.append("Fallback corridor line intersects coastline; maximum seaward deflection reached")
 
         return {
             "route_status": "clear",

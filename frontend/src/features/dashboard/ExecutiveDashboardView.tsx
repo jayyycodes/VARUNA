@@ -101,11 +101,11 @@ export const ExecutiveDashboardView: React.FC<ExecutiveDashboardViewProps> = ({
               {verdict === 'UNKNOWN' && t('unknown')}
             </div>
             <div className="exec-card__sub-text mono">
-              ZONE ID • RATNAGIRI-WZ-04
+              {t('zoneIdRatnagiri')}
             </div>
             <div className="exec-card__bottom">
-              <span className="exec-card__date mono">VALID: TODAY</span>
-              <span className="exec-card__brand-tag">INCOIS / IMD VERIFIED</span>
+              <span className="exec-card__date mono">{t('validToday')}</span>
+              <span className="exec-card__brand-tag">{t('incoisImdVerified')}</span>
             </div>
           </div>
 
@@ -116,13 +116,15 @@ export const ExecutiveDashboardView: React.FC<ExecutiveDashboardViewProps> = ({
               <span className="exec-card__menu-light">•••</span>
             </div>
             <div className="exec-card__main-val-light">
-              3 PFZ ZONES ACTIVE
+              {t('activePfzCount')}
             </div>
             <div className="exec-card__sub-text-light mono">
               SST {liveSst} • CHL {liveChl}
             </div>
             <div className="exec-card__bottom">
-              <span className="exec-card__date-light mono">UPDATED: {isLiveApi ? 'LIVE API' : 'LIVE'}</span>
+              <span className="exec-card__date-light mono">
+                {isLiveApi ? t('updatedLiveApi') : t('updatedLive')}
+              </span>
               <div className="exec-card__toggle-pill">
                 <span className="toggle-dot" />
                 <span>{t('sensorsOn')}</span>
@@ -214,8 +216,8 @@ export const ExecutiveDashboardView: React.FC<ExecutiveDashboardViewProps> = ({
                         <span>{initialLetter}</span>
                       </div>
                       <div className="sender-info">
-                        <span className="sender-name">{item.name}</span>
-                        <span className="sender-sub text-xs">{item.description.slice(0, 32)}...</span>
+                        <span className="sender-name">{t(`scenario_${key}_name`) || item.name}</span>
+                        <span className="sender-sub text-xs">{(t(`scenario_${key}_desc`) || item.description).slice(0, 42)}...</span>
                       </div>
                     </div>
 
@@ -292,10 +294,10 @@ export const ExecutiveDashboardView: React.FC<ExecutiveDashboardViewProps> = ({
                 <IconWave size={16} color="#FFFFFF" />
               </div>
               <div className="stat-item-info">
-                <span className="stat-item-name">INCOIS Wave Buoy</span>
-                <span className="stat-item-time text-xs">Swell 1.8m • Normal</span>
+                <span className="stat-item-name">{t('incoisWaveBuoy')}</span>
+                <span className="stat-item-time text-xs">{t('incoisWaveBuoySub')}</span>
               </div>
-              <span className="stat-item-badge stat-item-badge--pass"><IconCheck size={12} /> OK</span>
+              <span className="stat-item-badge stat-item-badge--pass"><IconCheck size={12} /> {t('badgeOk')}</span>
             </div>
 
             <div className="stat-item-row" onClick={() => onNavigateView('map')}>
@@ -303,10 +305,10 @@ export const ExecutiveDashboardView: React.FC<ExecutiveDashboardViewProps> = ({
                 <IconShield size={16} color="#FFFFFF" />
               </div>
               <div className="stat-item-info">
-                <span className="stat-item-name">Coast Guard MPA</span>
-                <span className="stat-item-time text-xs">Geofence Boundary</span>
+                <span className="stat-item-name">{t('coastGuardMpa')}</span>
+                <span className="stat-item-time text-xs">{t('coastGuardMpaSub')}</span>
               </div>
-              <span className="stat-item-badge stat-item-badge--pass"><IconCheck size={12} /> Clear</span>
+              <span className="stat-item-badge stat-item-badge--pass"><IconCheck size={12} /> {t('badgeClear')}</span>
             </div>
 
             <div className="stat-item-row" onClick={() => onNavigateView('map')}>
@@ -314,10 +316,10 @@ export const ExecutiveDashboardView: React.FC<ExecutiveDashboardViewProps> = ({
                 <IconAlert size={16} color="#FFFFFF" />
               </div>
               <div className="stat-item-info">
-                <span className="stat-item-name">IMD Cyclone Radar</span>
-                <span className="stat-item-time text-xs">Wind Gust 24kt</span>
+                <span className="stat-item-name">{t('imdCycloneRadar')}</span>
+                <span className="stat-item-time text-xs">{t('imdCycloneRadarSub')}</span>
               </div>
-              <span className="stat-item-badge stat-item-badge--caution">Monitor</span>
+              <span className="stat-item-badge stat-item-badge--caution">{t('badgeMonitor')}</span>
             </div>
 
             <div className="stat-item-row" onClick={() => onNavigateView('chat')}>
@@ -325,10 +327,10 @@ export const ExecutiveDashboardView: React.FC<ExecutiveDashboardViewProps> = ({
                 <IconCopilotBot size={16} color="#FFFFFF" />
               </div>
               <div className="stat-item-info">
-                <span className="stat-item-name">VARUNA Copilot</span>
-                <span className="stat-item-time text-xs">AI Advisory Ready</span>
+                <span className="stat-item-name">{t('varunaCopilot')}</span>
+                <span className="stat-item-time text-xs">{t('varunaCopilotSub')}</span>
               </div>
-              <span className="stat-item-badge stat-item-badge--ai">Active</span>
+              <span className="stat-item-badge stat-item-badge--ai">{t('badgeActive')}</span>
             </div>
           </div>
         </div>

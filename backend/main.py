@@ -183,6 +183,7 @@ async def process_query_pipeline(req: ChatRequest, background_tasks: BackgroundT
         query=q,
         conversation_id=cid,
         user_id=uid,
+        locale=req.locale,
     )
 
     completed_at = datetime.now(timezone.utc)

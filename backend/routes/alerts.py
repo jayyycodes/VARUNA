@@ -6,8 +6,8 @@ INCOIS Coastal Hazard Warning Centre, and MOSDAC Convective Lightning systems.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import datetime, timezone, timedelta
+from typing import Optional, Any
 from fastapi import APIRouter, Query
 from pydantic import BaseModel, Field
 
@@ -41,7 +41,7 @@ CURRENT_ALERTS: list[dict] = [
         "authority": "IMD Cyclone Warning Division & INCOIS",
         "action_scenario": "unsafe_cyclone",
         "issued_at": datetime.now(timezone.utc).isoformat(),
-        "valid_until": "2026-09-12T18:00:00Z",
+        "valid_until": (datetime.now(timezone.utc) + timedelta(days=3)).isoformat(),
         "affected_ports": ["Visakhapatnam", "Kakinada", "Machilipatnam"],
         "boundary_geojson": {
             "type": "Polygon",
@@ -66,7 +66,7 @@ CURRENT_ALERTS: list[dict] = [
         "authority": "IMD Regional Meteorological Centre, Mumbai & MOSDAC",
         "action_scenario": "unsafe_lightning",
         "issued_at": datetime.now(timezone.utc).isoformat(),
-        "valid_until": "2026-09-12T04:00:00Z",
+        "valid_until": (datetime.now(timezone.utc) + timedelta(days=2)).isoformat(),
         "affected_ports": ["Ratnagiri", "Malvan", "Jaigad", "Devgad"],
         "boundary_geojson": {
             "type": "Polygon",
@@ -91,7 +91,7 @@ CURRENT_ALERTS: list[dict] = [
         "authority": "INCOIS Coastal Hazard Warning Centre",
         "action_scenario": "caution_wave",
         "issued_at": datetime.now(timezone.utc).isoformat(),
-        "valid_until": "2026-09-12T12:00:00Z",
+        "valid_until": (datetime.now(timezone.utc) + timedelta(days=1)).isoformat(),
         "affected_ports": ["Kochi", "Alappuzha", "Vizhinjam", "Kollam"],
         "boundary_geojson": {
             "type": "Polygon",

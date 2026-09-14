@@ -31,7 +31,13 @@ export const RouteOptimizationView: React.FC<RouteOptimizationViewProps> = ({ re
     { id: 'mumbai', name: 'Mumbai Sassoon Docks' },
     { id: 'alibaug', name: 'Alibaug Port' },
     { id: 'goa', name: 'Mormugao Port, Goa' },
+    { id: 'karwar', name: 'Karwar Fisheries Harbour' },
+    { id: 'mangalore', name: 'New Mangalore Port' },
     { id: 'cochin', name: 'Cochin Fisheries Harbour' },
+    { id: 'vizhinjam', name: 'Vizhinjam Port' },
+    { id: 'chennai', name: 'Chennai Kasimedu Harbour' },
+    { id: 'visakhapatnam', name: 'Visakhapatnam Port' },
+    { id: 'kakinada', name: 'Kakinada Port' },
   ]);
   const [customPlan, setCustomPlan] = useState<any>(null);
 
@@ -48,6 +54,74 @@ export const RouteOptimizationView: React.FC<RouteOptimizationViewProps> = ({ re
     }
     loadPorts();
   }, []);
+
+  // Synchronize departure and destination ports when a query response arrives
+  useEffect(() => {
+    if (!response) return;
+
+    // Check user location from response map features or viewport
+    let locLon: number | null = null;
+    let locLat: number | null = null;
+
+    const layers = response.map?.layers || [];
+    for (const l of layers) {
+      const feat = l.feature_collection?.features?.find(
+        (f) => f.properties?.type === 'user_location'
+      );
+      if (feat && feat.geometry?.type === 'Point') {
+        locLon = feat.geometry.coordinates[0];
+        locLat = feat.geometry.coordinates[1];
+        break;
+      }
+    }
+
+    if (locLon === null && response.map?.viewport?.center) {
+      locLon = response.map.viewport.center[0];
+      locLat = response.map.viewport.center[1];
+    }
+
+    // Port coordinate mapping to match nearest coastal hub
+    const portCoords: Record<string, [number, number]> = {
+      ratnagiri: [73.30, 16.99],
+      malvan: [73.47, 16.05],
+      mumbai: [72.83, 18.94],
+      alibaug: [72.87, 18.64],
+      goa: [73.80, 15.42],
+      karwar: [74.13, 14.81],
+      mangalore: [74.84, 12.87],
+      cochin: [76.26, 9.93],
+      vizhinjam: [76.99, 8.38],
+      chennai: [80.27, 13.08],
+      visakhapatnam: [83.22, 17.69],
+      kakinada: [82.25, 16.99],
+    };
+
+    if (locLon !== null && locLat !== null) {
+      let nearestPort = 'ratnagiri';
+      let minDist = Infinity;
+      for (const [pId, coords] of Object.entries(portCoords)) {
+        const d = Math.hypot(coords[0] - locLon, coords[1] - locLat);
+        if (d < minDist) {
+          minDist = d;
+          nearestPort = pId;
+        }
+      }
+
+      if (minDist < 3.5) {
+        setDeparturePort(nearestPort);
+        // Set appropriate default destination in the same sector
+        if (nearestPort === 'visakhapatnam') setDestinationPort('kakinada');
+        else if (nearestPort === 'kakinada') setDestinationPort('visakhapatnam');
+        else if (nearestPort === 'cochin') setDestinationPort('vizhinjam');
+        else if (nearestPort === 'vizhinjam') setDestinationPort('cochin');
+        else if (nearestPort === 'chennai') setDestinationPort('vizhinjam');
+        else if (nearestPort === 'ratnagiri') setDestinationPort('malvan');
+        else if (nearestPort === 'malvan') setDestinationPort('goa');
+        else if (nearestPort === 'mumbai') setDestinationPort('alibaug');
+        else setDestinationPort('malvan');
+      }
+    }
+  }, [response]);
 
   const handleInitiateOptimization = async () => {
     setIsOptimizing(true);
@@ -81,14 +155,14 @@ export const RouteOptimizationView: React.FC<RouteOptimizationViewProps> = ({ re
 
   const depName =
     customPlan?.departure?.name ||
-    rProps.departure ||
     portsCatalog.find((p) => p.id === departurePort)?.name ||
+    rProps.departure ||
     'Ratnagiri Harbour';
 
   const destName =
     customPlan?.destination?.name ||
-    rProps.destination ||
     portsCatalog.find((p) => p.id === destinationPort)?.name ||
+    rProps.destination ||
     'Malvan Port';
 
   const routeTitle = hasLiveRoute ? `Route: ${depName} ➔ ${destName}` : `${t('routeTitle')}: Ratnagiri ➔ Malvan`;

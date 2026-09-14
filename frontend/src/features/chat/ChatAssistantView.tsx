@@ -49,6 +49,9 @@ interface ChatAssistantViewProps {
   onSelectScenario: (scenarioId: string) => void;
   onChangeView: (view: ActiveNavView) => void;
   currentResponse?: UserResponseV1 | null;
+  messages: ChatMessage[];
+  onUpdateMessages: React.Dispatch<React.SetStateAction<ChatMessage[]>>;
+  onUpdateResponse?: (resp: UserResponseV1, queryText?: string) => void;
 }
 
 const TIMELINE_DATA: TimelineItem[] = [
@@ -112,9 +115,11 @@ export const ChatAssistantView: React.FC<ChatAssistantViewProps> = ({
   onSelectScenario,
   onChangeView,
   currentResponse,
+  messages,
+  onUpdateMessages,
+  onUpdateResponse,
 }) => {
   const { currentLang, t } = useLocalization();
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputQuery, setInputQuery] = useState('');
   const [isThinking, setIsThinking] = useState(false);
   const [expandedThinking, setExpandedThinking] = useState<Record<string, boolean>>({});
@@ -160,12 +165,21 @@ export const ChatAssistantView: React.FC<ChatAssistantViewProps> = ({
       text: query,
     };
 
-    setMessages((prev) => [...prev, userMsg]);
+    onUpdateMessages((prev) => [...prev, userMsg]);
     setInputQuery('');
     setIsThinking(true);
 
     try {
-      const chatRes = await apiClient.submitChatQuery(query);
+      // Fire both conversational query and contract query to sync map layer state
+      const [chatRes, queryRes] = await Promise.all([
+        apiClient.submitChatQuery(query, currentLang),
+        apiClient.submitQuery({ text: query, locale: currentLang }).catch(() => null),
+      ]);
+
+      if (queryRes && onUpdateResponse) {
+        onUpdateResponse(queryRes.response, query);
+      }
+
       const assistantMsgId = `asst-${Date.now()}`;
 
       const assistantMsg: ChatMessage = {
@@ -180,7 +194,7 @@ export const ChatAssistantView: React.FC<ChatAssistantViewProps> = ({
         actions: chatRes.actions,
       };
 
-      setMessages((prev) => [...prev, assistantMsg]);
+      onUpdateMessages((prev) => [...prev, assistantMsg]);
       setExpandedThinking((prev) => ({ ...prev, [assistantMsgId]: true }));
     } catch (err: any) {
       console.warn('Chat assistant fallback trigger:', err);
@@ -337,7 +351,7 @@ export const ChatAssistantView: React.FC<ChatAssistantViewProps> = ({
       actions,
     };
 
-    setMessages((prev) => [...prev, newAssistantMsg]);
+    onUpdateMessages((prev) => [...prev, newAssistantMsg]);
     setExpandedThinking((prev) => ({ ...prev, [assistantMsgId]: true }));
 
     if (scenarioSyncId) {
@@ -428,7 +442,7 @@ export const ChatAssistantView: React.FC<ChatAssistantViewProps> = ({
           <button
             type="button"
             className="v-assistant-action-btn v-assistant-action-btn--primary"
-            onClick={() => setMessages([])}
+            onClick={() => onUpdateMessages([])}
             title="Start New Chat Session"
           >
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">

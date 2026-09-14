@@ -247,12 +247,17 @@ class MarineFishingAgent:
         # 3. Graceful fallback: region-calibrated oceanographic profile
         base_sst = 28.4
         base_chl = 0.72
+        # For West Coast of India (lon < 77.5), seaward/offshore is WEST (negative lon offset).
+        # For East Coast of India (lon >= 77.5), seaward/offshore is EAST (positive lon offset).
+        is_west_coast = lon < 77.5
+        lon_dir = -1.0 if is_west_coast else 1.0
+
         offset_a_lat = 0.08 if lat < 20.0 else -0.08
-        offset_a_lon = 0.14
+        offset_a_lon = lon_dir * 0.18
 
         dist_a = _haversine_distance_km(lat, lon, lat + offset_a_lat, lon + offset_a_lon)
-        dist_b = _haversine_distance_km(lat, lon, lat - 0.12, lon + 0.22)
-        dist_c = _haversine_distance_km(lat, lon, lat + 0.05, lon + 0.07)
+        dist_b = _haversine_distance_km(lat, lon, lat - 0.12, lon + (lon_dir * 0.28))
+        dist_c = _haversine_distance_km(lat, lon, lat + 0.05, lon + (lon_dir * 0.10))
 
         candidate_zones = [
             {
@@ -268,9 +273,9 @@ class MarineFishingAgent:
             },
             {
                 "zone_id": f"PFZ-IND-{int(lat*10)}-B",
-                "name": f"Continental Shelf Shelf-break ({lat-0.12:.2f}N, {lon+0.22:.2f}E)",
+                "name": f"Continental Shelf Shelf-break ({lat-0.12:.2f}N, {lon+(lon_dir*0.28):.2f}E)",
                 "lat": round(lat - 0.12, 4),
-                "lon": round(lon + 0.22, 4),
+                "lon": round(lon + (lon_dir * 0.28), 4),
                 "distance_km": round(dist_b, 1),
                 "sst_c": 27.9,
                 "chlorophyll": 0.68,
@@ -279,9 +284,9 @@ class MarineFishingAgent:
             },
             {
                 "zone_id": f"PFZ-IND-{int(lat*10)}-C",
-                "name": f"Nearshore Bank ({lat+0.05:.2f}N, {lon+0.07:.2f}E)",
+                "name": f"Nearshore Bank ({lat+0.05:.2f}N, {lon+(lon_dir*0.10):.2f}E)",
                 "lat": round(lat + 0.05, 4),
-                "lon": round(lon + 0.07, 4),
+                "lon": round(lon + (lon_dir * 0.10), 4),
                 "distance_km": round(dist_c, 1),
                 "sst_c": 28.6,
                 "chlorophyll": 0.58,

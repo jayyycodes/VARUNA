@@ -87,6 +87,21 @@ function App() {
   const [railCollapsed, setRailCollapsed] = useState<boolean>(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(false);
 
+  // Lifted Chat Assistant Messages (Persists across tab navigation and browser refresh)
+  const [chatMessages, setChatMessages] = useState<any[]>(() => {
+    try {
+      const saved = sessionStorage.getItem('varuna_chat_messages');
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return [];
+  });
+
+  useEffect(() => {
+    try {
+      sessionStorage.setItem('varuna_chat_messages', JSON.stringify(chatMessages));
+    } catch {}
+  }, [chatMessages]);
+
   // Bug 6 fix: preserve the last-submitted query so users can see what result is active.
   const [activeQuery, setActiveQuery] = useState<string | null>(null);
 
@@ -134,6 +149,14 @@ function App() {
       setError(err.message || 'Error processing maritime safety query.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleChatResponseUpdate = (newResponse: UserResponseV1, queryText?: string) => {
+    setResponse(newResponse);
+    setActiveScenarioId(null); // Clear scenario selection so custom live query is reflected
+    if (queryText) {
+      setActiveQuery(queryText);
     }
   };
 
@@ -366,6 +389,9 @@ function App() {
                   onSelectScenario={executeScenario}
                   onChangeView={setActiveView}
                   currentResponse={response}
+                  messages={chatMessages}
+                  onUpdateMessages={setChatMessages}
+                  onUpdateResponse={handleChatResponseUpdate}
                 />
               )}
 

@@ -253,6 +253,38 @@ export const TRANSLATIONS: Record<LanguageCode, Record<string, string>> = {
     searchScenarios: 'Search coastal scenario...',
     groundingTestSuite: 'Grounding & Test Suite',
     totalLabel: 'Total',
+
+    // Dynamic Dashboard & Telemetry
+    activePfzCount: '3 PFZ ZONES ACTIVE',
+    zoneIdRatnagiri: 'ZONE ID • RATNAGIRI-WZ-04',
+    validToday: 'VALID: TODAY',
+    incoisImdVerified: 'INCOIS / IMD VERIFIED',
+    updatedLiveApi: 'UPDATED: LIVE API',
+    updatedLive: 'UPDATED: LIVE',
+    incoisWaveBuoy: 'INCOIS Wave Buoy',
+    incoisWaveBuoySub: 'Swell 1.8m • Normal',
+    coastGuardMpa: 'Coast Guard MPA',
+    coastGuardMpaSub: 'Geofence Boundary',
+    imdCycloneRadar: 'IMD Cyclone Radar',
+    imdCycloneRadarSub: 'Wind Gust 24kt',
+    varunaCopilot: 'VARUNA Copilot',
+    varunaCopilotSub: 'AI Advisory Ready',
+    badgeOk: 'OK',
+    badgeClear: 'Clear',
+    badgeMonitor: 'Monitor',
+    badgeActive: 'Active',
+    scenario_safe_complete_name: '1. Safe / Complete (Ratnagiri)',
+    scenario_safe_complete_desc: 'Normal coastal conditions, all 4 domains current within 30 min, active PFZ.',
+    scenario_caution_wave_name: '2. Caution / High Wave (Kochi)',
+    scenario_caution_wave_desc: 'Wave swell 2.8m > 2.5m threshold; medium confidence due to unavailable lightning feed.',
+    scenario_unsafe_cyclone_name: '3. Unsafe / Cyclone (Visakhapatnam)',
+    scenario_unsafe_cyclone_desc: 'Severe cyclonic storm warning, 48 kt winds, 5.2m waves. Mandatory zero-departure.',
+    scenario_pfz_but_unsafe_name: '4. PFZ Productive but Unsafe (Ratnagiri)',
+    scenario_pfz_but_unsafe_desc: 'High chlorophyll PFZ zone, but 34 kt squall. Favorable fish aggregations do NOT override risk.',
+    scenario_geofence_restricted_name: '5. Geofence Restricted (Malvan MPA)',
+    scenario_geofence_restricted_desc: 'Target coordinates inside Malvan Marine Sanctuary No-Take Core Zone. Regulatory violation.',
+    scenario_weather_stale_name: '6. Weather Stale (Veraval)',
+    scenario_weather_stale_desc: 'Weather data > 90 min old; system triggers degraded confidence fallback.',
   },
   hi: {
     appTitle: 'वरुण समुद्री सूचना प्रणाली',
@@ -474,6 +506,38 @@ export const TRANSLATIONS: Record<LanguageCode, Record<string, string>> = {
     searchScenarios: 'तटीय परिदृश्य खोजें...',
     groundingTestSuite: 'तटीय प्रमाणन व परीक्षण सूट',
     totalLabel: 'कुल',
+
+    // Dynamic Dashboard & Telemetry
+    activePfzCount: '3 PFZ क्षेत्र सक्रिय',
+    zoneIdRatnagiri: 'क्षेत्र आईडी • रत्नागिरी-WZ-04',
+    validToday: 'वैधता: आज',
+    incoisImdVerified: 'INCOIS / IMD द्वारा सत्यापित',
+    updatedLiveApi: 'अद्यतन: लाइव API',
+    updatedLive: 'अद्यतन: लाइव',
+    incoisWaveBuoy: 'INCOIS तरंग प्लव',
+    incoisWaveBuoySub: 'लहरें 1.8 मी • सामान्य',
+    coastGuardMpa: 'तटरक्षक समुद्री संरक्षित क्षेत्र (MPA)',
+    coastGuardMpaSub: 'भू-सीमा परिधि',
+    imdCycloneRadar: 'IMD चक्रवात रडार',
+    imdCycloneRadarSub: 'हवा के झोंके 24 नॉट',
+    varunaCopilot: 'वरुण कोपायलट',
+    varunaCopilotSub: 'AI सलाह उपलब्ध',
+    badgeOk: 'ठीक',
+    badgeClear: 'सुरक्षित',
+    badgeMonitor: 'निगरानी',
+    badgeActive: 'सक्रिय',
+    scenario_safe_complete_name: '1. सुरक्षित / पूर्ण (रत्नागिरी)',
+    scenario_safe_complete_desc: 'सामान्य तटीय स्थिति, सभी 4 डोमेन 30 मिनट में अद्यतन, सक्रिय मछली क्षेत्र।',
+    scenario_caution_wave_name: '2. सावधानी / उच्च तरंग (कोच्चि)',
+    scenario_caution_wave_desc: 'लहरें 2.8 मी > 2.5 मी सीमा; बिजली डेटा अनुपलब्ध होने से मध्यम विश्वास।',
+    scenario_unsafe_cyclone_name: '3. असुरक्षित / चक्रवात (विशाखापट्टनम)',
+    scenario_unsafe_cyclone_desc: 'भीषण चक्रवाती तूफान चेतावनी, 48 नॉट हवा, 5.2 मी लहरें। प्रस्थान पूर्णतः स्थगित।',
+    scenario_pfz_but_unsafe_name: '4. मछली क्षेत्र उत्पादक पर असुरक्षित (रत्नागिरी)',
+    scenario_pfz_but_unsafe_desc: 'उच्च क्लोरोफिल क्षेत्र, लेकिन 34 नॉट स्क्वॉल। अनुकूल मछली समूह जोखिम को रद्द नहीं करते।',
+    scenario_geofence_restricted_name: '5. भू-सीमा प्रतिबंधित (मालवन MPA)',
+    scenario_geofence_restricted_desc: 'मालवन समुद्री अभयारण्य कोर ज़ोन के भीतर लक्षित निर्देशांक। विनियामक उल्लंघन।',
+    scenario_weather_stale_name: '6. पुराना मौसम डेटा (वेरावल)',
+    scenario_weather_stale_desc: 'मौसम डेटा 90 मिनट से पुराना; सिस्टम अधोगति विश्वसनीयता फ़ॉलबैक सक्रिय करता है।',
   },
   mr: {
     appTitle: 'वरुण सागरी माहिती प्रणाली',
@@ -695,6 +759,38 @@ export const TRANSLATIONS: Record<LanguageCode, Record<string, string>> = {
     searchScenarios: 'किनारपट्टी परिदृश्य शोधा...',
     groundingTestSuite: 'प्रमाणीकरण आणि चाचणी संच',
     totalLabel: 'एकूण',
+
+    // Dynamic Dashboard & Telemetry
+    activePfzCount: '3 PFZ क्षेत्र सक्रिय',
+    zoneIdRatnagiri: 'झोन आयडी • रत्नागिरी-WZ-04',
+    validToday: 'वैधता: आज',
+    incoisImdVerified: 'INCOIS / IMD प्रमाणित',
+    updatedLiveApi: 'अपडेट: थेट API',
+    updatedLive: 'अपडेट: थेट',
+    incoisWaveBuoy: 'INCOIS लाटांची तरंग-बॉय',
+    incoisWaveBuoySub: 'लाटा 1.8 मी • सामान्य',
+    coastGuardMpa: 'किनारपट्टी रक्षक सागरी संरक्षित क्षेत्र (MPA)',
+    coastGuardMpaSub: 'जिओफेन्स सीमा',
+    imdCycloneRadar: 'IMD चक्रीवादळ रडार',
+    imdCycloneRadarSub: 'वादळी वारे 24 नॉट्स',
+    varunaCopilot: 'वरुण कोपायलट',
+    varunaCopilotSub: 'AI सल्ला सज्ज',
+    badgeOk: 'ठीक',
+    badgeClear: 'सुरक्षित',
+    badgeMonitor: 'निरीक्षण',
+    badgeActive: 'सक्रिय',
+    scenario_safe_complete_name: '1. सुरक्षित / पूर्ण (रत्नागिरी)',
+    scenario_safe_complete_desc: 'सामान्य किनारपट्टी स्थिती, चारही डोमेन 30 मिनिटांत ताजे, सक्रिय PFZ.',
+    scenario_caution_wave_name: '2. सावधगिरी / उंच लाटा (कोची)',
+    scenario_caution_wave_desc: 'लाटा 2.8 मी > 2.5 मी मर्यादा; विजांचा डेटा उपलब्ध नसल्याने मध्यम विश्वास.',
+    scenario_unsafe_cyclone_name: '3. धोकादायक / चक्रीवादळ (विशाखापट्टणम)',
+    scenario_unsafe_cyclone_desc: 'तीव्र चक्रीवादळ चेतावणी, 48 नॉट वारे, 5.2 मी लाटा. समुद्रात जाण्यास पूर्ण बंदी.',
+    scenario_pfz_but_unsafe_name: '4. PFZ उत्पादक पण असुरक्षित (रत्नागिरी)',
+    scenario_pfz_but_unsafe_desc: 'उच्च क्लोरोफिल क्षेत्र, पण 34 नॉट सोसाट्याचा वारा. माशांचे प्रमाण धोक्यापेक्षा मोठे नाही.',
+    scenario_geofence_restricted_name: '5. जिओफेन्स प्रतिबंधित (मालवण MPA)',
+    scenario_geofence_restricted_desc: 'मालवण सागरी अभयारण्य नो-टेक कोअर झोनच्या आत. कायदेशीर उल्लंघन.',
+    scenario_weather_stale_name: '6. जुना हवामान डेटा (वेरावळ)',
+    scenario_weather_stale_desc: 'हवामान डेटा 90 मिनिटांपेक्षा जुना; सिस्टीम अधोगती विश्वासार्हता मोड सुरू करते.',
   },
   ta: {
     appTitle: 'வருணா கடல்சார் தகவல் அமைப்பு',
@@ -837,30 +933,77 @@ export const TRANSLATIONS: Record<LanguageCode, Record<string, string>> = {
     searchScenarios: 'கடற்கரை சூழ்நிலையைத் தேடுங்கள்...',
     groundingTestSuite: 'சரிபார்ப்பு & சோதனைத் தொகுப்பு',
     totalLabel: 'மொத்தம்',
+
+    // Dynamic Dashboard & Telemetry
+    activePfzCount: '3 PFZ மண்டலங்கள் செயலில்',
+    zoneIdRatnagiri: 'மண்டல ஐடி • ரத்னகிரி-WZ-04',
+    validToday: 'செல்லுபடியாகும்: இன்று',
+    incoisImdVerified: 'INCOIS / IMD சரிபார்க்கப்பட்டது',
+    updatedLiveApi: 'புதுப்பிக்கப்பட்டது: நேரலை API',
+    updatedLive: 'புதுப்பிக்கப்பட்டது: நேரலை',
+    incoisWaveBuoy: 'INCOIS அலை மிதவை',
+    incoisWaveBuoySub: 'அலை 1.8 மீ • இயல்பானது',
+    coastGuardMpa: 'கடலோர காவல்படை MPA',
+    coastGuardMpaSub: 'புவிசார் எல்லை',
+    imdCycloneRadar: 'IMD புயல் ரேடார்',
+    imdCycloneRadarSub: 'காற்று வீச்சு 24 நாட்ஸ்',
+    varunaCopilot: 'வருணா கோபைலட்',
+    varunaCopilotSub: 'AI வழிகாட்டுதல் தயார்',
+    badgeOk: 'சரி',
+    badgeClear: 'தெளிவு',
+    badgeMonitor: 'கண்காணிப்பு',
+    badgeActive: 'செயலில்',
+    scenario_safe_complete_name: '1. பாதுகாப்பானது / முழுமை (ரத்னகிரி)',
+    scenario_safe_complete_desc: 'சாதாரண கடலோர நிலைமைகள், 30 நிமிடங்களில் 4 களங்களும் புதுப்பிக்கப்பட்டன.',
+    scenario_caution_wave_name: '2. எச்சரிக்கை / உயர் அலை (கொச்சி)',
+    scenario_caution_wave_desc: 'அலை உயரம் 2.8 மீ > 2.5 மீ வரம்பு; மின்னல் தகவல் கிடைக்காததால் நடுத்தர நம்பிக்கை.',
+    scenario_unsafe_cyclone_name: '3. ஆபத்தானது / புயல் (விசாகப்பட்டினம்)',
+    scenario_unsafe_cyclone_desc: 'கடும் புயல் எச்சரிக்கை, 48 நாட் காற்று, 5.2 மீ அலைகள். கட்டாய புறப்பாடு நிறுத்தம்.',
+    scenario_pfz_but_unsafe_name: '4. PFZ உற்பத்தி திறன் கொண்டது ஆனால் ஆபத்தானது (ரத்னகிரி)',
+    scenario_pfz_but_unsafe_desc: 'அதிக குளோரோபில் PFZ மண்டலம், ஆனால் 34 நாட் காற்று. மீன் வளம் ஆபத்தை மீறாது.',
+    scenario_geofence_restricted_name: '5. புவிசார் தடைசெய்யப்பட்டது (மால்வன் MPA)',
+    scenario_geofence_restricted_desc: 'மால்வன் கடல் சரணாலய எல்லைக்குள் இலக்கு ஒருங்கிணைப்புகள். சட்ட மீறல்.',
+    scenario_weather_stale_name: '6. காலாவதியான வானிலை (வேராவல்)',
+    scenario_weather_stale_desc: 'வானிலை தகவல் 90 நிமிடங்களுக்கும் பழையது; கணினி எச்சரிக்கை விடுக்கிறது.',
   },
 };
 
 const STORAGE_KEY = 'varuna_preferred_lang';
 
-export function useLocalization() {
-  const [currentLang, setCurrentLang] = useState<LanguageCode>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY) as LanguageCode;
-      if (saved && ['en', 'hi', 'mr', 'ta'].includes(saved)) {
-        return saved;
-      }
-    } catch {}
-    return 'en';
-  });
+// Global reactive subscriber bus for language synchronization across all components
+const languageListeners = new Set<(lang: LanguageCode) => void>();
 
+function getInitialLanguage(): LanguageCode {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY) as LanguageCode;
+    if (saved && ['en', 'hi', 'mr', 'ta'].includes(saved)) {
+      return saved;
+    }
+  } catch {}
+  return 'en';
+}
+
+export function setGlobalLanguage(lang: LanguageCode) {
+  try {
+    localStorage.setItem(STORAGE_KEY, lang);
+  } catch {}
+  languageListeners.forEach((listener) => listener(lang));
+}
+
+export function useLocalization() {
+  const [currentLang, setCurrentLang] = useState<LanguageCode>(getInitialLanguage);
   const [isSpeaking, setIsSpeaking] = useState<boolean>(false);
   const [liveAnnouncement, setLiveAnnouncement] = useState<string>('');
 
+  useEffect(() => {
+    languageListeners.add(setCurrentLang);
+    return () => {
+      languageListeners.delete(setCurrentLang);
+    };
+  }, []);
+
   const setLanguage = (lang: LanguageCode) => {
-    setCurrentLang(lang);
-    try {
-      localStorage.setItem(STORAGE_KEY, lang);
-    } catch {}
+    setGlobalLanguage(lang);
   };
 
   const t = useCallback(

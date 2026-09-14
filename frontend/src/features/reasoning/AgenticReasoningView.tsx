@@ -14,6 +14,15 @@ export const AgenticReasoningView: React.FC<AgenticReasoningViewProps> = ({ resp
   const verdict = response?.summary?.verdict || 'SAFE';
   const queryId = response?.query_run_id || 'run-live-001';
 
+  const isRegulatory = response?.claims?.some((c) => c.kind === 'regulation') ||
+    response?.evidence_panel?.rule_trace?.some((r) => r.domain === 'statutory_regulation') ||
+    Boolean(response?.citations && response.citations.length > 0 && response?.summary?.action?.toLowerCase().includes('monsoon'));
+
+  const rawHeadline = response?.summary?.headline || '';
+  const displayHeadline = rawHeadline.length > 130
+    ? `${rawHeadline.slice(0, 127)}...`
+    : rawHeadline || 'Marine parameters evaluated against statutory and meteorological standards.';
+
   return (
     <div className="agentic-reasoning-view">
       {/* View Header */}
@@ -73,8 +82,10 @@ export const AgenticReasoningView: React.FC<AgenticReasoningViewProps> = ({ resp
                 <div className="code-block mono text-xs">
                   {JSON.stringify(
                     {
-                      intent: 'SAFETY_ASSESSMENT_AND_PFZ_QUERY',
-                      domain_agents_dispatched: ['MarineAgent', 'WeatherAgent', 'GeofenceAgent', 'RiskEngine'],
+                      intent: isRegulatory ? 'STATUTORY_REGULATION_INQUIRY' : 'SAFETY_ASSESSMENT_AND_PFZ_QUERY',
+                      domain_agents_dispatched: isRegulatory
+                        ? ['RAGLegalAdvisoryAgent', 'GeofenceAgent', 'MaritimeRulesEngine']
+                        : ['MarineAgent', 'WeatherAgent', 'GeofenceAgent', 'RiskEngine'],
                       execution_mode: 'PARALLEL_WITH_DETERMINISTIC_GATE',
                     },
                     null,
@@ -130,7 +141,7 @@ export const AgenticReasoningView: React.FC<AgenticReasoningViewProps> = ({ resp
           </div>
         </article>
 
-        {/* 3. Deterministic Risk Engine */}
+        {/* 3. Deterministic Risk Engine / Statutory Compliance */}
         <article className="timeline-node">
           <div className={`node-marker node-marker--${verdict.toLowerCase()}`}>
             <span className="node-icon">
@@ -140,14 +151,19 @@ export const AgenticReasoningView: React.FC<AgenticReasoningViewProps> = ({ resp
           <div className={`node-card glass node-card--verdict-${verdict.toLowerCase()}`}>
             <div className="node-card__header" onClick={() => setExpandedNode(expandedNode === 'risk' ? null : 'risk')}>
               <div>
-                <div className="node-domain mono text-xs">DETERMINISTIC RULE ENGINE</div>
-                <h3 className="node-title text-md font-bold">Risk Assessment Agent</h3>
+                <div className="node-domain mono text-xs">
+                  {isRegulatory ? 'STATUTORY COMPLIANCE & RISK GATE' : 'DETERMINISTIC RULE ENGINE'}
+                </div>
+                <h3 className="node-title text-md font-bold">
+                  {isRegulatory ? 'Maritime Legal & Regulatory Compliance Agent' : 'Risk Assessment Agent'}
+                </h3>
                 <p className="node-summary text-xs text-muted">
-                  Computed final verdict: <strong>{verdict}</strong> ({response?.summary?.headline})
+                  {isRegulatory ? 'Statutory evaluation: ' : 'Computed final verdict: '}
+                  <strong>{isRegulatory && verdict === 'UNSAFE' ? 'PROHIBITED (UNSAFE)' : verdict}</strong> — {displayHeadline}
                 </p>
               </div>
               <span className={`verdict-pill verdict-pill--${verdict.toLowerCase()} mono text-xs`}>
-                {verdict}
+                {isRegulatory && verdict === 'UNSAFE' ? 'PROHIBITED' : verdict}
               </span>
             </div>
 
