@@ -20,13 +20,8 @@ import { LanguageSelector } from './components/LanguageSelector';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { useLocalization } from './hooks/useLocalization';
 import { useAppStore } from './store/useAppStore';
-import {
-  IconMapPin,
-  IconSearch,
-  IconCopilotBot,
-  IconAnchor,
-  IconBook,
-} from './components/Icons';
+import { IconMapPin, IconSearch, IconCopilotBot, IconAnchor, IconBook } from './components/Icons';
+import { MobileTabBar } from './components/MobileTabBar';
 import { useIsMobile } from './hooks/useIsMobile';
 import './App.css';
 
@@ -472,6 +467,9 @@ function App() {
         onChangeView={setActiveView}
         currentResponse={response}
       />
+
+      {/* Floating Capsule Mobile Navigation Tab Bar */}
+      {isMobile && <MobileTabBar onNavigate={(view) => setActiveView(view as ActiveNavView)} />}
     </div>
   );
 }

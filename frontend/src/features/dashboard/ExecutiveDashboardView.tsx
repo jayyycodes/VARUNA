@@ -3,6 +3,7 @@ import type { UserResponseV1 } from '../../contracts/userResponse';
 import { FIXTURES } from '../../fixtures';
 import { apiClient } from '../../api/client';
 import { useLocalization } from '../../hooks/useLocalization';
+import { useIsMobile } from '../../hooks/useIsMobile';
 import {
   IconCheck,
   IconShield,
@@ -28,6 +29,7 @@ export const ExecutiveDashboardView: React.FC<ExecutiveDashboardViewProps> = ({
   onNavigateView,
 }) => {
   const { t } = useLocalization();
+  const isMobile = useIsMobile();
   const [fleetCount, setFleetCount] = useState<number>(24);
   const [alertCount, setAlertCount] = useState<number>(4);
   const [liveSst, setLiveSst] = useState<string>('28.4°C');
@@ -131,53 +133,55 @@ export const ExecutiveDashboardView: React.FC<ExecutiveDashboardViewProps> = ({
           </div>
         </div>
 
-        {/* 2. Action Pills Row */}
-        <div className="exec-actions-row">
-          <button
-            type="button"
-            className="exec-action-pill exec-action-pill--active"
-            onClick={() => onNavigateView('routing')}
-          >
-            <span className="pill-icon-circle"><IconRoute size={14} color="#FFFFFF" /></span>
-            <span>{t('routeOptimize')}</span>
-          </button>
+        {/* 2. Action Pills Row (Mobile Only) */}
+        {isMobile && (
+          <div className="exec-actions-row">
+            <button
+              type="button"
+              className="exec-action-pill exec-action-pill--active"
+              onClick={() => onNavigateView('routing')}
+            >
+              <span className="pill-icon-circle"><IconRoute size={14} color="#FFFFFF" /></span>
+              <span>{t('routeOptimize')}</span>
+            </button>
 
-          <button
-            type="button"
-            className="exec-action-pill"
-            onClick={() => onNavigateView('reasoning')}
-          >
-            <span className="pill-icon-circle pill-icon-circle--dark"><IconShield size={14} color="#FFFFFF" /></span>
-            <span>{t('rulesEngine')}</span>
-          </button>
+            <button
+              type="button"
+              className="exec-action-pill"
+              onClick={() => onNavigateView('reasoning')}
+            >
+              <span className="pill-icon-circle pill-icon-circle--dark"><IconShield size={14} color="#FFFFFF" /></span>
+              <span>{t('rulesEngine')}</span>
+            </button>
 
-          <button
-            type="button"
-            className="exec-action-pill"
-            onClick={() => onNavigateView('fleet')}
-          >
-            <span className="pill-icon-circle pill-icon-circle--dark"><IconShip size={14} color="#FFFFFF" /></span>
-            <span>{t('fleetOps')} ({fleetCount})</span>
-          </button>
+            <button
+              type="button"
+              className="exec-action-pill"
+              onClick={() => onNavigateView('fleet')}
+            >
+              <span className="pill-icon-circle pill-icon-circle--dark"><IconShip size={14} color="#FFFFFF" /></span>
+              <span>{t('fleetOps')} ({fleetCount})</span>
+            </button>
 
-          <button
-            type="button"
-            className="exec-action-pill"
-            onClick={() => onNavigateView('trends')}
-          >
-            <span className="pill-icon-circle pill-icon-circle--dark"><IconWave size={14} color="#FFFFFF" /></span>
-            <span>{t('fisheryTrends')}</span>
-          </button>
+            <button
+              type="button"
+              className="exec-action-pill"
+              onClick={() => onNavigateView('trends')}
+            >
+              <span className="pill-icon-circle pill-icon-circle--dark"><IconWave size={14} color="#FFFFFF" /></span>
+              <span>{t('fisheryTrends')}</span>
+            </button>
 
-          <button
-            type="button"
-            className="exec-action-pill"
-            onClick={() => onNavigateView('alerts')}
-          >
-            <span className="pill-icon-circle pill-icon-circle--dark"><IconAlert size={14} color="#FFFFFF" /></span>
-            <span>{t('activeAlerts')} ({alertCount})</span>
-          </button>
-        </div>
+            <button
+              type="button"
+              className="exec-action-pill"
+              onClick={() => onNavigateView('alerts')}
+            >
+              <span className="pill-icon-circle pill-icon-circle--dark"><IconAlert size={14} color="#FFFFFF" /></span>
+              <span>{t('activeAlerts')} ({alertCount})</span>
+            </button>
+          </div>
+        )}
 
         {/* 3. Recent Maritime Scenarios & Vessel Inquiries Table */}
         <div className="exec-table-section">
@@ -215,23 +219,25 @@ export const ExecutiveDashboardView: React.FC<ExecutiveDashboardViewProps> = ({
                       </div>
                       <div className="sender-info">
                         <span className="sender-name">{item.name}</span>
-                        <span className="sender-sub text-xs">{item.description.slice(0, 32)}...</span>
+                        <span className="sender-sub text-xs">{item.description.slice(0, 36)}...</span>
                       </div>
                     </div>
 
-                    <div className="td-date text-xs mono">
-                      {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                    </div>
+                    <div className="td-meta-row">
+                      <div className="td-status">
+                        <span className={`exec-status-pill ${statusTagClass}`}>
+                          <span className="exec-status-dot" />
+                          {itemVerdict}
+                        </span>
+                      </div>
 
-                    <div className="td-status">
-                      <span className={`exec-status-pill ${statusTagClass}`}>
-                        <span className="exec-status-dot" />
-                        {itemVerdict}
-                      </span>
-                    </div>
+                      <div className="td-date text-xs mono">
+                        {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                      </div>
 
-                    <div className="td-coords mono text-xs">
-                      16.98° N, 73.28° E
+                      <div className="td-coords mono text-xs">
+                        16.98° N, 73.28° E
+                      </div>
                     </div>
                   </div>
                 );
