@@ -53,10 +53,17 @@ app = FastAPI(
     version="0.1.0",
 )
 
+# ── CORS ─────────────────────────────────────────────────────────────
+cors_origins_env = os.getenv("CORS_ORIGINS", "*")
+if cors_origins_env == "*":
+    origins = ["*"]
+else:
+    origins = [o.strip() for o in cors_origins_env.split(",") if o.strip()]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # TODO: Tighten for production
-    allow_credentials=True,
+    allow_origins=origins,
+    allow_credentials=True if cors_origins_env != "*" else False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -251,3 +258,9 @@ async def upstream_health():
         "all_healthy": all(s["is_healthy"] for s in circuits),
         "circuits": circuits,
     }
+
+
+if __name__ == "__main__":
+    import uvicorn
+    port = int(os.getenv("PORT", 8000))
+    uvicorn.run("backend.main:app", host="0.0.0.0", port=port)
