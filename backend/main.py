@@ -139,9 +139,10 @@ def log_query_execution_to_supabase(
 # ── Request / Response Schemas ────────────────────────────────────────
 
 class ChatRequest(BaseModel):
-    """User query payload (accepts either 'query' or 'text')."""
+    """User query payload (accepts 'query', 'text', or 'message')."""
     query: str | None = Field(None, description="Natural-language question about marine conditions")
     text: str | None = Field(None, description="Alias for query")
+    message: str | None = Field(None, description="Alias for query")
     conversation_id: str | None = Field(None, description="Session ID for multi-turn context")
     user_id: str | None = Field(None, description="User identifier")
     location: dict | None = Field(None, description="Optional lat/lon coordinates")
@@ -150,7 +151,7 @@ class ChatRequest(BaseModel):
     session_id: str | None = Field(None, description="Alias for conversation_id")
 
     def get_query_text(self) -> str:
-        q = (self.query or self.text or "").strip()
+        q = (self.query or self.text or self.message or "").strip()
         if not q:
             return "Check current marine safety conditions"
         return q
@@ -217,13 +218,26 @@ async def chat(req: ChatRequest, background_tasks: BackgroundTasks):
     return await process_query_pipeline(req, background_tasks)
 
 
+@app.get("/chat")
+@app.get("/api/chat")
+async def chat_get_info():
+    """Information endpoint for GET /chat."""
+    return {
+        "status": "ok",
+        "service": "VARUNA Marine Copilot Gateway",
+        "instruction": "Send a POST request with JSON payload {'query': 'Your maritime question'} to submit queries."
+    }
+
+
 @app.post("/v1/query", response_model=ChatResponse)
+@app.post("/api/v1/query", response_model=ChatResponse)
 async def v1_query(req: ChatRequest, background_tasks: BackgroundTasks):
     """V1 REST query endpoint alias."""
     return await process_query_pipeline(req, background_tasks)
 
 
 @app.post("/v1/chat", response_model=ChatResponse)
+@app.post("/api/chat", response_model=ChatResponse)
 async def v1_chat(req: ChatRequest, background_tasks: BackgroundTasks):
     """V1 Chat endpoint alias."""
     return await process_query_pipeline(req, background_tasks)

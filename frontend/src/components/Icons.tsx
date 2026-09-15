@@ -170,8 +170,11 @@ export const IconSparkles: React.FC<IconProps> = ({ size = 16, className = '', c
 );
 
 export const IconCopilotBot: React.FC<IconProps> = ({ size = 18, className = '', color = 'currentColor' }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill={color} className={`svg-anim-copilot ${className}`}>
-    <path d="M12 1.5C12 7.298 16.702 12 22.5 12C16.702 12 12 16.702 12 22.5C12 16.702 7.298 12 1.5 12C7.298 12 12 7.298 12 1.5Z" className="svg-anim-sparkle-star" />
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`svg-anim-copilot ${className}`}>
+    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+    <circle cx="9" cy="10" r="1.2" fill={color} stroke="none" />
+    <circle cx="15" cy="10" r="1.2" fill={color} stroke="none" />
+    <path d="M10 13c.8.6 1.7.9 2.5.9s1.7-.3 2.5-.9" />
   </svg>
 );
 

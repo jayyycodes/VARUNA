@@ -26,17 +26,15 @@ export interface ChatMessage {
   }>;
 }
 
-interface TimelineItem {
+export interface ChatSession {
   id: string;
-  type: 'alerts' | 'forecast' | 'history' | 'automation';
   title: string;
-  timestamp: string;
-  timeGroup: 'TODAY' | 'YESTERDAY' | '1 WEEK AGO';
-  iconType: 'anomaly' | 'warning' | 'route' | 'forecast' | 'chat';
-  isUnread?: boolean;
-  queryPrompt: string;
-  targetScenario?: string;
-  targetView?: ActiveNavView;
+  createdAt: number;
+  updatedAt: number;
+  timeGroup: 'TODAY' | 'YESTERDAY' | 'PREVIOUS 7 DAYS';
+  messages: ChatMessage[];
+  lastQuery: string;
+  scenarioSyncId?: string;
 }
 
 interface ChatAssistantViewProps {
@@ -45,121 +43,357 @@ interface ChatAssistantViewProps {
   currentResponse?: UserResponseV1 | null;
 }
 
-const HISTORY_TIMELINE_DATA: TimelineItem[] = [
+const DEFAULT_INITIAL_SESSIONS: ChatSession[] = [
   {
-    id: 't-1',
-    type: 'alerts',
-    title: 'Severe cyclone anomaly detected & track simulation',
-    timestamp: '2h ago',
+    id: 'sess-1',
+    title: 'Ratnagiri PFZ & Convective Storm Risk',
+    createdAt: Date.now() - 3600 * 1000 * 2,
+    updatedAt: Date.now() - 3600 * 1000 * 2,
     timeGroup: 'TODAY',
-    iconType: 'anomaly',
-    isUnread: true,
-    queryPrompt: 'Simulate severe cyclone storm track and wind gust speeds for Visakhapatnam',
-    targetScenario: 'unsafe_cyclone',
+    lastQuery: 'Where is the nearest Potential Fishing Zone (PFZ) today from Ratnagiri?',
+    scenarioSyncId: 'pfz_but_unsafe',
+    messages: [
+      {
+        id: 'u-1',
+        sender: 'user',
+        timestamp: '10:15 AM',
+        text: 'Where is the nearest Potential Fishing Zone (PFZ) today from Ratnagiri?',
+      },
+      {
+        id: 'a-1',
+        sender: 'assistant',
+        timestamp: '10:15 AM',
+        verdict: 'UNSAFE',
+        scenarioSyncId: 'pfz_but_unsafe',
+        metrics: {
+          wave: '1.04 m (Calm)',
+          wind: '13.4 km/h',
+          pfz: '3 Zones Active',
+          confidence: 'HIGH (IMD / INCOIS Verified)',
+        },
+        thinking: [
+          'Query parsed: Location "Ratnagiri", Domain "PFZ Discovery & Marine Safety Assessment".',
+          'Weather check: Wave height 1.04m, Wind speed 13.4 km/h (within standard limits).',
+          'Atmospheric Threat: Severe convective storm activity forecast; "high" lightning-risk rating flagged.',
+          'Deterministic Rule Engine: IMD severe-lightning rule triggered → Automatic UNSAFE verdict.',
+          'Geofencing check: Clear — 97 km clearance from Malvan Marine Sanctuary.',
+          'PFZ Retrieval: 3 productive zones identified (Nearshore Bank 12 km, Sector Alpha 21 km, Shelf-break 33 km).',
+        ],
+        text: `The system's risk engine has marked today's conditions as **UNSAFE**.\n\n**Root Cause:** The only trigger was the **"high" lightning risk** — severe convective storm activity is forecast for the area, and under the IMD severe-lightning rule this automatically makes any offshore movement unsafe, regardless of wave height (**1.04 m**) or wind (**13.4 km/h**).\n\n**Potential Fishing Zones Identified:**\n• **PFZ-IND-169-C "Nearshore Bank"** — about 12 km away, shallow (≈19 m), productivity **0.704** (prawns, croaker, sole).\n• **PFZ-IND-169-A "Offshore Sector Alpha"** — about 21 km away, deeper (≈30 m), productivity **0.710** (mackerel, sardine, anchovy).\n• **PFZ-IND-169-B "Continental Shelf-break"** — about 33 km away, deeper (≈46 m), productivity **0.653** (tuna, pomfret, ribbonfish).\n\n**Geofence Status:** Clear — 97 km from Malvan Marine Sanctuary.\n\n**Action:** Stay in sheltered waters such as **Mirya Bay** or nearshore anchorages within 2–5 km of the coast until the convective storm passes and lightning risk drops to "low" or "none".`,
+        actions: [
+          { label: 'View Ratnagiri Alert on Map', actionType: 'scenario', target: 'pfz_but_unsafe' },
+          { label: 'Check Marine Warnings', actionType: 'view', target: 'alerts' },
+        ],
+      },
+    ],
   },
   {
-    id: 't-2',
-    type: 'alerts',
-    title: 'High wave swell alert near Kochi port',
-    timestamp: '3h ago',
+    id: 'sess-2',
+    title: 'Kochi Morning Safety Clearance Check',
+    createdAt: Date.now() - 3600 * 1000 * 5,
+    updatedAt: Date.now() - 3600 * 1000 * 5,
     timeGroup: 'TODAY',
-    iconType: 'warning',
-    isUnread: true,
-    queryPrompt: 'Analyze wave swell height and warning bulletins for Kochi port',
-    targetScenario: 'caution_high_wave',
+    lastQuery: 'Is it safe to venture into the sea tomorrow morning off Kochi?',
+    scenarioSyncId: 'safe_complete',
+    messages: [
+      {
+        id: 'u-2',
+        sender: 'user',
+        timestamp: '07:30 AM',
+        text: 'Is it safe to venture into the sea tomorrow morning off Kochi?',
+      },
+      {
+        id: 'a-2',
+        sender: 'assistant',
+        timestamp: '07:30 AM',
+        verdict: 'SAFE',
+        scenarioSyncId: 'safe_complete',
+        metrics: {
+          wave: '1.02 m (Calm)',
+          wind: '13 km/h W',
+          pfz: '3 Zones Safe',
+          confidence: 'HIGH (100% Passed)',
+        },
+        thinking: [
+          'Target Sector: Kochi, Kerala / Malabar Coast.',
+          'Weather Ingestion: Wave height 1.02 m, Wind 13 km/h from West, Low lightning risk.',
+          'Ocean Currents: Gentle 1.1 kts from SSE.',
+          'Geofencing: > 269 km from nearest foreign EEZ (Sri Lanka); zero territorial breaches.',
+          'Deterministic Rule Engine: All parameters well within limits for 10–15 m trawlers → SAFE verdict.',
+        ],
+        text: `The system's risk engine has marked tomorrow morning off Kochi as **SAFE**.\n\n**Safety Analysis:**\n• Wave height is **1.02 m** (well under 1.5 m caution threshold).\n• Wind is **13 km/h from the West** (well under 25 km/h caution limit).\n• Lightning risk is **low**, no cyclone alert, and ocean currents are a gentle **1.1 kts SSE**.\n\n**Productive Fishing Zones Identified:**\n1. **Nearshore Bank (PFZ-IND-99-C)** — about 12 km out, depth ~33 m, productivity score **0.703** (prawns, croaker, sole).\n2. **Offshore Sector Alpha (PFZ-IND-99-A)** — roughly 22 km offshore, depth ~57 m, productivity **0.708** (mackerel, sardine, anchovy).\n3. **Continental Shelf-break (PFZ-IND-99-B)** — about 34 km away, depth ~111 m, productivity **0.650** (tuna, pomfret, ribbonfish).\n\n**Geofencing Status:** Clear — > 269 km from nearest foreign EEZ (Sri Lanka).\n\n**Action:** Launch before sunrise, head west-southwest toward the Nearshore Bank (≈12 km, 6 NM), target prawns and croaker, and stay within sight of the coast.`,
+        actions: [
+          { label: 'View Kochi Map', actionType: 'scenario', target: 'safe_complete' },
+          { label: 'Open Navigation Corridor', actionType: 'view', target: 'routing' },
+        ],
+      },
+    ],
   },
   {
-    id: 't-3',
-    type: 'automation',
-    title: 'Safe transit corridor from Cochin to Gulf',
-    timestamp: '5h ago',
-    timeGroup: 'TODAY',
-    iconType: 'route',
-    queryPrompt: 'Compute safe navigation corridor and waypoint clearance from Cochin to Gulf',
-    targetView: 'routing',
-  },
-  {
-    id: 't-4',
-    type: 'forecast',
-    title: 'SWAN wave forecast model update & buoy telemetry',
-    timestamp: 'Yesterday',
+    id: 'sess-3',
+    title: 'Veraval Tide, Swell & Weather Ingestion',
+    createdAt: Date.now() - 3600 * 1000 * 24,
+    updatedAt: Date.now() - 3600 * 1000 * 24,
     timeGroup: 'YESTERDAY',
-    iconType: 'forecast',
-    queryPrompt: 'Show latest SWAN ocean wave height predictions and buoy telemetry',
+    lastQuery: 'What are the current tide, swell, and weather conditions near Veraval?',
+    scenarioSyncId: 'weather_stale',
+    messages: [
+      {
+        id: 'u-3',
+        sender: 'user',
+        timestamp: 'Yesterday',
+        text: 'What are the current tide, swell, and weather conditions near Veraval?',
+      },
+      {
+        id: 'a-3',
+        sender: 'assistant',
+        timestamp: 'Yesterday',
+        verdict: 'UNSAFE',
+        scenarioSyncId: 'weather_stale',
+        metrics: {
+          wave: '1.4 m (Convective)',
+          wind: '23.9 km/h (Gusts 49 km/h)',
+          pfz: '3 Zones Unsafe',
+          confidence: 'HIGH',
+        },
+        thinking: [
+          'Target Sector: Veraval Coastal Waters / Saurashtra Coast.',
+          'Atmospheric Ingestion: Wind from West at 23.9 km/h with gale gusts up to 49 km/h.',
+          'Wave Telemetry: Wave height 1.4 m, swell period 8.3 s, humidity 82%, 87% chance of rain.',
+          'Severe Convective Squall: High lightning risk flagged by rule engine.',
+          'Geofencing: Clear — 346 km from Sir Creek boundary.',
+        ],
+        text: `At Veraval right now the sea is being hammered by a **strong convective storm**.\n\n**Root Cause & Weather Telemetry:**\n• Wind: West at **23.9 km/h** with gusts up to **49 km/h**.\n• Wave Height: **1.4 m** with an **8.3 s swell period**.\n• Precipitation: 87% chance of rain, 82% humidity.\n• **Hazard:** **High lightning risk** triggers the deterministic safety rule.\n\n**Productive Fishing Zones in Area:**\n• **Nearshore Bank**: 11.8 km away (prawn, croaker, sole).\n• **Offshore Sector Alpha**: 20.7 km out (mackerel, sardine, anchovy).\n• **Continental Shelf-break**: 32 km out (tuna, pomfret, ribbonfish).\n\n**Geofencing Status:** Clear — 346 km from the Sir Creek flashpoint.\n\n**Actionable Recommendation:** Remain in the protected bay today, secure your gear, and plan to head out only after the convective storm eases and lightning risk is removed. Stay safe.`,
+        actions: [
+          { label: 'View Veraval Weather Alert', actionType: 'scenario', target: 'weather_stale' },
+          { label: 'Check Active Warnings', actionType: 'view', target: 'alerts' },
+        ],
+      },
+    ],
   },
   {
-    id: 't-5',
-    type: 'history',
-    title: 'Ratnagiri harbour safety clearance inquiry',
-    timestamp: 'Yesterday • 4 messages',
-    timeGroup: 'YESTERDAY',
-    iconType: 'chat',
-    queryPrompt: 'Can artisanal and motorized craft safely sail off Ratnagiri today?',
-    targetScenario: 'safe_complete',
-  },
-  {
-    id: 't-6',
-    type: 'history',
-    title: 'PFZ Zone Alpha-7 chlorophyll scan & coordinates',
-    timestamp: '6 days ago • 6 messages',
-    timeGroup: '1 WEEK AGO',
-    iconType: 'chat',
-    queryPrompt: 'Locate closest high-chlorophyll PFZ Zone Alpha-7 coordinates off Mirya Bay',
-  },
-  {
-    id: 't-7',
-    type: 'history',
-    title: 'Vessel traffic & AIS collision risk analysis',
-    timestamp: '7 days ago • 3 messages',
-    timeGroup: '1 WEEK AGO',
-    iconType: 'chat',
-    queryPrompt: 'Check vessel collision vectors and AIS proximity around Ratnagiri',
+    id: 'sess-4',
+    title: 'Cochin to Gulf Fuel-Optimal Route',
+    createdAt: Date.now() - 3600 * 1000 * 48,
+    updatedAt: Date.now() - 3600 * 1000 * 48,
+    timeGroup: 'PREVIOUS 7 DAYS',
+    lastQuery: 'Compute safe navigation corridor and waypoint clearance from Cochin to Gulf',
+    scenarioSyncId: 'safe_complete',
+    messages: [
+      {
+        id: 'u-4',
+        sender: 'user',
+        timestamp: '3 days ago',
+        text: 'Compute safe navigation corridor and waypoint clearance from Cochin to Gulf',
+      },
+      {
+        id: 'a-4',
+        sender: 'assistant',
+        timestamp: '3 days ago',
+        verdict: 'SAFE',
+        metrics: {
+          wave: '1.4 m average',
+          wind: '14 kts NW',
+          confidence: 'HIGH (99.8%)',
+        },
+        thinking: [
+          'Running multi-objective A* nautical routing solver.',
+          'Evaluating weather routing parameters: Current drift + 1.4 kts, wave resistance nominal.',
+          'Computing least-fuel optimal corridor from Cochin to Gulf of Oman.',
+        ],
+        text: `**OPTIMAL ROUTE COMPUTED**:\n\nThe safest and most fuel-efficient corridor from **Cochin to Gulf** has been generated. By staying 18 NM west of Minicoy passage, the vessel saves **4.2% fuel** while maintaining clearance from shallow reef shelves.`,
+        actions: [
+          { label: 'Open Route Optimization View', actionType: 'view', target: 'routing' },
+          { label: 'View Command Map', actionType: 'view', target: 'map' },
+        ],
+      },
+    ],
   },
 ];
 
 export const ChatAssistantView: React.FC<ChatAssistantViewProps> = ({
   onSelectScenario,
-  onChangeView,
-  currentResponse,
+  onChangeView: _onChangeView,
+  currentResponse: _currentResponse,
 }) => {
   const { currentLang, t } = useLocalization();
-  const [viewMode, setViewMode] = useState<'discovery' | 'chat' | 'history'>('discovery');
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  
+  // Persistent Sessions state
+  const [sessions, setSessions] = useState<ChatSession[]>(() => {
+    try {
+      const saved = localStorage.getItem('varuna_chat_history_v3');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {
+      console.warn('Could not load chat sessions from localStorage:', e);
+    }
+    return DEFAULT_INITIAL_SESSIONS;
+  });
+
+  const [activeSessionId, setActiveSessionId] = useState<string | null>(() => {
+    try {
+      const saved = localStorage.getItem('varuna_active_session_id');
+      if (saved) return saved;
+    } catch {}
+    return null;
+  });
+
+  const [messages, setMessages] = useState<ChatMessage[]>(() => {
+    try {
+      const savedActiveId = localStorage.getItem('varuna_active_session_id');
+      const savedSessions = localStorage.getItem('varuna_chat_history_v3');
+      if (savedActiveId && savedSessions) {
+        const parsedSessions: ChatSession[] = JSON.parse(savedSessions);
+        const found = parsedSessions.find((s) => s.id === savedActiveId);
+        if (found && found.messages && found.messages.length > 0) {
+          return found.messages;
+        }
+      }
+    } catch {}
+    return [];
+  });
+
   const [inputQuery, setInputQuery] = useState('');
   const [isThinking, setIsThinking] = useState(false);
   const [expandedThinking, setExpandedThinking] = useState<Record<string, boolean>>({});
   const [isRecording, setIsRecording] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [historySearch, setHistorySearch] = useState('');
+  const [modelDropdownOpen, setModelDropdownOpen] = useState(false);
+  const [selectedEngine, setSelectedEngine] = useState('Hydro Engine 2.0');
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [showScrollBottom, setShowScrollBottom] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const trendingPrompts = [
-    { id: '#1', icon: '🌀', label: 'Cyclone Fengal Risk', prompt: 'Assess Cyclone storm track, wind gusts, and port warnings for Visakhapatnam' },
-    { id: '#2', icon: '🧭', label: 'Safe Passage Route', prompt: 'What is the safest route from Ratnagiri to Malvan avoiding protected zones?' },
-    { id: '#3', icon: '🐟', label: 'PFZ Chlorophyll Hotspots', prompt: 'Locate closest high-chlorophyll PFZ Zone Alpha-7 coordinates off Mirya Bay' },
-    { id: '#4', icon: '🛡️', label: 'Vessel Collision CPA', prompt: 'Check vessel collision vectors and AIS proximity around Ratnagiri' },
-    { id: '#5', icon: '🌊', label: 'Sea Swell Analysis', prompt: 'Analyze wave swell height and SWAN ocean model predictions' },
-  ];
-
-  const recentInquiries = [
-    { title: 'Can artisanal and motorized craft safely sail off Ratnagiri today?', prompt: 'Is it safe to go fishing tomorrow near Ratnagiri?' },
-    { title: 'Analyze wave swell height and warning bulletins for Kochi port', prompt: 'Analyze wave swell height and warning bulletins for Kochi port' },
-    { title: 'Compute safe navigation corridor and waypoint clearance from Cochin to Gulf', prompt: 'Compute safe navigation corridor and waypoint clearance from Cochin to Gulf' },
-  ];
-
+  // Save sessions to localStorage
   useEffect(() => {
-    if (viewMode === 'chat' && messages.length > 0) {
+    try {
+      localStorage.setItem('varuna_chat_history_v3', JSON.stringify(sessions));
+    } catch (e) {
+      console.warn('Failed to persist chat sessions:', e);
+    }
+  }, [sessions]);
+
+  // Persist active session ID to localStorage across tab navigation
+  useEffect(() => {
+    try {
+      if (activeSessionId) {
+        localStorage.setItem('varuna_active_session_id', activeSessionId);
+      } else {
+        localStorage.removeItem('varuna_active_session_id');
+      }
+    } catch {}
+  }, [activeSessionId]);
+
+  // Load session messages when activeSessionId changes
+  useEffect(() => {
+    if (activeSessionId) {
+      const found = sessions.find((s) => s.id === activeSessionId);
+      if (found) {
+        setMessages(found.messages);
+      }
+    }
+  }, [activeSessionId, sessions]);
+
+  // Scroll to bottom on new messages
+  useEffect(() => {
+    if (messages.length > 0) {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [messages, isThinking, viewMode]);
+  }, [messages, isThinking]);
+
+  // Scroll listener for scroll-to-bottom arrow
+  const handleScroll = () => {
+    if (!messagesContainerRef.current) return;
+    const { scrollTop, scrollHeight, clientHeight } = messagesContainerRef.current;
+    if (scrollHeight - scrollTop - clientHeight > 160) {
+      setShowScrollBottom(true);
+    } else {
+      setShowScrollBottom(false);
+    }
+  };
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  const trendingPrompts = [
+    { id: '#1', icon: '🐟', label: 'Ratnagiri PFZ & Lightning Risk', prompt: 'Where is the nearest Potential Fishing Zone (PFZ) today from Ratnagiri?' },
+    { id: '#2', icon: '🧭', label: 'Kochi Morning Safety Check', prompt: 'Is it safe to venture into the sea tomorrow morning off Kochi?' },
+    { id: '#3', icon: '🌊', label: 'Veraval Swell & Weather', prompt: 'What are the current tide, swell, and weather conditions near Veraval?' },
+    { id: '#4', icon: '🌀', label: 'Andhra Cyclone & Lightning Alert', prompt: 'Are there any active lightning or cyclone alerts along the Andhra Pradesh coast?' },
+    { id: '#5', icon: '⚓', label: 'Safe Fishing Zones Ratnagiri', prompt: 'Find me safe fishing zones in Ratnagiri.' },
+  ];
+
+  // Start a fresh new chat
+  const handleStartNewChat = () => {
+    setActiveSessionId(null);
+    setMessages([]);
+    setInputQuery('');
+    setDrawerOpen(false);
+    if (inputRef.current) {
+      inputRef.current.focus();
+    }
+  };
+
+  // Select an existing chat session from history
+  const handleSelectSession = (sessionId: string) => {
+    setActiveSessionId(sessionId);
+    const s = sessions.find((item) => item.id === sessionId);
+    if (s) {
+      setMessages(s.messages);
+    }
+    setDrawerOpen(false);
+  };
+
+  // Delete a chat session
+  const handleDeleteSession = (e: React.MouseEvent, sessionId: string) => {
+    e.stopPropagation();
+    setSessions((prev) => prev.filter((s) => s.id !== sessionId));
+    if (activeSessionId === sessionId) {
+      handleStartNewChat();
+    }
+  };
+
+  const handleCopyText = (id: string, text: string) => {
+    navigator.clipboard?.writeText(text);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 2000);
+  };
+
+  const handleActionClick = (act: { label: string; actionType: 'scenario' | 'view'; target: string }, scenarioSyncId?: string) => {
+    if (act.actionType === 'scenario') {
+      onSelectScenario(act.target);
+      _onChangeView('map');
+    } else if (act.actionType === 'view') {
+      if (act.target === 'map' && scenarioSyncId) {
+        onSelectScenario(scenarioSyncId);
+      }
+      _onChangeView(act.target as ActiveNavView);
+    }
+  };
+
+  const handleShareChat = () => {
+    const chatTitle = activeSessionId 
+      ? (sessions.find((s) => s.id === activeSessionId)?.title || 'VARUNA Marine Copilot') 
+      : 'VARUNA Marine Copilot';
+    const textExport = `[VARUNA Marine Copilot Chat: ${chatTitle}]\n\n` + 
+      messages.map((m) => `${m.sender.toUpperCase()} (${m.timestamp}):\n${m.text}\n`).join('\n---\n');
+    
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(textExport);
+      alert('Conversation copied to clipboard! You can share it anywhere.');
+    }
+  };
 
   const handleSendMessage = async (textToSend?: string) => {
     const query = (textToSend || inputQuery).trim();
     if (!query || isThinking) return;
-
-    // Switch to active chat screen immediately
-    setViewMode('chat');
 
     const userMsgId = `user-${Date.now()}`;
     const userMsg: ChatMessage = {
@@ -169,7 +403,9 @@ export const ChatAssistantView: React.FC<ChatAssistantViewProps> = ({
       text: query,
     };
 
-    setMessages((prev) => [...prev, userMsg]);
+    // Append immediately to active messages
+    const updatedMessages = [...messages, userMsg];
+    setMessages(updatedMessages);
     setInputQuery('');
     setIsThinking(true);
 
@@ -189,134 +425,83 @@ export const ChatAssistantView: React.FC<ChatAssistantViewProps> = ({
         actions: chatRes.actions,
       };
 
-      setMessages((prev) => [...prev, assistantMsg]);
+      const finalMessages = [...updatedMessages, assistantMsg];
+      setMessages(finalMessages);
       setExpandedThinking((prev) => ({ ...prev, [assistantMsgId]: true }));
+
+      // Persist in chat session history
+      saveToSessionHistory(query, finalMessages, chatRes.scenarioSyncId);
+
+      if (chatRes.scenarioSyncId) {
+        onSelectScenario(chatRes.scenarioSyncId);
+      }
     } catch (err: any) {
-      console.warn('Chat assistant fallback trigger:', err);
-      generateAgentResponse(query);
+      console.warn('Chat assistant live fallback trigger:', err);
+      generateAgentResponse(query, updatedMessages);
     } finally {
       setIsThinking(false);
     }
   };
 
-  const generateAgentResponse = (query: string) => {
-    const lower = query.toLowerCase();
-    const assistantMsgId = `asst-${Date.now()}`;
-    let responseText = '';
-    let thinkingSteps: string[] = [];
-    let verdict: 'SAFE' | 'CAUTION' | 'UNSAFE' | undefined = undefined;
-    let scenarioSyncId: string | undefined = undefined;
-    let metrics: ChatMessage['metrics'] = undefined;
-    let actions: ChatMessage['actions'] = [];
+  // Helper to persist conversation into sessions
+  const saveToSessionHistory = (query: string, msgs: ChatMessage[], scenarioSyncId?: string) => {
+    setSessions((prev) => {
+      if (activeSessionId) {
+        return prev.map((s) => {
+          if (s.id === activeSessionId) {
+            return {
+              ...s,
+              updatedAt: Date.now(),
+              messages: msgs,
+              lastQuery: query,
+              scenarioSyncId: scenarioSyncId || s.scenarioSyncId,
+            };
+          }
+          return s;
+        });
+      } else {
+        const newId = `sess-${Date.now()}`;
+        const newTitle = query.length > 38 ? `${query.slice(0, 38)}...` : query;
+        const newSession: ChatSession = {
+          id: newId,
+          title: newTitle,
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+          timeGroup: 'TODAY',
+          messages: msgs,
+          lastQuery: query,
+          scenarioSyncId,
+        };
+        setActiveSessionId(newId);
+        return [newSession, ...prev];
+      }
+    });
+  };
 
-    if (lower.includes('ratnagiri') || lower.includes('fishing') || lower.includes('sail') || lower.includes('harbour')) {
-      verdict = 'SAFE';
-      scenarioSyncId = 'safe_complete';
-      thinkingSteps = [
-        'Query parsed: Location "Ratnagiri Harbour", Entity "Coastal Artisanal Fleet".',
-        'Ingesting SWAN Wave Model buoy 43012: Hsig = 1.2m (Threshold: 2.5m).',
-        'Atmospheric check: Sustained wind 12 kts WNW, no squall formations.',
-        'PFZ Layer: Mirya Bay high-chlorophyll zone confirmed active (12 NM off).',
-        'Rule-WAVE-01 (PASS), Rule-WIND-01 (PASS), Rule-GEO-01 (PASS).',
-      ];
-      responseText = `**SAFE TO PROCEED** from Ratnagiri Harbour.\n\nAll primary marine domains are within regulatory safety envelopes. Wave heights are nominal at **1.2 m**, and surface winds are mild (**12 kts WNW**). High chlorophyll aggregation is detected **12 NM offshore** in Sector 42A.`;
-      metrics = {
-        wave: '1.2 m (nominal)',
-        wind: '12 kts WNW',
-        pfz: '12 NM (Active PFZ)',
-        confidence: 'HIGH (99.4%)',
-      };
-      actions = [
-        { label: 'Sync Map with Ratnagiri', actionType: 'scenario', target: 'safe_complete' },
-        { label: 'Open Navigation Corridor', actionType: 'view', target: 'routing' },
-      ];
-    } else if (lower.includes('kochi') || lower.includes('swell') || lower.includes('high wave')) {
-      verdict = 'CAUTION';
-      scenarioSyncId = 'caution_high_wave';
-      thinkingSteps = [
-        'Target location: Kochi Marine Sector / Vembanad Mouth.',
-        'Buoy telemetry ingestion: Wave swell measured at 2.8m (Threshold 2.5m).',
-        'Checking INCOIS High Wave Warning Feed: Alert issued for coastal motorized craft.',
-        'Confidence evaluation: INCOIS lightning feed degraded (Medium confidence).',
-        'Verdict synthesized: CAUTION / HIGH WAVE.',
-      ];
-      responseText = `**CAUTION — HIGH WAVE SWELL DETECTED** near Kochi waters.\n\nSignificant wave swell is currently **2.8 m**, exceeding the **2.5 m small craft threshold**. Artisanal and non-motorized vessels are advised to exercise extreme caution and remain within harbour limits.`;
-      metrics = {
-        wave: '2.8 m (Exceeds Limit)',
-        wind: '18 kts SW',
-        confidence: 'MEDIUM (Telemetry Gap)',
-      };
-      actions = [
-        { label: 'Load Kochi Alert Map', actionType: 'scenario', target: 'caution_high_wave' },
-        { label: 'View Active Alerts List', actionType: 'view', target: 'alerts' },
-      ];
-    } else if (lower.includes('cyclone') || lower.includes('fengal') || lower.includes('visakhapatnam') || lower.includes('storm') || lower.includes('unsafe')) {
-      verdict = 'UNSAFE';
-      scenarioSyncId = 'unsafe_cyclone';
-      thinkingSteps = [
-        'Analyzing Bay of Bengal Sector: Visakhapatnam Deep Sea.',
-        'IMD Severe Cyclonic Storm Advisory active (Advisory #04).',
-        'Sustained gale winds measured at 48 kts with gusts to 65 kts.',
-        'Extreme wave heights reaching 5.2 m.',
-        'Mandatory Zero-Departure Directive enforced.',
-      ];
-      responseText = `**MANDATORY ZERO-DEPARTURE — SEVERE CYCLONIC WARNING**.\n\nDeep sea squalls and gale-force winds of **48 kts** with **5.2 m waves** are sweeping through the Visakhapatnam coastal sector. Port operations are on Level 3 Alert. All maritime departures are prohibited.`;
-      metrics = {
-        wave: '5.2 m (Hazardous)',
-        wind: '48 kts Gale',
-        confidence: 'HIGH',
-      };
-      actions = [
-        { label: 'Load Cyclone Warning', actionType: 'scenario', target: 'unsafe_cyclone' },
-        { label: 'Inspect Fleet Positions', actionType: 'view', target: 'fleet' },
-      ];
-    } else if (lower.includes('route') || lower.includes('cochin') || lower.includes('gulf') || lower.includes('optimize')) {
-      verdict = 'SAFE';
-      thinkingSteps = [
-        'Running multi-objective A* nautical routing solver.',
-        'Evaluating weather routing parameters: Current drift + 1.4 kts, wave resistance nominal.',
-        'Computing least-fuel optimal corridor from Cochin to Gulf of Oman.',
-      ];
-      responseText = `**OPTIMAL ROUTE COMPUTED**:\n\nThe safest and most fuel-efficient corridor from **Cochin to Gulf** has been generated. By staying 18 NM west of Minicoy passage, the vessel saves **4.2% fuel** while maintaining clearance from shallow reef shelves.`;
-      metrics = {
-        wave: '1.4 m average',
-        wind: '14 kts NW',
-        confidence: 'HIGH (99.8%)',
-      };
-      actions = [
-        { label: 'Open Route Optimization View', actionType: 'view', target: 'routing' },
-        { label: 'View Command Map', actionType: 'view', target: 'map' },
-      ];
-    } else {
-      verdict = currentResponse?.summary?.verdict as any;
-      thinkingSteps = [
-        `Processing maritime natural language query: "${query}"`,
-        'Correlating query against 4 marine safety domains: Wave, Wind, Lightning, Geofence.',
-        'Synthesizing deterministic multi-agent verdict response.',
-      ];
-      responseText = `**Maritime Analysis for "${query}"**:\n\nBased on real-time marine telemetry across coastal India, conditions are being actively evaluated against safety rules. You can inspect live buoys, compute safe transit trajectories, or review deterministic safety evidence in the inspection engine.`;
-      actions = [
-        { label: 'View Tactical Ocean Map', actionType: 'view', target: 'map' },
-      ];
-    }
+  const generateAgentResponse = (query: string, currentMsgs: ChatMessage[]) => {
+    const assistantMsgId = `asst-${Date.now()}`;
+    const dynamicRes = apiClient.getMockChatResponse(query);
 
     const newAssistantMsg: ChatMessage = {
       id: assistantMsgId,
       sender: 'assistant',
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      text: responseText,
-      thinking: thinkingSteps,
-      verdict,
-      scenarioSyncId,
-      metrics,
-      actions,
+      text: dynamicRes.text,
+      thinking: dynamicRes.thinking,
+      verdict: dynamicRes.verdict,
+      scenarioSyncId: dynamicRes.scenarioSyncId,
+      metrics: dynamicRes.metrics,
+      actions: dynamicRes.actions,
     };
 
-    setMessages((prev) => [...prev, newAssistantMsg]);
+    const finalMessages = [...currentMsgs, newAssistantMsg];
+    setMessages(finalMessages);
     setExpandedThinking((prev) => ({ ...prev, [assistantMsgId]: true }));
 
-    if (scenarioSyncId) {
-      onSelectScenario(scenarioSyncId);
+    saveToSessionHistory(query, finalMessages, dynamicRes.scenarioSyncId);
+
+    if (dynamicRes.scenarioSyncId) {
+      onSelectScenario(dynamicRes.scenarioSyncId);
     }
   };
 
@@ -327,538 +512,524 @@ export const ChatAssistantView: React.FC<ChatAssistantViewProps> = ({
     }));
   };
 
-  const startNewChat = () => {
-    setMessages([]);
-    setInputQuery('');
-    setViewMode('chat');
-  };
+  // Filtered session list based on historySearch
+  const filteredSessions = sessions.filter((s) => {
+    if (!historySearch.trim()) return true;
+    return s.title.toLowerCase().includes(historySearch.toLowerCase()) || 
+           s.lastQuery.toLowerCase().includes(historySearch.toLowerCase());
+  });
 
   return (
-    <div className="v-bot-container">
+    <div className="v-claude-shell">
       {/* =========================================================================
-          SCREEN 1: DISCOVERY / WELCOME SCREEN (Oceanic Aura & Modern Assistant)
+          1. CLAUDE-STYLE SIDEBAR HISTORY DRAWER (Matches Reference Image 2)
           ========================================================================= */}
-      {viewMode === 'discovery' && (
-        <div className="v-discovery-view">
-          {/* Glowing Ocean Aurora Hero Section */}
-          <div className="v-ocean-hero-section">
-            {/* Ambient Animated Ocean Wave Backdrop */}
-            <div className="v-ocean-wave-ambient">
-              <div className="v-ocean-orb v-ocean-orb--1" />
-              <div className="v-ocean-orb v-ocean-orb--2" />
-              <svg className="v-ocean-wave-svg" viewBox="0 0 1440 320" preserveAspectRatio="none">
-                <path fill="rgba(255, 255, 255, 0.08)" d="M0,96L48,112C96,128,192,160,288,160C384,160,480,128,576,138.7C672,149,768,203,864,208C960,213,1056,171,1152,144C1248,117,1344,107,1392,101.3L1440,96L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z" />
-              </svg>
-            </div>
+      {drawerOpen && (
+        <div 
+          className="v-drawer-backdrop"
+          onClick={() => setDrawerOpen(false)}
+        />
+      )}
 
-            {/* Top Bar inside Ocean Header */}
-            <div className="v-discovery-topbar">
-              <div className="v-brand-pill">
-                <span className="v-brand-pill-spark">✨</span>
-                <span className="v-brand-pill-title">VARUNA Copilot</span>
+      <aside className={`v-claude-sidebar-drawer ${drawerOpen ? 'v-claude-sidebar-drawer--open' : ''}`}>
+        {/* Drawer Header */}
+        <div className="v-drawer-topbar">
+          <div className="v-drawer-brand">
+            <span className="v-drawer-brand-icon">⚓</span>
+            <span className="v-drawer-brand-text">VARUNA</span>
+          </div>
+          <button
+            type="button"
+            className="v-topbar-drawer-btn"
+            onClick={() => setDrawerOpen(false)}
+            aria-label="Collapse sidebar"
+            title="Collapse sidebar"
+          >
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+              <line x1="9" y1="3" x2="9" y2="21" />
+              <polyline points="16 9 13 12 16 15" />
+            </svg>
+          </button>
+        </div>
+
+        {/* Search Chats Input */}
+        <div className="v-drawer-search-wrap">
+          <svg className="v-drawer-search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#64748B" strokeWidth="2.2">
+            <circle cx="11" cy="11" r="8" />
+            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+          </svg>
+          <input
+            type="text"
+            className="v-drawer-search-input"
+            placeholder="Search chats..."
+            value={historySearch}
+            onChange={(e) => setHistorySearch(e.target.value)}
+          />
+        </div>
+
+        {/* Prominent + New Chat Button */}
+        <div className="v-drawer-new-chat-section">
+          <button
+            type="button"
+            className="v-drawer-new-chat-btn"
+            onClick={handleStartNewChat}
+          >
+            <span className="v-drawer-new-chat-plus">+</span>
+            <span className="v-drawer-new-chat-label">{t('newChats') || 'New chat'}</span>
+          </button>
+        </div>
+
+        {/* Quick Tools Navigation */}
+        <div className="v-drawer-nav-section">
+          <button type="button" className="v-drawer-nav-item" onClick={() => handleSendMessage('Where is the nearest Potential Fishing Zone (PFZ) today from Ratnagiri?')}>
+            <span className="v-drawer-nav-icon">🐟</span>
+            <span className="v-drawer-nav-text">PFZ Hotspots</span>
+          </button>
+          <button type="button" className="v-drawer-nav-item" onClick={() => handleSendMessage('What are the current tide, swell, and weather conditions near Veraval?')}>
+            <span className="v-drawer-nav-icon">🌊</span>
+            <span className="v-drawer-nav-text">Ocean Telemetry</span>
+          </button>
+          <button type="button" className="v-drawer-nav-item" onClick={() => handleSendMessage('Compute safe navigation corridor and waypoint clearance from Cochin to Gulf')}>
+            <span className="v-drawer-nav-icon">🧭</span>
+            <span className="v-drawer-nav-text">Nautical Routes</span>
+          </button>
+        </div>
+
+        {/* Grouped Chats & Tasks List */}
+        <div className="v-drawer-history-scroll">
+          <div className="v-drawer-section-title-row">
+            <span className="v-drawer-section-title">Chats and tasks</span>
+            <span className="v-drawer-count-badge">{filteredSessions.length}</span>
+          </div>
+
+          <div className="v-drawer-sessions-list">
+            {filteredSessions.length === 0 ? (
+              <div className="v-drawer-empty-state">
+                <span>No previous chats found</span>
               </div>
-              <div className="v-discovery-topbar-right">
-                <div className="v-engine-status-pill">
-                  <span className="v-status-live-dot" />
-                  <span>Hydro Engine 2.0</span>
+            ) : (
+              filteredSessions.map((s) => {
+                const isActive = s.id === activeSessionId;
+                return (
+                  <div
+                    key={s.id}
+                    className={`v-drawer-session-item ${isActive ? 'v-drawer-session-item--active' : ''}`}
+                    onClick={() => handleSelectSession(s.id)}
+                  >
+                    <span className="v-drawer-session-dot" />
+                    <span className="v-drawer-session-title" title={s.title}>
+                      {s.title}
+                    </span>
+                    <button
+                      type="button"
+                      className="v-drawer-delete-btn"
+                      onClick={(e) => handleDeleteSession(e, s.id)}
+                      title="Delete chat"
+                    >
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="3 6 5 6 21 6" />
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                      </svg>
+                    </button>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
+
+        {/* Drawer Profile Footer */}
+        <div className="v-drawer-footer">
+          <div className="v-drawer-user-pill">
+            <div className="v-drawer-avatar">A</div>
+            <div className="v-drawer-user-info">
+              <span className="v-drawer-user-name">Captain Adeey</span>
+              <span className="v-drawer-user-role">Hydro Engine 2.0 • Live</span>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      {/* =========================================================================
+          2. MAIN CLAUDE-STYLE CHAT WORKSPACE (Matches Reference Image 1)
+          ========================================================================= */}
+      <main className="v-claude-main-area">
+        {/* Top Claude Chat Bar */}
+        <header className="v-claude-topbar">
+          <div className="v-topbar-left">
+            {!drawerOpen && (
+              <button
+                type="button"
+                className="v-topbar-drawer-btn"
+                onClick={() => setDrawerOpen(true)}
+                aria-label="Open sidebar"
+                title="Open sidebar"
+              >
+                <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                  <line x1="9" y1="3" x2="9" y2="21" />
+                </svg>
+              </button>
+            )}
+
+            {/* Title Dropdown */}
+            <div className="v-model-selector-wrap">
+              <button
+                type="button"
+                className="v-model-selector-btn"
+                onClick={() => setModelDropdownOpen(!modelDropdownOpen)}
+              >
+                <span className="v-model-title">VARUNA</span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="6 9 12 15 18 9" />
+                </svg>
+              </button>
+
+              {modelDropdownOpen && (
+                <div className="v-model-dropdown-menu">
+                  <button 
+                    type="button" 
+                    className={`v-model-dropdown-item ${selectedEngine === 'Hydro Engine 2.0' ? 'v-model-dropdown-item--active' : ''}`}
+                    onClick={() => { setSelectedEngine('Hydro Engine 2.0'); setModelDropdownOpen(false); }}
+                  >
+                    <div className="v-item-title">Hydro Engine 2.0</div>
+                    <div className="v-item-sub">FastAPI Marine Multi-Agent Network</div>
+                  </button>
+                  <button 
+                    type="button" 
+                    className={`v-model-dropdown-item ${selectedEngine === 'Statutory RAG Legal' ? 'v-model-dropdown-item--active' : ''}`}
+                    onClick={() => { setSelectedEngine('Statutory RAG Legal'); setModelDropdownOpen(false); }}
+                  >
+                    <div className="v-item-title">Statutory Legal Advisor</div>
+                    <div className="v-item-sub">MFRA, Wildlife Protection, Monsoon Ban</div>
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  className="v-notif-btn"
-                  onClick={() => setViewMode('history')}
-                  title={t('historyChat') || 'History Chat'}
-                  aria-label="View history"
-                >
-                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
-                    <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
-                  </svg>
-                  <span className="v-notif-dot" />
-                </button>
-              </div>
+              )}
             </div>
 
-            {/* Hero Salutation & Ocean Header */}
-            <div className="v-ocean-hero-content">
-              <h1 className="v-ocean-hero-title">
-                Hi, Captain! ⚓
-                <span className="v-ocean-hero-subtitle-block">
-                  {t('whereCuriosity') || 'Where Coastal Wisdom Meets Real-Time Intelligence'}
-                </span>
+            {/* Quick + New Chat Pill in Topbar */}
+            <button
+              type="button"
+              className="v-topbar-new-chat-pill"
+              onClick={handleStartNewChat}
+              title="Start a new chat conversation"
+            >
+              <span className="v-pill-plus">+</span>
+              <span>New</span>
+            </button>
+          </div>
+
+          <div className="v-topbar-right">
+            {/* Share / Export button */}
+            <button
+              type="button"
+              className="v-topbar-action-btn"
+              onClick={handleShareChat}
+              title="Share conversation"
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
+                <polyline points="16 6 12 2 8 6" />
+                <line x1="12" y1="2" x2="12" y2="15" />
+              </svg>
+              <span className="v-share-text">{t('share') || 'Share'}</span>
+            </button>
+          </div>
+        </header>
+
+        {/* Active Conversation Messages Stream */}
+        <div 
+          ref={messagesContainerRef}
+          className="v-claude-stream-body"
+          onScroll={handleScroll}
+        >
+          {messages.length === 0 ? (
+            /* =========================================================================
+               WELCOME / DISCOVERY HERO (When starting a fresh conversation)
+               ========================================================================= */
+            <div className="v-claude-welcome-container">
+              <div className="v-claude-welcome-badge">
+                <span className="v-spark-icon">⚓</span>
+                <span>Marine Intelligence Copilot</span>
+              </div>
+
+              <h1 className="v-claude-welcome-heading">
+                Where Coastal Wisdom Meets Real-Time Intelligence
               </h1>
-              <p className="v-ocean-hero-subtext">
-                Your real-time marine copilot for swell, passage corridors, and cyclone risk
+              <p className="v-claude-welcome-subheading">
+                Real-time safety evaluations, PFZ chlorophyll hotspots, deterministic IMD rules, and least-fuel passage routing.
               </p>
 
-              {/* Floating Quick Action Prompt Pills */}
-              <div className="v-quick-prompts-cluster">
-                {trendingPrompts.map((tp) => (
+              {/* Sample Prompt Chips (All 5 PDF Test Scenarios) */}
+              <div className="v-claude-chips-grid">
+                {trendingPrompts.map((item) => (
                   <button
-                    key={tp.id}
+                    key={item.id}
                     type="button"
-                    className="v-quick-prompt-chip"
-                    onClick={() => handleSendMessage(tp.prompt)}
+                    className="v-claude-prompt-card"
+                    onClick={() => handleSendMessage(item.prompt)}
                   >
-                    <span className="v-chip-icon">{tp.icon}</span>
-                    <span className="v-chip-text">{tp.label}</span>
+                    <span className="v-card-icon">{item.icon}</span>
+                    <div className="v-card-text-col">
+                      <span className="v-card-label">{item.label}</span>
+                      <span className="v-card-query">{item.prompt}</span>
+                    </div>
                   </button>
                 ))}
               </div>
             </div>
-          </div>
+          ) : (
+            /* =========================================================================
+               ACTIVE MESSAGE THREAD
+               ========================================================================= */
+            <div className="v-claude-messages-wrapper">
+              {messages.map((msg) => {
+                const isAsst = msg.sender === 'assistant';
+                return (
+                  <div
+                    key={msg.id}
+                    className={`v-claude-msg-row ${isAsst ? 'v-claude-msg-row--asst' : 'v-claude-msg-row--user'}`}
+                  >
+                    {isAsst && (
+                      <div className="v-claude-avatar-asst">
+                        <span>⚓</span>
+                      </div>
+                    )}
 
-          {/* Curved Content Sheet (Popular Topics & Search Bar) */}
-          <div className="v-ocean-content-sheet">
-            {/* Search Prompt Bar */}
-            <div className="v-discovery-search-section">
-              <form
-                className="v-search-bar-capsule"
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  if (inputQuery.trim()) {
-                    handleSendMessage();
-                  }
-                }}
-              >
-                <div className="v-search-lens-icon">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0284C7" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <circle cx="11" cy="11" r="8" />
-                    <line x1="21" y1="21" x2="16.65" y2="16.65" />
-                  </svg>
+                    <div className={`v-claude-bubble ${isAsst ? 'v-claude-bubble--asst' : 'v-claude-bubble--user'}`}>
+                      {/* Assistant Multi-Agent Thinking Accordion */}
+                      {isAsst && msg.thinking && msg.thinking.length > 0 && (
+                        <div className="v-thinking-collapsible">
+                          <button
+                            type="button"
+                            className="v-thinking-toggle"
+                            onClick={() => toggleThinking(msg.id)}
+                          >
+                            <div className="v-thinking-toggle-left">
+                              <span className="v-thinking-pulse-dot" />
+                              <span>Thought for 2 seconds (Hydro Engine)</span>
+                            </div>
+                            <svg 
+                              className={`v-thinking-chevron ${expandedThinking[msg.id] ? 'v-thinking-chevron--open' : ''}`} 
+                              width="14" 
+                              height="14" 
+                              viewBox="0 0 24 24" 
+                              fill="none" 
+                              stroke="currentColor" 
+                              strokeWidth="2.5"
+                            >
+                              <polyline points="6 9 12 15 18 9" />
+                            </svg>
+                          </button>
+
+                          {expandedThinking[msg.id] && (
+                            <div className="v-thinking-body">
+                              {msg.thinking.map((step, sIdx) => (
+                                <div key={sIdx} className="v-thinking-step">
+                                  <span className="v-step-bullet">•</span>
+                                  <span>{step}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Main Message Text */}
+                      <div className="v-claude-text-content">
+                        {msg.text.split('\n').map((line, idx) => (
+                          <p key={idx}>{line}</p>
+                        ))}
+                      </div>
+
+                      {/* Verdict Status Tag */}
+                      {msg.verdict && (
+                        <div className="v-msg-verdict-row">
+                          <span className={`v-verdict-badge v-verdict-badge--${msg.verdict.toLowerCase()}`}>
+                            ● {msg.verdict === 'SAFE' ? 'SAFE TO SAIL' : msg.verdict === 'CAUTION' ? 'CAUTION ADVISED' : 'UNSAFE / DANGER'}
+                          </span>
+                        </div>
+                      )}
+
+                      {/* Metrics Cluster */}
+                      {msg.metrics && (
+                        <div className="v-metrics-cluster">
+                          {msg.metrics.wave && (
+                            <div className="v-metric-tag">
+                              <span className="v-metric-key">Wave:</span>
+                              <span className="v-metric-val">{msg.metrics.wave}</span>
+                            </div>
+                          )}
+                          {msg.metrics.wind && (
+                            <div className="v-metric-tag">
+                              <span className="v-metric-key">Wind:</span>
+                              <span className="v-metric-val">{msg.metrics.wind}</span>
+                            </div>
+                          )}
+                          {msg.metrics.pfz && (
+                            <div className="v-metric-tag">
+                              <span className="v-metric-key">PFZ:</span>
+                              <span className="v-metric-val">{msg.metrics.pfz}</span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Action Buttons */}
+                      {msg.actions && msg.actions.length > 0 && (
+                        <div className="v-actions-pill-row">
+                          {msg.actions.map((act, aIdx) => (
+                            <button
+                              key={aIdx}
+                              type="button"
+                              className="v-action-btn"
+                              onClick={() => handleActionClick(act, msg.scenarioSyncId)}
+                            >
+                              <span>{act.label}</span>
+                              <span className="v-action-arrow">→</span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Message Footer Toolbar */}
+                      {isAsst && (
+                        <div className="v-msg-footer-bar">
+                          <button
+                            type="button"
+                            className="v-copy-msg-btn"
+                            onClick={() => handleCopyText(msg.id, msg.text)}
+                            title="Copy response"
+                          >
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                            </svg>
+                            <span>{copiedId === msg.id ? 'Copied' : 'Copy'}</span>
+                          </button>
+                          <span className="v-model-tag">VARUNA • Hydro 2.0</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+
+              {/* Thinking Aurora Animation */}
+              {isThinking && (
+                <div className="v-claude-msg-row v-claude-msg-row--asst">
+                  <div className="v-claude-avatar-asst">
+                    <span>⚡</span>
+                  </div>
+                  <div className="v-claude-bubble v-claude-bubble--asst v-bubble-loading">
+                    <div className="v-thinking-dots-anim">
+                      <span className="v-anim-dot" />
+                      <span className="v-anim-dot" />
+                      <span className="v-anim-dot" />
+                    </div>
+                    <span className="v-loading-label">Evaluating oceanographic telemetry & deterministic safety rules...</span>
+                  </div>
                 </div>
-                <input
-                  type="text"
-                  className="v-search-input"
-                  placeholder={t('chatSearchPlaceholder') || 'Ask anything about marine conditions, swell, or routes...'}
-                  value={inputQuery}
-                  onChange={(e) => setInputQuery(e.target.value)}
-                />
+              )}
+
+              <div ref={messagesEndRef} />
+            </div>
+          )}
+        </div>
+
+        {/* Scroll to Bottom Floating Button */}
+        {showScrollBottom && (
+          <button
+            type="button"
+            className="v-scroll-bottom-fab"
+            onClick={scrollToBottom}
+            aria-label="Scroll to bottom"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="12" y1="5" x2="12" y2="19" />
+              <polyline points="19 12 12 19 5 12" />
+            </svg>
+          </button>
+        )}
+
+        {/* =========================================================================
+            3. CLAUDE / GROK STYLE FLOATING COMPOSER CARD (Matches Reference Image 1)
+            ========================================================================= */}
+        <div className="v-claude-composer-wrapper">
+          <form
+            className="v-claude-composer-card"
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleSendMessage();
+            }}
+          >
+            <input
+              ref={inputRef}
+              type="text"
+              className="v-claude-input"
+              placeholder={t('typeMessage') || 'Write a message or ask about marine safety...'}
+              value={inputQuery}
+              onChange={(e) => setInputQuery(e.target.value)}
+              disabled={isThinking}
+            />
+
+            <div className="v-composer-bottom-row">
+              <div className="v-composer-actions-left">
+                {/* + Attachment / Quick Action Button */}
+                <button
+                  type="button"
+                  className="v-composer-icon-btn"
+                  onClick={() => setInputQuery((prev) => prev ? `${prev} [Buoy Telemetry Attached]` : 'Attach coastal buoy telemetry off Ratnagiri')}
+                  title="Attach coastal data or telemetry"
+                  aria-label="Attach data"
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="12" y1="5" x2="12" y2="19" />
+                    <line x1="5" y1="12" x2="19" y2="12" />
+                  </svg>
+                </button>
+              </div>
+
+              <div className="v-composer-actions-right">
+                {/* Microphone / Voice Dictation Button */}
+                <button
+                  type="button"
+                  className={`v-composer-icon-btn ${isRecording ? 'v-composer-icon-btn--recording' : ''}`}
+                  onClick={() => setIsRecording(!isRecording)}
+                  title="Voice dictation"
+                  aria-label="Voice input"
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
+                    <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                    <line x1="12" y1="19" x2="12" y2="22" />
+                  </svg>
+                </button>
+
+                {/* Send Button (Perfect Circle) */}
                 <button
                   type="submit"
-                  className="v-search-submit-btn"
-                  aria-label="Submit search"
+                  className="v-claude-send-btn"
+                  disabled={!inputQuery.trim() || isThinking}
+                  aria-label="Send message"
                 >
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                     <line x1="22" y1="2" x2="11" y2="13" />
                     <polygon points="22 2 15 22 11 13 2 9 22 2" />
                   </svg>
                 </button>
-              </form>
+              </div>
             </div>
+          </form>
 
-            {/* Popular Topics Section */}
-            <div className="v-discovery-popular-section">
-              <div className="v-section-header-row">
-                <span className="v-section-label">POPULAR TOPICS</span>
-                <button
-                  type="button"
-                  className="v-see-all-link"
-                  onClick={() => setViewMode('history')}
-                >
-                  {t('seeAll') || 'See All'} &gt;
-                </button>
-              </div>
-              <div className="v-popular-cards-grid">
-                {recentInquiries.map((item, idx) => (
-                  <button
-                    key={idx}
-                    type="button"
-                    className="v-popular-card-item"
-                    onClick={() => handleSendMessage(item.prompt)}
-                  >
-                    <div className="v-popular-icon-bubble">
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0284C7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                      </svg>
-                    </div>
-                    <div className="v-popular-text-col">
-                      <span className="v-popular-title">{item.title}</span>
-                      <span className="v-popular-sub">Tap to evaluate with AI engine →</span>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
+          {/* Claude / Grok Style Footer Disclaimer */}
+          <div className="v-claude-footer-disclaimer">
+            <span>VARUNA Copilot provides advisory intelligence backed by INCOIS & IMD deterministic rules.</span>
+            <span className="v-footer-engine-tag">VARUNA • Hydro Engine</span>
           </div>
         </div>
-      )}
-
-      {/* =========================================================================
-          SCREEN 2: ACTIVE CHAT CONVERSATION SCREEN
-          ========================================================================= */}
-      {viewMode === 'chat' && (
-        <div className="v-chat-thread-view">
-          {/* Animated Ocean Thinking Aurora Banner */}
-          {isThinking && <div className="v-ocean-thinking-aurora" />}
-
-          {/* Top Bar */}
-          <div className="v-thread-topbar">
-            <button
-              type="button"
-              className="v-thread-back-btn"
-              onClick={() => setViewMode('discovery')}
-              aria-label="Back to discovery"
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="19" y1="12" x2="5" y2="12" />
-                <polyline points="12 19 5 12 12 5" />
-              </svg>
-            </button>
-            <div className="v-thread-header-title">
-              <span className="v-thread-name">{t('pageChatTitle') || 'VARUNA AI'}</span>
-              <span className="v-thread-status">
-                <span className={`v-status-dot ${isThinking ? 'v-status-dot--thinking' : ''}`} />
-                {isThinking ? 'Analyzing ocean telemetry...' : (t('assistantConnected') || 'Active Coastal Model')}
-              </span>
-            </div>
-
-            <div className="v-thread-menu-wrap">
-              <button
-                type="button"
-                className="v-thread-menu-btn"
-                onClick={() => setMenuOpen(!menuOpen)}
-                aria-label="Chat options"
-              >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <circle cx="12" cy="5" r="1.5" />
-                  <circle cx="12" cy="12" r="1.5" />
-                  <circle cx="12" cy="19" r="1.5" />
-                </svg>
-              </button>
-
-              {menuOpen && (
-                <div className="v-thread-dropdown">
-                  <button
-                    type="button"
-                    className="v-dropdown-option"
-                    onClick={() => {
-                      navigator.clipboard?.writeText(window.location.href);
-                      setMenuOpen(false);
-                    }}
-                  >
-                    <span>{t('share')}</span>
-                  </button>
-                  <button
-                    type="button"
-                    className="v-dropdown-option"
-                    onClick={() => {
-                      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(messages, null, 2));
-                      const downloadAnchor = document.createElement('a');
-                      downloadAnchor.setAttribute("href", dataStr);
-                      downloadAnchor.setAttribute("download", "varuna-chat-session.json");
-                      document.body.appendChild(downloadAnchor);
-                      downloadAnchor.click();
-                      downloadAnchor.remove();
-                      setMenuOpen(false);
-                    }}
-                  >
-                    <span>{t('export')}</span>
-                  </button>
-                  <button
-                    type="button"
-                    className="v-dropdown-option v-dropdown-option--danger"
-                    onClick={() => {
-                      setMessages([]);
-                      setMenuOpen(false);
-                    }}
-                  >
-                    <span>Clear Messages</span>
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Messages Stream */}
-          <div className="v-thread-messages-body">
-            {messages.length === 0 && (
-              <div className="v-thread-empty-prompt">
-                <span className="v-empty-spark">⚡</span>
-                <p>{t('welcomeAnalyze') || 'What would you like to analyze today?'}</p>
-              </div>
-            )}
-
-            {messages.map((msg) => {
-              const isAsst = msg.sender === 'assistant';
-              return (
-                <div
-                  key={msg.id}
-                  className={`v-message-row ${isAsst ? 'v-message-row--asst' : 'v-message-row--user'}`}
-                >
-                  {isAsst && (
-                    <div className="v-asst-avatar-badge">
-                      <span>⚡</span>
-                    </div>
-                  )}
-
-                  <div className={`v-message-bubble ${isAsst ? 'v-bubble--asst' : 'v-bubble--user'}`}>
-                    <div className="v-bubble-text">
-                      {msg.text.split('\n').map((line, lIdx) => (
-                        <p key={lIdx}>{line}</p>
-                      ))}
-                    </div>
-
-                    {/* Verdict Pill if present */}
-                    {msg.verdict && (
-                      <div className="v-msg-verdict-tag">
-                        <span className={`v-verdict-pill v-verdict-pill--${msg.verdict.toLowerCase()}`}>
-                          {msg.verdict === 'SAFE' && '✓ ' + t('safe')}
-                          {msg.verdict === 'CAUTION' && '⚠ ' + t('caution')}
-                          {msg.verdict === 'UNSAFE' && '⛔ ' + t('unsafe')}
-                        </span>
-                      </div>
-                    )}
-
-                    {/* Interactive Multi-Agent Thinking Accordion */}
-                    {msg.thinking && msg.thinking.length > 0 && (
-                      <div className="v-msg-thinking-block">
-                        <button
-                          type="button"
-                          className="v-thinking-toggle-btn"
-                          onClick={() => toggleThinking(msg.id)}
-                        >
-                          <span className="v-thinking-spark">✦</span>
-                          <span>Multi-Agent Synthesis Trace ({msg.thinking.length} Steps)</span>
-                          <span className="v-thinking-chevron">{expandedThinking[msg.id] ? '▲' : '▼'}</span>
-                        </button>
-
-                        {expandedThinking[msg.id] && (
-                          <div className="v-thinking-steps-list">
-                            {msg.thinking.map((step, sIdx) => (
-                              <div key={sIdx} className="v-thinking-step-item">
-                                <span className="v-step-num">{sIdx + 1}</span>
-                                <span className="v-step-text">{step}</span>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Action buttons */}
-                    {msg.actions && msg.actions.length > 0 && (
-                      <div className="v-msg-actions-row">
-                        {msg.actions.map((act, actIdx) => (
-                          <button
-                            key={actIdx}
-                            type="button"
-                            className="v-msg-action-pill"
-                            onClick={() => {
-                              if (act.actionType === 'scenario') onSelectScenario(act.target);
-                              if (act.actionType === 'view') onChangeView(act.target as ActiveNavView);
-                            }}
-                          >
-                            <span>{act.label} →</span>
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  {!isAsst && (
-                    <div className="v-user-avatar-badge">
-                      <span>👨🏽‍✈️</span>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-
-            {isThinking && (
-              <div className="v-message-row v-message-row--asst">
-                <div className="v-asst-avatar-badge">
-                  <span>⚡</span>
-                </div>
-                <div className="v-bubble--asst v-bubble-thinking">
-                  <span className="v-thinking-dot" />
-                  <span className="v-thinking-dot" />
-                  <span className="v-thinking-dot" />
-                </div>
-              </div>
-            )}
-
-            <div ref={messagesEndRef} />
-          </div>
-
-          {/* Bottom Modern Composer Bar */}
-          <div className="v-thread-composer-wrapper">
-            <form
-              className="v-composer-capsule"
-              onSubmit={(e) => {
-                e.preventDefault();
-                handleSendMessage();
-              }}
-            >
-              <button
-                type="button"
-                className="v-composer-attach-btn"
-                onClick={() => setInputQuery((prev) => prev ? `${prev} [Buoy Telemetry Attached]` : 'Attach coastal buoy telemetry off Ratnagiri')}
-                title="Attach telemetry"
-                aria-label="Attach telemetry file or data"
-              >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="3" y="3" width="18" height="18" rx="4" />
-                  <circle cx="8.5" cy="8.5" r="1.5" />
-                  <polyline points="21 15 16 10 5 21" />
-                </svg>
-              </button>
-
-              <input
-                ref={inputRef}
-                type="text"
-                className="v-composer-input"
-                placeholder={t('typeMessage') || 'Type a message...'}
-                value={inputQuery}
-                onChange={(e) => setInputQuery(e.target.value)}
-                disabled={isThinking}
-              />
-
-              <button
-                type="button"
-                className={`v-composer-mic-btn ${isRecording ? 'v-composer-mic-btn--active' : ''}`}
-                onClick={() => setIsRecording(!isRecording)}
-                title="Voice dictation"
-                aria-label="Voice input"
-              >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
-                  <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
-                  <line x1="12" y1="19" x2="12" y2="22" />
-                </svg>
-              </button>
-
-              <button
-                type="submit"
-                className="v-composer-send-btn"
-                disabled={!inputQuery.trim() || isThinking}
-                aria-label="Send message"
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="22" y1="2" x2="11" y2="13" />
-                  <polygon points="22 2 15 22 11 13 2 9 22 2" />
-                </svg>
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* =========================================================================
-          SCREEN 3: HISTORY CHAT SCREEN
-          ========================================================================= */}
-      {viewMode === 'history' && (
-        <div className="v-history-view">
-          {/* Top Bar */}
-          <div className="v-history-topbar">
-            <button
-              type="button"
-              className="v-thread-back-btn"
-              onClick={() => setViewMode('discovery')}
-              aria-label="Back to discovery"
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="19" y1="12" x2="5" y2="12" />
-                <polyline points="12 19 5 12 12 5" />
-              </svg>
-            </button>
-
-            <span className="v-thread-title">{t('historyChat') || 'History Chat'}</span>
-
-            <button
-              type="button"
-              className="v-thread-menu-btn"
-              onClick={() => setMenuOpen(!menuOpen)}
-              aria-label="History options"
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <circle cx="12" cy="5" r="1.5" />
-                <circle cx="12" cy="12" r="1.5" />
-                <circle cx="12" cy="19" r="1.5" />
-              </svg>
-            </button>
-          </div>
-
-          {/* Grouped History List */}
-          <div className="v-history-scroll-body">
-            {/* TODAY Group */}
-            <div className="v-history-group">
-              <span className="v-history-group-label">{t('today') || 'TODAY'}</span>
-              <div className="v-history-cards-list">
-                {HISTORY_TIMELINE_DATA.filter((i) => i.timeGroup === 'TODAY').map((item) => (
-                  <button
-                    key={item.id}
-                    type="button"
-                    className="v-history-card-item"
-                    onClick={() => handleSendMessage(item.queryPrompt)}
-                  >
-                    <div className="v-recent-icon-bubble">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                      </svg>
-                    </div>
-                    <span className="v-history-prompt-text">“{item.title}”</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* YESTERDAY Group */}
-            <div className="v-history-group">
-              <span className="v-history-group-label">{t('yesterday') || 'YESTERDAY'}</span>
-              <div className="v-history-cards-list">
-                {HISTORY_TIMELINE_DATA.filter((i) => i.timeGroup === 'YESTERDAY').map((item) => (
-                  <button
-                    key={item.id}
-                    type="button"
-                    className="v-history-card-item"
-                    onClick={() => handleSendMessage(item.queryPrompt)}
-                  >
-                    <div className="v-recent-icon-bubble">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                      </svg>
-                    </div>
-                    <span className="v-history-prompt-text">“{item.title}”</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* 1 WEEK AGO Group */}
-            <div className="v-history-group">
-              <span className="v-history-group-label">{t('oneWeekAgo') || '1 WEEK AGO'}</span>
-              <div className="v-history-cards-list">
-                {HISTORY_TIMELINE_DATA.filter((i) => i.timeGroup === '1 WEEK AGO').map((item) => (
-                  <button
-                    key={item.id}
-                    type="button"
-                    className="v-history-card-item"
-                    onClick={() => handleSendMessage(item.queryPrompt)}
-                  >
-                    <div className="v-recent-icon-bubble">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                      </svg>
-                    </div>
-                    <span className="v-history-prompt-text">“{item.title}”</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Floating Action Button "New Chats +" */}
-          <button
-            type="button"
-            className="v-new-chats-fab"
-            onClick={startNewChat}
-            aria-label="Start new chat"
-          >
-            <span className="v-fab-text">{t('newChats') || 'New Chats'}</span>
-            <span className="v-fab-icon">+</span>
-          </button>
-        </div>
-      )}
+      </main>
     </div>
   );
 };
