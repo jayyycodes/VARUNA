@@ -13,3 +13,12 @@ data/shapefiles/
 data/vector_store/
 *.chroma
 scratch/
+
+# Evaluation & Audit Artifacts
+Untitled document.pdf
+evaluation_results.json
+eval_report_output.json
+eval_batch2_output.json
+routes_audit_output.json
+*.jsonl
+

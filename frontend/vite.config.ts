@@ -7,16 +7,16 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      '/chat': {
-        target: 'http://localhost:8000',
+      '/api': {
+        target: 'http://127.0.0.1:8000',
         changeOrigin: true,
       },
       '/health': {
-        target: 'http://localhost:8000',
+        target: 'http://127.0.0.1:8000',
         changeOrigin: true,
       },
       '/v1': {
-        target: 'http://localhost:8000',
+        target: 'http://127.0.0.1:8000',
         changeOrigin: true,
       },
     },

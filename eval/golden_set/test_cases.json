@@ -523,5 +523,80 @@
       "nearest_boundary_name": "India - Sri Lanka IMBL"
     },
     "expected_verdict": "CAUTION"
+  },
+  {
+    "id": "GS-36",
+    "region": "Ratnagiri, Maharashtra",
+    "description": "Severe lightning threat overrides calm waves (1.04m) and nominal wind (13.4 km/h)",
+    "inputs": {
+      "wave_height_m": 1.04,
+      "wind_speed_kmh": 13.4,
+      "lightning_risk": "high",
+      "cyclone_alert": null,
+      "geofencing_status": "clear",
+      "distance_km": 12.0,
+      "nearest_boundary_name": "Malvan Marine Sanctuary"
+    },
+    "expected_verdict": "UNSAFE"
+  },
+  {
+    "id": "GS-37",
+    "region": "Ratnagiri, Maharashtra",
+    "description": "Safe fishing zones query in Ratnagiri flagged UNSAFE due to severe convective storm activity",
+    "inputs": {
+      "wave_height_m": 1.0,
+      "wind_speed_kmh": 9.6,
+      "lightning_risk": "high",
+      "cyclone_alert": null,
+      "geofencing_status": "clear",
+      "distance_km": 21.0,
+      "nearest_boundary_name": "Malvan Marine Sanctuary"
+    },
+    "expected_verdict": "UNSAFE"
+  },
+  {
+    "id": "GS-38",
+    "region": "Kochi, Kerala",
+    "description": "Safe morning trip with 1.02m wave, 13 km/h wind, and low lightning risk",
+    "inputs": {
+      "wave_height_m": 1.02,
+      "wind_speed_kmh": 13.0,
+      "lightning_risk": "low",
+      "cyclone_alert": null,
+      "geofencing_status": "clear",
+      "distance_km": 12.0,
+      "nearest_boundary_name": "India - Sri Lanka EEZ"
+    },
+    "expected_verdict": "SAFE"
+  },
+  {
+    "id": "GS-39",
+    "region": "Veraval, Gujarat",
+    "description": "Convective storm near Veraval with 49 km/h wind gusts, 1.4m wave, and high lightning risk",
+    "inputs": {
+      "wave_height_m": 1.4,
+      "wind_speed_kmh": 23.9,
+      "lightning_risk": "high",
+      "cyclone_alert": null,
+      "geofencing_status": "clear",
+      "distance_km": 11.8,
+      "nearest_boundary_name": "Sir Creek Flashpoint"
+    },
+    "expected_verdict": "UNSAFE"
+  },
+  {
+    "id": "GS-40",
+    "region": "Visakhapatnam, Andhra Pradesh",
+    "description": "Andhra coast clear with 0.92m wave, 9.4 km/h wind, low lightning, and zero cyclone warnings",
+    "inputs": {
+      "wave_height_m": 0.92,
+      "wind_speed_kmh": 9.4,
+      "lightning_risk": "low",
+      "cyclone_alert": null,
+      "geofencing_status": "clear",
+      "distance_km": 12.0,
+      "nearest_boundary_name": "Gahirmatha Marine Sanctuary"
+    },
+    "expected_verdict": "SAFE"
   }
 ]

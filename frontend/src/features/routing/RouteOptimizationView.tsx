@@ -3,7 +3,7 @@ import type { UserResponseV1 } from '../../contracts/userResponse';
 import { apiClient } from '../../api/client';
 import { useLocalization } from '../../hooks/useLocalization';
 import {
-  IconSparkles,
+  IconRoute,
   IconShip,
   IconMapPin,
   IconWind,
@@ -286,7 +286,7 @@ export const RouteOptimizationView: React.FC<RouteOptimizationViewProps> = ({ re
             onClick={handleInitiateOptimization}
             disabled={isOptimizing}
           >
-            <IconSparkles size={14} />
+            <IconRoute size={14} />
             <span>{isOptimizing ? t('calculatingRoute') : t('calculateRoute')}</span>
           </button>
         </div>

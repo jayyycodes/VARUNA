@@ -267,24 +267,35 @@ def extract_route_endpoints(
         return port, None
 
     # Check if destination explicitly parsed by LLM
-    if parsed and parsed.get("destination"):
+    if parsed and isinstance(parsed, dict) and parsed.get("destination"):
         raw_dest = parsed["destination"]
-        dest = resolve_port_location(raw_dest.get("name", ""), raw_dest)
-        start = resolve_port_location(query, parsed.get("location"))
+        if isinstance(raw_dest, dict):
+            dest = resolve_port_location(raw_dest.get("name", ""), raw_dest)
+        elif isinstance(raw_dest, str):
+            dest = resolve_port_location(raw_dest, None)
+        else:
+            dest = None
+        start = resolve_port_location(query, parsed.get("location") if isinstance(parsed.get("location"), dict) else None)
         return start, dest
 
     # Check if query mentions a specific location extracted by LLM
-    if parsed and parsed.get("location") and parsed["location"].get("name"):
-        llm_loc = resolve_port_location(parsed["location"]["name"], parsed["location"])
-        if "default" not in llm_loc.get("name", "").lower():
-            return llm_loc, None
+    if parsed and isinstance(parsed, dict) and parsed.get("location"):
+        raw_loc = parsed["location"]
+        if isinstance(raw_loc, dict) and raw_loc.get("name"):
+            llm_loc = resolve_port_location(raw_loc["name"], raw_loc)
+            if "default" not in (llm_loc.get("name") or "").lower():
+                return llm_loc, None
+        elif isinstance(raw_loc, str) and raw_loc.strip():
+            llm_loc = resolve_port_location(raw_loc, None)
+            if "default" not in (llm_loc.get("name") or "").lower():
+                return llm_loc, None
 
     # Only fall back to prior location if user explicitly asks follow-up referencing prior place
     # (e.g. "what about tomorrow?", "is it safe there?") using whole-word boundary
     if prior_location and (re.search(r'\b(there|here|that area|that zone)\b', q_lower) or any(kw in q_lower for kw in ["tomorrow", "what about", "is it safe"])):
         return prior_location, prior_destination
 
-    start = resolve_port_location(query, parsed.get("location") if parsed else None)
+    start = resolve_port_location(query, parsed.get("location") if (parsed and isinstance(parsed, dict) and isinstance(parsed.get("location"), dict)) else None)
     return start, None
 
 
