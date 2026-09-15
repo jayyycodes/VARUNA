@@ -29,7 +29,6 @@ Currently, VARUNA uses an atmospheric convective instability proxy (`rain_probab
    ```bash
    MOSDAC_USERNAME=your_username
    MOSDAC_PASSWORD=your_password
-   MOSDAC_API_TOKEN=your_oauth_or_api_token
    MOSDAC_WMS_URL=https://mosdac.gov.in/geoserver/wms
    MOSDAC_WCS_URL=https://mosdac.gov.in/geoserver/wcs
    ```
