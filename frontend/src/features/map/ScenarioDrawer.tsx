@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { FIXTURES } from '../../fixtures';
-import { IconSearch, IconChevronLeft, IconChevronRight } from '../../components/Icons';
+import { IconSearch, IconPanelLeft } from '../../components/Icons';
+import { useLocalization } from '../../hooks/useLocalization';
 import './ScenarioDrawer.css';
 
 interface ScenarioDrawerProps {
@@ -14,6 +15,7 @@ export const ScenarioDrawer: React.FC<ScenarioDrawerProps> = ({
   onSelectScenario,
   loading = false,
 }) => {
+  const { t } = useLocalization();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -33,20 +35,21 @@ export const ScenarioDrawer: React.FC<ScenarioDrawerProps> = ({
 
   return (
     <div className={`scenario-drawer ${isCollapsed ? 'scenario-drawer--collapsed' : ''}`}>
-      {/* Collapse Toggle Tab */}
-      <button
-        type="button"
-        className="scenario-drawer__toggle-btn"
-        onClick={() => setIsCollapsed(!isCollapsed)}
-        title={isCollapsed ? 'Expand Test Scenarios' : 'Collapse Test Scenarios'}
-        aria-label={isCollapsed ? 'Expand Test Scenarios' : 'Collapse Test Scenarios'}
-      >
-        {isCollapsed ? <IconChevronRight size={14} /> : <IconChevronLeft size={14} />}
-      </button>
-
       {isCollapsed ? (
         <div className="scenario-drawer__collapsed-content" onClick={() => setIsCollapsed(false)}>
-          <span className="collapsed-vertical-text">TEST SCENARIOS</span>
+          <button
+            type="button"
+            className="scenario-drawer__toggle-btn scenario-drawer__toggle-btn--collapsed"
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsCollapsed(false);
+            }}
+            title={t('testScenarios')}
+            aria-label={t('testScenarios')}
+          >
+            <IconPanelLeft size={16} />
+          </button>
+          <span className="collapsed-vertical-text">{t('testScenarios')}</span>
           <span className="collapsed-badge">{scenariosList.length}</span>
         </div>
       ) : (
@@ -54,13 +57,24 @@ export const ScenarioDrawer: React.FC<ScenarioDrawerProps> = ({
           {/* Header */}
           <div className="scenario-drawer__header">
             <div className="scenario-drawer__title-row">
-              <h3 className="scenario-drawer__title">Scenarios</h3>
-              <span className="scenario-drawer__count-badge mono text-xs">
-                {scenariosList.length} Total
-              </span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <h3 className="scenario-drawer__title">{t('scenariosTitle')}</h3>
+                <span className="scenario-drawer__count-badge mono text-xs">
+                  {scenariosList.length} {t('totalLabel')}
+                </span>
+              </div>
+              <button
+                type="button"
+                className="scenario-drawer__toggle-btn"
+                onClick={() => setIsCollapsed(true)}
+                title="Collapse Test Scenarios"
+                aria-label="Collapse Test Scenarios"
+              >
+                <IconPanelLeft size={16} />
+              </button>
             </div>
             <span className="scenario-drawer__subtitle text-xs">
-              Grounding & Test Suite
+              {t('groundingTestSuite')}
             </span>
           </div>
 
@@ -70,7 +84,7 @@ export const ScenarioDrawer: React.FC<ScenarioDrawerProps> = ({
             <input
               type="text"
               className="scenario-drawer__input"
-              placeholder="Search coastal scenario..."
+              placeholder={t('searchScenarios')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               disabled={loading}

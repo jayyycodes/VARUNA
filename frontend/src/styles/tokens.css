@@ -81,6 +81,7 @@
   --pfz-high:             #14B8A6;
 
   /* --- Typography --- */
+  --font-brand:           'Bodoni Moda', 'Playfair Display', Georgia, serif;
   --font-display:         'Sora', -apple-system, 'Segoe UI', Roboto, sans-serif;
   --font-body:            'Manrope', -apple-system, 'Segoe UI', Roboto, sans-serif;
 

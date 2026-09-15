@@ -25,8 +25,16 @@ OFFICIAL_DOCUMENT_NAMES: dict[str, str] = {
     "ind85258": "Orissa Marine Fishing Regulation Rules, 1983",
     "ind85259": "Orissa Marine Fisheries Notification, 2005",
     "maharashtra_mfra_1981": "Maharashtra Marine Fishing Regulation Act, 1981",
-    "dahdf_monsoon_ban_notification": "DAHDF Notification — Uniform Monsoon Ban",
+    "ind22415": "Andhra Pradesh Marine Fishing (Regulation) Act, 1994",
+    "the-gujarat-fisheries-act-2003": "Gujarat Fisheries Act, 2003",
+    "gujarat_fisheries_act_2003": "Gujarat Fisheries Act, 2003",
+    "andhra_pradesh_mfra_1994": "Andhra Pradesh Marine Fishing (Regulation) Act, 1994",
+    "west bengal marine fishing regulation act, 1993": "West Bengal Marine Fishing Regulation Act, 1993",
+    "west_bengal_mfra_1993": "West Bengal Marine Fishing Regulation Act, 1993",
+    "8_indiawildlifeprotectionactandtheoceans": "Wildlife Protection Act and Marine Habitats",
+    "append1_0": "Wildlife Protection Act 1972, Schedule I",
     "wildlife_protection_act_marine_schedule1": "Wildlife Protection Act 1972, Schedule I",
+    "dahdf_monsoon_ban_notification": "DAHDF Notification — Uniform Monsoon Ban",
     "incois_imd_marine_advisory_protocol": "INCOIS & IMD Marine Advisory Protocol",
 }
 
@@ -171,7 +179,21 @@ class DocumentProcessor:
         text_lower = text.lower()
         return [term for term in sample_terms if term in text_lower]
 
+    @staticmethod
+    def compute_file_hash(file_path: str | Path) -> str:
+        """Compute SHA-256 checksum of a file for incremental change auditing."""
+        import hashlib
+        p = Path(file_path)
+        if not p.exists():
+            return ""
+        sha = hashlib.sha256()
+        with open(p, "rb") as f:
+            while chunk := f.read(65536):
+                sha.update(chunk)
+        return sha.hexdigest()
+
     def process_directory(self, dir_path: str | Path) -> list[DocumentChunk]:
+        """Process all valid document files in a directory."""
         folder = Path(dir_path)
         if not folder.exists():
             return []
@@ -183,3 +205,43 @@ class DocumentProcessor:
                 all_chunks.extend(chunks)
 
         return all_chunks
+
+    def process_directory_incremental(
+        self,
+        dir_path: str | Path,
+        manifest: dict[str, Any] | None = None,
+    ) -> tuple[list[DocumentChunk], dict[str, Any], list[str]]:
+        """
+        Incrementally process directory by comparing SHA-256 hashes.
+        Returns:
+            (new_or_modified_chunks, updated_manifest, skipped_files)
+        """
+        folder = Path(dir_path)
+        if not folder.exists():
+            return [], manifest or {}, []
+
+        manifest = dict(manifest) if manifest else {}
+        new_chunks: list[DocumentChunk] = []
+        skipped_files: list[str] = []
+
+        for file_path in sorted(folder.iterdir()):
+            if not (file_path.is_file() and file_path.suffix.lower() in [".txt", ".pdf", ".md"]):
+                continue
+
+            current_hash = self.compute_file_hash(file_path)
+            cached_entry = manifest.get(file_path.name, {})
+
+            if cached_entry.get("sha256") == current_hash:
+                skipped_files.append(file_path.name)
+                continue
+
+            # File is new or changed
+            file_chunks = self.load_file(file_path)
+            new_chunks.extend(file_chunks)
+            manifest[file_path.name] = {
+                "sha256": current_hash,
+                "size_bytes": file_path.stat().st_size,
+                "chunks_count": len(file_chunks),
+            }
+
+        return new_chunks, manifest, skipped_files

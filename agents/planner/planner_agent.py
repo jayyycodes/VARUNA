@@ -92,6 +92,7 @@ Given a user query about marine / fishing / coastal conditions, extract:
    - "find_fishing_zone"  → asks where to fish, best spots, PFZ
    - "route_request"      → asks about navigation, how to reach a location safely
    - "regulation_question" → asks about rules, regulations, why a zone is restricted
+   - "historical_trends"   → asks why fish catch or productivity declined, historical trends, upwelling changes
 
 2. **location** — lat/lon and place name.
    If the user names a place, approximate its coordinates.
@@ -106,23 +107,27 @@ Respond ONLY with valid JSON — no markdown fences, no explanation:
 
 
 SYNTHESIS_SYSTEM_PROMPT = """\
-You are the response writer for ORCA, a marine intelligence system \
-for Indian fishermen and coastal operators.
+You are the response writer for ORCA, an advanced marine intelligence system \
+for Indian fishermen, coastal vessel operators, and maritime authorities.
 
 Given structured agent results, write a clear, practical, conversational response.
 
 RULES — you MUST follow all of these:
-1. Reference specific numbers (wave height, wind speed, SST, distance, etc.).
-2. The risk verdict "{verdict}" was computed by a deterministic rule engine. \
-It is FINAL. State it clearly — do NOT soften, override, or reinterpret it.
-3. Explain WHY the verdict was reached using the reasons provided.
-4. If PFZ fishing zones are available, recommend the top zones with distance and likely species.
-5. If geofencing data is available, mention boundary status and any warnings.
-6. If route navigation data is available, provide the recommended compass heading, nautical distance (NM), estimated travel time (hours), and fuel required (liters).
-7. Be concise and practical — your audience is working fishermen, not academics.
-8. End with one clear, actionable recommendation.
-
-Write the response as plain text paragraphs. No markdown headers or bullet points."""
+1. If the query is a regulation or legal question (intent is "regulation_question"):
+   - Focus directly on the statutory fisheries laws, seasonal bans (e.g. Monsoon Fishing Ban June 1 to July 31 for mechanized boats), zoning limits, gear rules, and vessel permissions.
+   - Clearly declare whether the activity is PERMITTED, RESTRICTED, or PROHIBITED under statutory law.
+   - Do NOT say "Risk verdict: N/A" or force weather evaluation on a pure legal inquiry.
+2. If the query is an operational safety check or fishing inquiry:
+   - Reference specific numbers (wave height in m, wind speed in km/h or knots, SST in °C, distance in km).
+   - The risk verdict "{verdict}" was computed by a deterministic rule engine. It is FINAL. State it clearly.
+   - Explain WHY the verdict was reached using the reasons provided.
+   - If offshore conditions are UNSAFE or CAUTION, advise remaining in sheltered harbor or nearshore waters local to the user's departure port (e.g., inside Mumbai harbour for Mumbai, inside Mirya Bay for Ratnagiri, within Kochi backwaters for Kochi).
+3. If PFZ fishing zones are available, recommend the top zones with distance and likely species, noting whether they are safe to access.
+4. If geofencing data is available, mention boundary status and any warnings.
+5. If route navigation data is available, provide the compass heading, nautical distance (NM), estimated travel time (hours), and fuel required (liters).
+6. If historical fishery trends or productivity decline data are available, explain the root causes (SST anomaly, upwelling suppression, chlorophyll deficit).
+7. Respond fully and naturally in the user's language without injecting English metadata phrases like "Risk verdict: N/A" or "What you should do:".
+8. End with one clear, actionable recommendation."""
 
 
 # ── Verified Indian Coastal Ports Gazetteer ─────────────────────────────
@@ -172,6 +177,19 @@ INDIAN_COASTAL_PORTS: dict[str, dict[str, Any]] = {
     "dhamra": {"lat": 20.80, "lon": 86.97, "name": "Dhamra, Odisha"},
     "digha": {"lat": 21.63, "lon": 87.52, "name": "Digha, West Bengal"},
     "kakdwip": {"lat": 21.87, "lon": 88.18, "name": "Kakdwip, West Bengal"},
+    # Regional & State coastal aliases
+    "andhra pradesh": {"lat": 17.69, "lon": 83.22, "name": "Visakhapatnam, Andhra Pradesh"},
+    "andhra": {"lat": 17.69, "lon": 83.22, "name": "Visakhapatnam, Andhra Pradesh"},
+    "kerala": {"lat": 9.93, "lon": 76.26, "name": "Kochi, Kerala"},
+    "tamil nadu": {"lat": 13.08, "lon": 80.27, "name": "Chennai (Kasimedu), Tamil Nadu"},
+    "odisha": {"lat": 20.32, "lon": 86.61, "name": "Paradeep, Odisha"},
+    "orissa": {"lat": 20.32, "lon": 86.61, "name": "Paradeep, Odisha"},
+    "west bengal": {"lat": 21.63, "lon": 87.52, "name": "Digha, West Bengal"},
+    "bengal": {"lat": 21.63, "lon": 87.52, "name": "Digha, West Bengal"},
+    "gujarat": {"lat": 20.90, "lon": 70.37, "name": "Veraval, Gujarat"},
+    "karnataka": {"lat": 12.87, "lon": 74.84, "name": "Mangalore, Karnataka"},
+    "maharashtra": {"lat": 16.99, "lon": 73.30, "name": "Ratnagiri, Maharashtra"},
+    "konkan": {"lat": 16.99, "lon": 73.30, "name": "Ratnagiri, Maharashtra"},
 }
 
 
@@ -217,8 +235,16 @@ def extract_route_endpoints(
     Detects patterns like 'from PortA to PortB' or multiple ports in query.
     Falls back to prior session location for multi-turn queries.
     """
+    import re
     q_lower = query.lower()
-    ports_found = [p for p in INDIAN_COASTAL_PORTS if p in q_lower]
+
+    # Sort port keys by length descending to match multi-word entries first ('andhra pradesh' before 'andhra', etc.)
+    sorted_port_keys = sorted(INDIAN_COASTAL_PORTS.keys(), key=len, reverse=True)
+    ports_found = []
+    for p in sorted_port_keys:
+        if p in q_lower:
+            if not any(p in existing for existing in ports_found):
+                ports_found.append(p)
 
     if len(ports_found) >= 2:
         # Check order of appearance in string
@@ -231,17 +257,14 @@ def extract_route_endpoints(
         dest = INDIAN_COASTAL_PORTS[dest_key]
         return start, dest
 
-    # Single port in routing query with prior location context
+    # Single port in query
     if len(ports_found) == 1:
         port = INDIAN_COASTAL_PORTS[ports_found[0]]
-        # If query asks "to <port>" or "route to <port>" and we have prior location
-        if prior_location and any(kw in q_lower for kw in ["to ", "reach ", "route "]):
+        # If query explicitly asks "to <port>" or "route to <port>" and we have prior location
+        if prior_location and any(kw in q_lower for kw in ["to " + ports_found[0], "reach " + ports_found[0], "towards " + ports_found[0]]):
             return prior_location, port
+        # User named a new port/sector as their focal location -> destination is None
         return port, None
-
-    # No explicit port in query — check prior location for follow-up questions
-    if prior_location and any(kw in q_lower for kw in ["there", "here", "tomorrow", "this", "safe", "weather", "route"]):
-        return prior_location, prior_destination
 
     # Check if destination explicitly parsed by LLM
     if parsed and parsed.get("destination"):
@@ -249,6 +272,17 @@ def extract_route_endpoints(
         dest = resolve_port_location(raw_dest.get("name", ""), raw_dest)
         start = resolve_port_location(query, parsed.get("location"))
         return start, dest
+
+    # Check if query mentions a specific location extracted by LLM
+    if parsed and parsed.get("location") and parsed["location"].get("name"):
+        llm_loc = resolve_port_location(parsed["location"]["name"], parsed["location"])
+        if "default" not in llm_loc.get("name", "").lower():
+            return llm_loc, None
+
+    # Only fall back to prior location if user explicitly asks follow-up referencing prior place
+    # (e.g. "what about tomorrow?", "is it safe there?") using whole-word boundary
+    if prior_location and (re.search(r'\b(there|here|that area|that zone)\b', q_lower) or any(kw in q_lower for kw in ["tomorrow", "what about", "is it safe"])):
+        return prior_location, prior_destination
 
     start = resolve_port_location(query, parsed.get("location") if parsed else None)
     return start, None
@@ -412,9 +446,18 @@ async def dispatch_data_agents(state: PlannerState) -> dict:
             from agents.marine_fishing.marine_agent import MarineFishingAgent
 
             async def _fetch():
-                return await MarineFishingAgent().get_ocean_state(
+                agent = MarineFishingAgent()
+                ocean_state = await agent.get_ocean_state(
                     lat=lat, lon=lon, date_str=d, query_run_id=qid
                 )
+                # Check for historical fishery trend inquiries (SIH Query #7)
+                q_lower = state.get("query", "").lower()
+                if intent == "historical_trends" or any(kw in q_lower for kw in ["decline", "declined", "decrease", "trend", "productivity", "catch drop", "why has"]):
+                    trend_env = await agent.analyze_historical_trends(
+                        lat=lat, lon=lon, sector_name=state.get("location", {}).get("name"), query_run_id=qid
+                    )
+                    ocean_state.data["historical_trends"] = trend_env.data
+                return ocean_state
 
             result = await circuit_registry.call(
                 "incois_wfs",
@@ -447,21 +490,27 @@ async def dispatch_data_agents(state: PlannerState) -> dict:
     dest_lat: float | None = None
     dest_lon: float | None = None
 
-    if dest_info:
-        dest_lat = float(dest_info["lat"])
-        dest_lon = float(dest_info["lon"])
-    elif marine and hasattr(marine, "data") and marine.data.get("pfz_zones"):
-        top_zone = marine.data["pfz_zones"][0]
-        if "coordinates" in top_zone and isinstance(top_zone["coordinates"], (list, tuple)):
-            dest_lon, dest_lat = float(top_zone["coordinates"][0]), float(top_zone["coordinates"][1])
-        elif "latitude" in top_zone and "longitude" in top_zone:
-            dest_lat, dest_lon = float(top_zone["latitude"]), float(top_zone["longitude"])
-    elif intent == "route_request":
-        # Default transit 15 NM offshore from departure port
-        dest_lat = start_lat - 0.15
-        dest_lon = start_lon - 0.15
+    should_plan_route = False
+    if intent == "route_request":
+        should_plan_route = True
+        if dest_info:
+            dest_lat = float(dest_info["lat"])
+            dest_lon = float(dest_info["lon"])
+        else:
+            # Default transit 15 NM offshore seaward from departure port
+            dest_lat = start_lat - 0.15
+            dest_lon = start_lon - 0.15
+    elif intent == "find_fishing_zone":
+        # For fishing zone queries, route only to the local PFZ offshore if available
+        if marine and hasattr(marine, "data") and marine.data.get("pfz_zones"):
+            top_zone = marine.data["pfz_zones"][0]
+            if "coordinates" in top_zone and isinstance(top_zone["coordinates"], (list, tuple)):
+                dest_lon, dest_lat = float(top_zone["coordinates"][0]), float(top_zone["coordinates"][1])
+            elif "latitude" in top_zone and "longitude" in top_zone:
+                dest_lat, dest_lon = float(top_zone["latitude"]), float(top_zone["longitude"])
+            should_plan_route = (dest_lat is not None and dest_lon is not None)
 
-    if dest_lat is not None and dest_lon is not None and (intent in ("route_request", "find_fishing_zone") or dest_info is not None):
+    if should_plan_route and dest_lat is not None and dest_lon is not None:
         try:
             from agents.route.route_agent import RouteAgent
             from backend.gateway.observability import log_agent_trajectory
@@ -642,11 +691,13 @@ def _build_map_data(state: PlannerState) -> dict:
     # PFZ zones from marine data
     marine = state.get("marine_result", {})
     for zone in marine.get("data", {}).get("pfz_zones", []):
+        z_lon = float(zone.get("lon") if zone.get("lon") is not None else zone.get("center_lon", 0))
+        z_lat = float(zone.get("lat") if zone.get("lat") is not None else zone.get("center_lat", 0))
         features.append({
             "type": "Feature",
             "geometry": {
                 "type": "Point",
-                "coordinates": [zone.get("center_lon", 0), zone.get("center_lat", 0)],
+                "coordinates": [z_lon, z_lat],
             },
             "properties": {
                 "type": "pfz_zone",
@@ -654,7 +705,11 @@ def _build_map_data(state: PlannerState) -> dict:
                 "name": zone.get("name"),
                 "productivity_score": zone.get("productivity_score"),
                 "distance_km": zone.get("distance_km"),
-                "species": zone.get("species_likely", []),
+                "species": zone.get("likely_species", zone.get("species_likely", [])),
+                "estimated_depth_m": zone.get("estimated_depth_m"),
+                "depth_category": zone.get("depth_category"),
+                "gear_compatible": zone.get("gear_compatible", True),
+                "gear_warning": zone.get("gear_warning"),
                 "icon": "fish",
             },
         })
@@ -749,16 +804,30 @@ def _build_evidence(state: PlannerState) -> list[dict]:
 
 
 def _fallback_text(state: PlannerState) -> str:
-    """Generate a basic text response without LLM if synthesis fails."""
+    """Generate a clean, informative text response if LLM synthesis experiences an upstream timeout."""
+    intent = state.get("intent", "")
+
+    # For regulatory queries, directly return the retrieved RAG legal answer
+    rag = state.get("rag_result", {})
+    if intent == "regulation_question" and rag and rag.get("answer"):
+        return rag["answer"]
+
     verdict = state.get("risk_verdict", {})
     v = verdict.get("verdict", "UNKNOWN") if verdict else "UNKNOWN"
     reasons = verdict.get("reasons", []) if verdict else []
-    return (
-        f"Safety assessment: {v}. "
-        + " ".join(reasons)
-        + " (Note: detailed narrative unavailable due to a temporary issue — "
-        "raw data is shown above.)"
-    )
+
+    w_data = state.get("weather_result", {}).get("data", {})
+    wave = w_data.get("significant_wave_height_m", "N/A")
+    wind = w_data.get("wind_speed_kmh", "N/A")
+    loc_name = state.get("location", {}).get("name", "your operational zone")
+
+    lines = [f"Operational Safety Verdict: {v} for {loc_name}."]
+    if reasons:
+        lines.append(" ".join(reasons))
+    if wave != "N/A" and wind != "N/A":
+        lines.append(f"Current marine parameters: Significant wave height {wave}m, sustained wind {wind} km/h.")
+
+    return " ".join(lines)
 
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -816,8 +885,9 @@ class PlannerAgent:
     async def handle_query(
         self,
         query: str,
-        conversation_id: str = "",
-        user_id: str = "anonymous",
+        conversation_id: str | None = None,
+        user_id: str | None = None,
+        locale: str | None = None,
     ) -> dict:
         """
         Process a user query through the full agent pipeline.
@@ -843,8 +913,23 @@ class PlannerAgent:
         from backend.gateway.multilingual import translate_in, translate_out
         clean_query, detected_lang = await translate_in(query)
 
+        # Determine target language:
+        # If user explicitly asked in Indic script, detected_lang takes precedence.
+        # Otherwise, if UI locale specifies an Indic language, use that locale.
+        target_lang = "en"
+        if detected_lang != "en":
+            target_lang = detected_lang
+        elif locale:
+            loc = locale.lower()
+            if loc.startswith("hi"):
+                target_lang = "hi"
+            elif loc.startswith("mr"):
+                target_lang = "mr"
+            elif loc.startswith("ta"):
+                target_lang = "ta"
+
         logger.info(
-            f"[planner] Query: {query!r} (lang={detected_lang}, en={clean_query!r}, run={query_run_id[:8]}…)"
+            f"[planner] Query: {query!r} (detected={detected_lang}, target={target_lang}, en={clean_query!r}, run={query_run_id[:8]}…)"
         )
 
         try:
@@ -855,7 +940,7 @@ class PlannerAgent:
                 "query_run_id": query_run_id,
                 "prior_location": prior_loc,
                 "prior_destination": prior_dest,
-                "detected_language": detected_lang,
+                "detected_language": target_lang,
             })
 
             resp = result.get("response", {
@@ -870,7 +955,13 @@ class PlannerAgent:
 
             # 3. Save updated session state
             final_loc = result.get("location") or prior_loc
-            final_dest = result.get("destination") or prior_dest
+            if result.get("destination"):
+                final_dest = result.get("destination")
+            elif result.get("intent") == "route_request":
+                final_dest = prior_dest
+            else:
+                final_dest = None
+
             self.sessions[cid] = {
                 "location": final_loc,
                 "destination": final_dest,
@@ -881,9 +972,20 @@ class PlannerAgent:
             }
 
             # 4. Outbound localized translation if needed
-            if detected_lang != "en" and resp.get("text"):
-                resp["text"] = await translate_out(resp["text"], detected_lang)
-                resp["detected_language"] = detected_lang
+            if target_lang != "en" and resp.get("text"):
+                resp["text"] = await translate_out(resp["text"], target_lang)
+                resp["detected_language"] = target_lang
+
+                # Also translate risk reasons if present
+                rv = resp.get("risk_verdict")
+                if rv and isinstance(rv, dict) and rv.get("reasons"):
+                    try:
+                        translated_reasons = []
+                        for reason in rv["reasons"]:
+                            translated_reasons.append(await translate_out(reason, target_lang))
+                        rv["reasons"] = translated_reasons
+                    except Exception as trans_err:
+                        logger.warning(f"[planner] Failed translating risk reasons: {trans_err}")
 
             return resp
 

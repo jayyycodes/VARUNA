@@ -195,11 +195,13 @@
   box-shadow: 0 0 6px #10B981;
 }
 
-/* Action Pills Row */
+/* Action Pills Row (Hidden on Desktop by default) */
 .exec-actions-row {
-  display: flex;
-  gap: 12px;
-  overflow-x: auto;
+  display: none !important;
+}
+
+.exec-actions-row::-webkit-scrollbar {
+  display: none;
 }
 
 .exec-action-pill {
@@ -217,7 +219,13 @@
   box-shadow: var(--shadow-light-card);
   transition: all 150ms ease;
   white-space: nowrap;
+  flex-shrink: 0;
 }
+
+.td-meta-row {
+  display: contents;
+}
+
 
 .exec-action-pill:hover {
   background: #FFFFFF;
@@ -415,12 +423,15 @@
   font-weight: 600;
 }
 
-/* Right Column (Floating Statistic Card) */
+/* Right Column (Floating Statistic Card - Sticky) */
 .exec-right-column {
   width: 360px;
   min-width: 360px;
   display: flex;
   flex-direction: column;
+  position: sticky;
+  top: 0;
+  align-self: flex-start;
 }
 
 .exec-statistic-card {
@@ -600,8 +611,8 @@
   background: #D97706;
 }
 
-.stat-item-icon--purple {
-  background: #7C3AED;
+.stat-item-icon--ocean {
+  background: #2563EB;
 }
 
 .stat-item-info {
@@ -639,5 +650,104 @@
 }
 
 .stat-item-badge--ai {
-  color: #7C3AED;
+  color: #2563EB;
 }
+
+/* ================================================================
+   Mobile Single-Column Reflow (Checkpoint 1 & 4 Polish)
+   ================================================================ */
+@media (max-width: 768px) {
+  .executive-dashboard {
+    flex-direction: column;
+    padding: 12px 12px 90px 12px;
+    gap: 16px;
+  }
+
+  .exec-cards-row {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .exec-card {
+    height: auto;
+    min-height: 150px;
+  }
+
+  .exec-actions-row {
+    display: flex !important;
+    gap: 8px;
+    padding-bottom: 4px;
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    box-sizing: border-box;
+  }
+
+  .exec-action-pill {
+    padding: 7px 13px;
+    font-size: 11px;
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+
+  .exec-table-section {
+    padding: 14px;
+    border-radius: 20px;
+  }
+
+  .exec-table-head-row {
+    display: none;
+  }
+
+  .exec-table-body {
+    gap: 8px;
+  }
+
+  .exec-table-row {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    background: #FFFFFF;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    border-radius: 16px;
+    padding: 12px 14px;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+  }
+
+  [data-theme="dark"] .exec-table-row {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(255, 255, 255, 0.08);
+  }
+
+  .td-sender {
+    width: 100%;
+  }
+
+  .td-meta-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    border-top: 1px solid rgba(15, 23, 42, 0.06);
+    padding-top: 8px;
+    gap: 8px;
+  }
+
+  [data-theme="dark"] .td-meta-row {
+    border-top-color: rgba(255, 255, 255, 0.08);
+  }
+
+  .exec-metrics-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 10px;
+  }
+
+  .exec-quick-actions-row {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 10px;
+  }
+}
+
+

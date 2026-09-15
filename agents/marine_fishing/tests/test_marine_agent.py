@@ -136,3 +136,22 @@ async def test_marine_agent_fallback_on_empty_or_error():
     # Top zone should have highest productivity score
     scores = [z["productivity_score"] for z in res.data["pfz_zones"]]
     assert scores == sorted(scores, reverse=True)
+
+
+@pytest.mark.asyncio
+async def test_marine_agent_satellite_raster_slice():
+    agent = MarineFishingAgent()
+    envelope = await agent.get_satellite_raster_slice(
+        bbox=(16.0, 72.5, 17.5, 73.5),
+        target_date="2026-09-12",
+        query_run_id="test-raster-run",
+    )
+    assert isinstance(envelope, AgentEnvelope)
+    assert envelope.status == "success"
+    assert envelope.agent == "marine_fishing"
+    assert envelope.query_run_id == "test-raster-run"
+    assert "sst_grid" in envelope.data
+    assert "chl_grid" in envelope.data
+    assert "detected_fronts" in envelope.data
+    assert envelope.data["front_count"] >= 0
+

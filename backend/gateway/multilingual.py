@@ -96,8 +96,30 @@ async def translate_in(query: str) -> Tuple[str, str]:
         logger.info(f"[multilingual] Translated IN ({lang} -> en): '{query}' -> '{clean_text}'")
         return clean_text, lang
     except Exception as err:
-        logger.warning(f"[multilingual] translate_in failed ({err}), falling back to raw query.")
-        return query, lang
+        logger.warning(f"[multilingual] translate_in failed ({err}), falling back to transliteration dictionary.")
+        fallback_query = query
+        _INDIC_FALLBACK_MAP = {
+            "रत्नागिरीच्या": "Ratnagiri",
+            "रत्नागिरी": "Ratnagiri",
+            "मालवणला": "Malvan",
+            "मालवण": "Malvan",
+            "मुंबईच्या": "Mumbai",
+            "मुंबई": "Mumbai",
+            "कोची": "Kochi",
+            "कोच्चि": "Kochi",
+            "गोवा": "Goa",
+            "मौसम": "weather",
+            "हवामान": "weather",
+            "सुरक्षित": "safe",
+            "मछली": "fishing",
+            "उद्या": "tomorrow",
+            "कल": "tomorrow",
+            "लाटा": "waves",
+            "समुद्र": "sea",
+        }
+        for k, v in _INDIC_FALLBACK_MAP.items():
+            fallback_query = fallback_query.replace(k, v)
+        return fallback_query, lang
 
 
 async def translate_out(response_text: str, target_lang: str) -> str:
@@ -111,15 +133,20 @@ async def translate_out(response_text: str, target_lang: str) -> str:
     if target_lang == "en" or not response_text:
         return response_text
 
-    lang_name = "Marathi (मराठी)" if target_lang == "mr" else "Hindi (हिंदी)"
+    if target_lang.startswith("ta"):
+        lang_name = "Tamil (தமிழ்)"
+    elif target_lang.startswith("mr"):
+        lang_name = "Marathi (मराठी)"
+    else:
+        lang_name = "Hindi (हिंदी)"
 
     system_msg = (
         f"You are an expert translator specializing in Indian maritime weather and coastal fishing advisories.\n"
         f"Translate the provided maritime intelligence report into fluent, natural {lang_name}.\n\n"
         f"STRICT SAFETY & NUMERICAL RULES:\n"
-        f"1. Preserve safety verdict tokens: **UNSAFE** (असुरक्षित), **CAUTION** (सावधान), **SAFE** (सुरक्षित).\n"
+        f"1. Preserve safety verdict tokens: **UNSAFE**, **CAUTION**, **SAFE**, and legal status **PROHIBITED** or **PERMITTED**.\n"
         f"2. Keep exact numeric values and units untouched (e.g., '1.2 m', '14 knots', '28.6°C', '0.58 mg/m³', '106 km', '57.3 NM', '7.2 hrs', '126 L').\n"
-        f"3. Keep port names familiar (Ratnagiri, Malvan, Mumbai, Kochi, etc.).\n"
+        f"3. Keep port names familiar (Ratnagiri, Malvan, Mumbai, Kochi, Visakhapatnam, etc.).\n"
         f"4. Preserve markdown layout, bullet points, and citation names.\n"
         f"5. Return ONLY the translated markdown text."
     )
@@ -134,8 +161,51 @@ async def translate_out(response_text: str, target_lang: str) -> str:
             temperature=0.1,
             max_tokens=2048,
         )
+        out = (translated or "").strip()
+        if not out:
+            raise ValueError("Empty translation from LLM")
         logger.info(f"[multilingual] Translated OUT (en -> {target_lang}) successfully.")
-        return translated.strip()
+        return out
     except Exception as err:
-        logger.error(f"[multilingual] translate_out failed ({err}), returning original English.")
-        return response_text
+        logger.error(f"[multilingual] translate_out failed ({err}), falling back to Indic dictionary.")
+        fallback = response_text
+        if target_lang.startswith("hi"):
+            dict_map = {
+                "Operational Safety Verdict": "ऑपरेशनल सुरक्षा निर्णय",
+                "Safety Verdict": "सुरक्षा निर्णय",
+                "UNSAFE": "असुरक्षित (UNSAFE)",
+                "CAUTION": "सावधानी (CAUTION)",
+                "SAFE": "सुरक्षित (SAFE)",
+                "PROHIBITED": "प्रतिबंधित (PROHIBITED)",
+                "PERMITTED": "अनुमत (PERMITTED)",
+                "for Ratnagiri, Maharashtra": "रत्नागिरी, महाराष्ट्र के लिए",
+                "Severe lightning": "गंभीर आकाशीय बिजली",
+                "convective storm": "संवहनी तूफान",
+                "wave height": "लहरों की ऊंचाई",
+                "wind speed": "हवा की गति",
+                "Advice": "सलाह",
+                "Remain in port": "बंदरगाह में ही रहें",
+            }
+        elif target_lang.startswith("mr"):
+            dict_map = {
+                "Operational Safety Verdict": "ऑपरेशनल सुरक्षितता निर्णय",
+                "Safety Verdict": "सुरक्षितता निर्णय",
+                "UNSAFE": "धोकादायक (UNSAFE)",
+                "CAUTION": "सावधगिरी (CAUTION)",
+                "SAFE": "सुरक्षित (SAFE)",
+                "PROHIBITED": "प्रतिबंधित (PROHIBITED)",
+                "PERMITTED": "परवानगी (PERMITTED)",
+                "for Ratnagiri, Maharashtra": "रत्नागिरी, महाराष्ट्रासाठी",
+                "Severe lightning": "तीव्र वीज आणि वादळ",
+                "convective storm": "संवहनी वादळ",
+                "wave height": "लाटांची उंची",
+                "wind speed": "वाऱ्याचा वेग",
+                "Advice": "सल्ला",
+                "Remain in port": "बंदरातच राहा",
+            }
+        else:
+            dict_map = {}
+
+        for k, v in dict_map.items():
+            fallback = fallback.replace(k, v)
+        return fallback

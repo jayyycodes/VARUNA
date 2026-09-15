@@ -16,22 +16,25 @@ Fetches and models Sea Surface Temperature (SST), Chlorophyll-a concentrations, 
 
 ---
 
-## 2. Post-MVP & Production Tasks (Current Focus)
-According to the root `README.md` (Sections 1.1, 3, 6, & 9), the next operational priorities are:
+## 2. Post-MVP & Production Tasks (Tier-2 Progress)
+According to the root `README.md` (Sections 1.1, 3, 6, & 9), the operational priorities are:
 
-- [ ] **Automated INCOIS PFZ WebGIS Advisory Ingestion**:
-  - Build automated scraper/ETL for daily INCOIS PFZ shapefiles and GeoJSON advisories (`https://incois.gov.in/portal/datainfo/pfz.jsp`).
-  - Store multi-day advisories in PostGIS with spatial indexing (`GIST`).
-- [ ] **Live Satellite Raster Ingestion (NOAA ERDDAP / ISRO OCM-3)**:
-  - Connect NOAA CoastWatch ERDDAP for GHRSST 1km/5km daily SST grids.
-  - Ingest Copernicus Marine / Sentinel-3 OLCI and ISRO OCM-3 Chlorophyll-a raster products.
-- [ ] **Historical Productivity & Trend Analysis (SIH Target Query #7)**:
-  - Implement historical trend engine answering *"Why has fish productivity declined in this region?"*.
-  - Correlate SST anomalies (marine heatwaves), seasonal upwelling shifts, and chlorophyll depletion over 5-year spans.
-- [ ] **Golden-Set CI Automation**:
-  - Build automated regression pipeline running 30–50 historical ground-truth test cases verified against ICAR-CMFRI landing data.
-- [ ] **Bathymetric Depth Filtering**:
-  - Overlay GEBCO 15 arc-second bathymetry contours to filter out pelagic zones that exceed small-craft artisanal net depth limits (<50m depth).
+- [x] **Historical Productivity & Trend Analysis (SIH Target Query #7)**:
+  - Implemented `HistoricalTrendsEngine` (`historical_trends.py`) answering *"Why has fish productivity declined in this region?"*.
+  - Correlates SST anomalies (marine heatwaves), seasonal upwelling shifts, and chlorophyll depletion over 5-year spans across Konkan, Saurashtra, Malabar, Coromandel, and Northern Circars sectors.
+  - Exposed via `GET /api/analytics/historical-trends` and `MarineFishingAgent.analyze_historical_trends()`.
+- [x] **Bathymetric Depth Filtering**:
+  - Implemented `BathymetryEngine` (`bathymetry.py`) modeling GEBCO 15 arc-second bathymetry contours along Indian coasts.
+  - Filters out pelagic zones that exceed small-craft artisanal net depth limits (<50m depth) and annotates map features.
+  - Exposed via `GET /api/analytics/bathymetry`.
+- [x] **Golden-Set CI Automation**:
+  - Built automated regression pipeline running 35 historical ground-truth test cases (`eval/golden_set/run_evals.py` & `eval/golden_set/test_golden_set.py`).
+- [x] **Automated INCOIS PFZ WebGIS Advisory Ingestion**:
+  - Implemented automated ETL pipeline (`data/etl/ingest_incois_pfz.py`) for live INCOIS PFZ shapefile/GeoJSON advisories.
+  - Multi-day advisories persisted into PostGIS `pfz_advisories` table with `GIST` spatial index and CLI `--dry-run` / `--force-seed` support.
+- [x] **Live Satellite Raster Ingestion (NOAA ERDDAP / ISRO OCM-3)**:
+  - Implemented `SatelliteRasterClient` (`satellite_raster.py`) connecting NOAA CoastWatch ERDDAP GHRSST and ISRO OCM-3 / VIIRS ocean color grids.
+  - Added 2D finite-difference oceanographic front detection identifying convergent upwelling zones and thermal edges.
 
 ---
 

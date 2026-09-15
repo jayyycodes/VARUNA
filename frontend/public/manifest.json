@@ -1,0 +1,17 @@
+{
+  "short_name": "VARUNA",
+  "name": "VARUNA — Marine Intelligence",
+  "description": "Agentic Marine Intelligence & Coastal Safety for India's Coastline (SIH 2026)",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#0F172A",
+  "theme_color": "#0F172A",
+  "display": "standalone",
+  "orientation": "any"
+}

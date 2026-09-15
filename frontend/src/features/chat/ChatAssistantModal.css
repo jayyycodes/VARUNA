@@ -570,7 +570,7 @@
   right: 24px;
   z-index: 999;
   background: linear-gradient(135deg, #0E1420 0%, #151E2E 100%);
-  border: 1px solid rgba(216, 250, 54, 0.35);
+  border: 1px solid rgba(59, 130, 246, 0.4);
   color: #FFFFFF;
   padding: 10px 18px;
   border-radius: var(--radius-pill);
@@ -581,18 +581,18 @@
   font-size: 12px;
   font-weight: 800;
   cursor: pointer;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45), 0 0 16px rgba(216, 250, 54, 0.2);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45), 0 0 16px rgba(59, 130, 246, 0.25);
   transition: all 180ms ease;
 }
 
 .floating-ai-launcher-btn:hover {
   transform: translateY(-2px);
-  border-color: #D8FA36;
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.55), 0 0 24px rgba(216, 250, 54, 0.4);
+  border-color: #3B82F6;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.55), 0 0 24px rgba(59, 130, 246, 0.45);
 }
 
 .launcher-sparkle-icon {
-  color: #D8FA36;
+  color: #38BDF8;
   animation: pulseRotate 3s infinite linear;
 }
 

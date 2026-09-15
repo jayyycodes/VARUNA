@@ -23,7 +23,7 @@ export const MapLegend: React.FC<MapLegendProps> = ({ layers, layerVisibility, o
         type="button"
         title={isExpanded ? 'Collapse Legend' : 'Expand Legend'}
       >
-        <IconLayers size={14} className="map-legend__icon" />
+        <IconLayers size={12} className="map-legend__icon" />
         <span className="map-legend__title mono text-xs">
           LAYERS & LEGEND ({layers.filter((l) => layerVisibility[l.id] !== false).length}/{layers.length})
         </span>
@@ -31,7 +31,7 @@ export const MapLegend: React.FC<MapLegendProps> = ({ layers, layerVisibility, o
           className="map-legend__chevron"
           style={{ transform: isExpanded ? 'rotate(0deg)' : 'rotate(180deg)', display: 'inline-flex', transition: 'transform 150ms ease' }}
         >
-          <IconChevronDown size={12} />
+          <IconChevronDown size={10} />
         </span>
       </button>
 

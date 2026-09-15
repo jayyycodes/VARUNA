@@ -27,19 +27,25 @@ Correlates real-time Weather, Marine, and Geofencing telemetry into an auditable
 ## 2. Post-MVP & Production Tasks (Current Focus)
 According to the root `README.md` (Sections 1.2, 3, & 9), the next operational priorities are:
 
-- [ ] **Vessel-Specific Safety Criteria**:
-  - Dynamically scale thresholds based on vessel classification:
+- [x] **Vessel-Specific Safety Criteria**:
+  - Dynamically scaled thresholds based on vessel classification (`VESSEL_THRESHOLDS`):
     - *Non-mechanized / Traditional Country Craft*: Cap at $H_s \le 1.2$ m, Wind $\le 20$ km/h.
     - *Mechanized Trawlers (10–15m)*: Standard thresholds ($H_s \le 2.5$ m, Wind $\le 40$ km/h).
-    - *Deep-Sea Commercial Longliners (>20m)*: Tolerant up to $H_s \le 3.5$ m.
-- [ ] **Compound Maritime Risk Modeling**:
-  - Evaluate nonlinear hazards like wind-swell crossing angles (beam seas), tidal currents opposing wave direction (steep breakers at harbor mouths), and shallow-water shoaling.
-- [ ] **Threshold Rule Versioning & DB Audit Log**:
-  - Assign explicit version tags (e.g. `RULE-WAVE-01: v2.1`, `RULE-WIND-01: v1.4`) persisted to the `risk_verdicts` table in PostgreSQL for maritime accident investigation audits.
-- [ ] **Automated LLM Groundedness Evaluator**:
-  - Implement an LLM-as-judge unit test asserting that natural language explanations never invent numbers outside `rule_trace`.
-- [ ] **Time-to-Shelter Evacuation Estimator**:
-  - Calculate vessel distance to closest port of refuge and determine if squalls will intercept before safe return.
+    - *Deep-Sea Commercial Longliners (>20m)*: Tolerant up to $H_s \le 3.5$ m, Wind $\le 55$ km/h.
+  - Implemented and unit tested across all craft classes (`agents/risk/tests/test_vessel_criteria.py`).
+- [x] **Compound Maritime Risk Modeling**:
+  - Implemented `CompoundRiskEngine` (`compound_risk.py`) evaluating nonlinear multi-variable sea interactions:
+    - Beam Seas / Dangerous Cross Swell ($60^\circ \le \Delta\theta \le 120^\circ$ inducing vessel roll resonance).
+    - Current-Wave Opposing Interaction ($\Delta\theta \ge 135^\circ$, current $\ge 1.2$ kts causing steep breaking seas).
+    - Shallow-Water Shoaling Breakers ($\text{depth} \le 2 \times H_s$ or $\text{depth} < 10$ m).
+- [x] **Threshold Rule Versioning & DB Audit Log**:
+  - Assigned explicit version tags (`RULE-GEO-01: v2.0`, `RULE-CYC-01: v2.0`, `RULE-WAVE-01: v2.1`, `RULE-WIND-01: v2.1`, `RULE-COMPOUND-01: v1.2`, `RULE-EVAC-01: v1.0`).
+  - Implemented `RiskAuditLogger` (`audit_logger.py`) persisting audit telemetry into PostgreSQL `risk_verdicts` table.
+- [x] **Automated LLM Groundedness Evaluator**:
+  - Implemented `RiskGroundednessEvaluator` (`eval/risk_groundedness.py`) asserting natural language explanations never hallucinate numbers, contradict computed verdicts, or invent ungrounded hazards.
+- [x] **Time-to-Shelter Evacuation Estimator**:
+  - Implemented `EvacuationEngine` (`evacuation.py`) matching vessel position to nearest port of refuge across 16 Indian harbors.
+  - Computes transit duration against advancing squall / gale speed to evaluate evacuation margins ($\Delta T < 0.5$h triggers emergency intercept warning).
 
 ---
 

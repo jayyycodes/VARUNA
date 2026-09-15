@@ -1,0 +1,39 @@
+services:
+  - type: web
+    name: varuna-backend
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn backend.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    plan: free
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: APP_ENV
+        value: production
+      - key: CORS_ORIGINS
+        value: "*"
+      - key: GROQ_API_KEY
+        sync: false
+      - key: CEREBRAS_API_KEY
+        sync: false
+      - key: POSTGRES_HOST
+        sync: false
+      - key: POSTGRES_PORT
+        value: "5432"
+      - key: POSTGRES_DB
+        value: "postgres"
+      - key: POSTGRES_USER
+        value: "postgres"
+      - key: POSTGRES_PASSWORD
+        sync: false
+      - key: REDIS_URL
+        sync: false
+      - key: PLANNER_MODEL
+        value: groq/llama-3.3-70b-versatile
+      - key: RISK_EXPLAIN_MODEL
+        value: groq/llama-3.3-70b-versatile
+      - key: RAG_MODEL
+        value: cerebras/llama3.1-70b
+      - key: FALLBACK_MODEL
+        value: cerebras/llama3.1-70b

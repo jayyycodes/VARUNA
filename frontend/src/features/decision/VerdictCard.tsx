@@ -126,8 +126,8 @@ export const VerdictCard: React.FC<VerdictCardProps> = ({
     );
   }
 
-  // Extract top 1-3 actionable claims for fast tapping
-  const headlineClaims = claims.slice(0, 3);
+  // Extract top 1-2 actionable claims for compact card display
+  const headlineClaims = claims.slice(0, 2);
 
   return (
     <div
