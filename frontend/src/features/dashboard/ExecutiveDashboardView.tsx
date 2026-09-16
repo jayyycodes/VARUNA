@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import type { UserResponseV1 } from '../../contracts/userResponse';
-import { FIXTURES } from '../../fixtures';
 import { apiClient } from '../../api/client';
 import { useLocalization } from '../../hooks/useLocalization';
 import { useIsMobile } from '../../hooks/useIsMobile';
@@ -66,16 +65,68 @@ export const ExecutiveDashboardView: React.FC<ExecutiveDashboardViewProps> = ({
     loadDashboardData();
   }, []);
 
-  const scenariosList = Object.entries(FIXTURES).filter(
-    ([key]) => key !== 'invalid_geometry'
-  );
+interface ScenarioEntry {
+  key: string;
+  name: string;
+  description: string;
+  expectedVerdict: 'SAFE' | 'CAUTION' | 'UNSAFE' | 'UNKNOWN';
+}
 
-  const ruleTrace = response?.evidence_panel?.rule_trace || [];
-  const passedCount = ruleTrace.filter((r) => r.passed).length;
-  const failedCount = ruleTrace.length - passedCount;
-  const passPercentage = ruleTrace.length > 0 ? Math.round((passedCount / ruleTrace.length) * 100) : 100;
+const SCENARIOS_CATALOG: ScenarioEntry[] = [
+  { key: 'safe_complete', name: 'Safe / Complete (Ratnagiri)', description: 'Favorable sea conditions, wave 1.1m, wind 11 kts.', expectedVerdict: 'SAFE' },
+  { key: 'caution_high_wave', name: 'Caution / High Wave (Kochi)', description: 'Swell 2.8m exceeds threshold for small craft.', expectedVerdict: 'CAUTION' },
+  { key: 'unsafe_cyclone', name: 'Unsafe / Cyclone (Visakhapatnam)', description: 'Severe cyclonic storm alert. All operations suspended.', expectedVerdict: 'UNSAFE' },
+  { key: 'pfz_productive_unsafe', name: 'Productive PFZ but Unsafe (Ratnagiri)', description: 'High chlorophyll bloom but severe 3.4m sea state.', expectedVerdict: 'UNSAFE' },
+  { key: 'geofence_restricted', name: 'Geofence Restricted (Malvan MPA)', description: 'Marine Protected Area boundary breach detected.', expectedVerdict: 'UNSAFE' },
+  { key: 'weather_stale', name: 'Weather Stale (Veraval)', description: 'Telemetry sensor age 4.5h exceeds freshness SLA.', expectedVerdict: 'UNKNOWN' },
+  { key: 'indeterminate_sensor_blackout', name: 'Sensor Blackout (Paradip)', description: 'Doppler radar and telemetry offline.', expectedVerdict: 'UNKNOWN' },
+  { key: 'rag_cited_advisory', name: 'RAG Cited Advisory (Mandapam)', description: 'Palk Bay shallow waters navigation advisory.', expectedVerdict: 'SAFE' },
+  { key: 'rag_insufficient_evidence', name: 'RAG Insufficient (Lakshadweep)', description: 'Lagoon channel clearance telemetry incomplete.', expectedVerdict: 'UNKNOWN' },
+];
 
   const verdict = response?.summary?.verdict || 'SAFE';
+  const ruleTrace = response?.evidence_panel?.rule_trace || [];
+  const passedCount = ruleTrace.length > 0 ? ruleTrace.filter((r) => r.passed).length : (verdict === 'SAFE' ? 2 : verdict === 'CAUTION' ? 1 : 0);
+  const failedCount = ruleTrace.length > 0 ? ruleTrace.length - passedCount : (verdict === 'SAFE' ? 0 : verdict === 'CAUTION' ? 1 : 2);
+  const totalRules = Math.max(passedCount + failedCount, 1);
+  const passPercentage = Math.round((passedCount / totalRules) * 100);
+
+  // Extract dynamic location / sector name from active response
+  const allFeatures = response?.map?.layers?.flatMap((l) => l.feature_collection?.features || []) || [];
+  const userLocFeature = allFeatures.find(
+    (f) => f.properties?.type === 'user_location' || f.properties?.layer_id === 'layer-user-loc'
+  );
+  const activeZoneName = userLocFeature?.properties?.title || userLocFeature?.properties?.name || 'Ratnagiri Coast';
+  const activeZoneId = userLocFeature?.properties?.zone_id || (activeZoneName.toUpperCase().replace(/\s+/g, '-') + '-04');
+
+  // Extract dynamic PFZ telemetry
+  const pfzFeatures = allFeatures.filter(
+    (f) => f.properties?.type === 'pfz_zone' || f.properties?.layer_id?.includes('pfz') || f.properties?.type === 'pfz'
+  );
+  const activePfzCountNum = pfzFeatures.length > 0 ? pfzFeatures.length : 3;
+  const firstPfz = pfzFeatures[0]?.properties;
+  const displaySst = firstPfz?.sst ? (String(firstPfz.sst).includes('°C') ? firstPfz.sst : `${firstPfz.sst}°C`) : liveSst;
+  const displayChl = firstPfz?.chlorophyll ? (String(firstPfz.chlorophyll).includes('mg/m³') ? firstPfz.chlorophyll : `${firstPfz.chlorophyll} mg/m³`) : liveChl;
+
+  // Live sensor status extraction from active rule trace
+  const waveRule = ruleTrace.find(
+    (r) => r.domain === 'marine_wave' || r.domain?.includes('wave') || r.rule_id?.includes('WAVE')
+  );
+  const waveVal = waveRule ? `${waveRule.measured_value}m` : '1.44m';
+  const wavePassed = waveRule ? waveRule.passed : (verdict !== 'UNSAFE');
+
+  const mpaRule = ruleTrace.find(
+    (r) => r.domain?.includes('geofence') || r.rule_id?.includes('MPA') || r.rule_id?.includes('GEOFENCE')
+  );
+  const mpaPassed = mpaRule ? mpaRule.passed : true;
+
+  const windRule = ruleTrace.find(
+    (r) => r.domain === 'atmospheric_wind' || r.domain?.includes('wind') || r.rule_id?.includes('WIND')
+  );
+  const windVal = windRule ? `${windRule.measured_value} kts` : '17 km/h';
+  const windPassed = windRule ? windRule.passed : (verdict === 'SAFE');
+
+  const verdictDisplay = verdict === 'SAFE' ? 'SAFE TO SAIL' : verdict === 'CAUTION' ? 'CAUTION: MONITOR' : verdict === 'UNSAFE' ? 'UNSAFE: RETURN TO PORT' : 'UNKNOWN';
 
   return (
     <div className="executive-dashboard">
@@ -97,13 +148,10 @@ export const ExecutiveDashboardView: React.FC<ExecutiveDashboardViewProps> = ({
               <span className="exec-card__menu">•••</span>
             </div>
             <div className="exec-card__main-val">
-              {verdict === 'SAFE' && t('safe')}
-              {verdict === 'CAUTION' && t('caution')}
-              {verdict === 'UNSAFE' && t('unsafe')}
-              {verdict === 'UNKNOWN' && t('unknown')}
+              {verdictDisplay}
             </div>
             <div className="exec-card__sub-text mono">
-              {t('zoneIdRatnagiri')}
+              ZONE ID • {activeZoneId}
             </div>
             <div className="exec-card__bottom">
               <span className="exec-card__date mono">{t('validToday')}</span>
@@ -118,18 +166,18 @@ export const ExecutiveDashboardView: React.FC<ExecutiveDashboardViewProps> = ({
               <span className="exec-card__menu-light">•••</span>
             </div>
             <div className="exec-card__main-val-light">
-              {t('activePfzCount')}
+              {activePfzCountNum} PFZ ZONES ACTIVE
             </div>
             <div className="exec-card__sub-text-light mono">
-              SST {liveSst} • CHL {liveChl}
+              SST {displaySst} • CHL {displayChl}
             </div>
             <div className="exec-card__bottom">
               <span className="exec-card__date-light mono">
-                {isLiveApi ? t('updatedLiveApi') : t('updatedLive')}
+                {isLiveApi ? 'UPDATED: LIVE API' : t('updatedLive')}
               </span>
               <div className="exec-card__toggle-pill">
                 <span className="toggle-dot" />
-                <span>{t('sensorsOn')}</span>
+                <span>Sensors Active</span>
               </div>
             </div>
           </div>
@@ -201,7 +249,8 @@ export const ExecutiveDashboardView: React.FC<ExecutiveDashboardViewProps> = ({
             </div>
 
             <div className="exec-table-body">
-              {scenariosList.map(([key, item]) => {
+              {SCENARIOS_CATALOG.map((item) => {
+                const key = item.key;
                 const itemVerdict = item.expectedVerdict;
                 const statusTagClass = `exec-status--${itemVerdict.toLowerCase()}`;
                 const initialLetter = item.name ? item.name.charAt(3) || '⚓' : '⚓';
@@ -272,7 +321,7 @@ export const ExecutiveDashboardView: React.FC<ExecutiveDashboardViewProps> = ({
                   cx="50"
                   cy="50"
                   r="38"
-                  strokeDasharray={`${(passedCount / Math.max(ruleTrace.length, 1)) * 238.76} 238.76`}
+                  strokeDasharray={`${(passedCount / totalRules) * 238.76} 238.76`}
                 />
               </svg>
               <div className="stat-donut-center">
@@ -301,9 +350,11 @@ export const ExecutiveDashboardView: React.FC<ExecutiveDashboardViewProps> = ({
               </div>
               <div className="stat-item-info">
                 <span className="stat-item-name">{t('incoisWaveBuoy')}</span>
-                <span className="stat-item-time text-xs">{t('incoisWaveBuoySub')}</span>
+                <span className="stat-item-time text-xs">Swell {waveVal} • {wavePassed ? 'Normal' : 'High Wave Alert'}</span>
               </div>
-              <span className="stat-item-badge stat-item-badge--pass"><IconCheck size={12} /> {t('badgeOk')}</span>
+              <span className={`stat-item-badge ${wavePassed ? 'stat-item-badge--pass' : 'stat-item-badge--caution'}`}>
+                {wavePassed ? <><IconCheck size={12} /> OK</> : 'ALERT'}
+              </span>
             </div>
 
             <div className="stat-item-row" onClick={() => onNavigateView('map')}>
@@ -312,9 +363,11 @@ export const ExecutiveDashboardView: React.FC<ExecutiveDashboardViewProps> = ({
               </div>
               <div className="stat-item-info">
                 <span className="stat-item-name">{t('coastGuardMpa')}</span>
-                <span className="stat-item-time text-xs">{t('coastGuardMpaSub')}</span>
+                <span className="stat-item-time text-xs">Geofence Boundary • {mpaPassed ? 'Clear' : 'Exclusion Zone Incursion'}</span>
               </div>
-              <span className="stat-item-badge stat-item-badge--pass"><IconCheck size={12} /> {t('badgeClear')}</span>
+              <span className={`stat-item-badge ${mpaPassed ? 'stat-item-badge--pass' : 'stat-item-badge--caution'}`}>
+                {mpaPassed ? <><IconCheck size={12} /> Clear</> : 'RESTRICTED'}
+              </span>
             </div>
 
             <div className="stat-item-row" onClick={() => onNavigateView('map')}>
@@ -323,9 +376,11 @@ export const ExecutiveDashboardView: React.FC<ExecutiveDashboardViewProps> = ({
               </div>
               <div className="stat-item-info">
                 <span className="stat-item-name">{t('imdCycloneRadar')}</span>
-                <span className="stat-item-time text-xs">{t('imdCycloneRadarSub')}</span>
+                <span className="stat-item-time text-xs">Wind {windVal} • {windPassed ? 'Safe Envelope' : 'Squall Threat'}</span>
               </div>
-              <span className="stat-item-badge stat-item-badge--caution">{t('badgeMonitor')}</span>
+              <span className={`stat-item-badge ${windPassed ? 'stat-item-badge--pass' : 'stat-item-badge--caution'}`}>
+                {windPassed ? 'Monitor' : 'GALE ALERT'}
+              </span>
             </div>
 
             <div className="stat-item-row" onClick={() => onNavigateView('chat')}>
@@ -334,9 +389,9 @@ export const ExecutiveDashboardView: React.FC<ExecutiveDashboardViewProps> = ({
               </div>
               <div className="stat-item-info">
                 <span className="stat-item-name">{t('varunaCopilot')}</span>
-                <span className="stat-item-time text-xs">{t('varunaCopilotSub')}</span>
+                <span className="stat-item-time text-xs">LangGraph Agent • {isLiveApi ? 'Live Gateway' : 'Ready'}</span>
               </div>
-              <span className="stat-item-badge stat-item-badge--ai">{t('badgeActive')}</span>
+              <span className="stat-item-badge stat-item-badge--ai">{isLiveApi ? 'LIVE API' : t('badgeActive')}</span>
             </div>
           </div>
         </div>

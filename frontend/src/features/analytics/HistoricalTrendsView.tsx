@@ -1,16 +1,113 @@
 import React, { useState, useEffect } from 'react';
-import historicalFallback from '../../fixtures/historical_trends.json';
+import { useNavigate } from 'react-router-dom';
 import { apiClient } from '../../api/client';
 import { useLocalization } from '../../hooks/useLocalization';
-import { IconAlert, IconSearch } from '../../components/Icons';
+import { useAppStore } from '../../store/useAppStore';
+import {
+  IconAlert,
+  IconSearch,
+  IconArrowUpRight,
+  IconAward,
+  IconScale,
+  IconWave,
+  IconFileText,
+  IconLayers,
+  IconCheck,
+} from '../../components/Icons';
 import './HistoricalTrendsView.css';
+
+const SECTOR_OPTIONS = [
+  {
+    name: 'Ratnagiri Fishery Zone',
+    vessels: '31 Vessels',
+    lag: '50 min lag',
+    bulletins: '12 Bulletins',
+    anomalyIndex: '80%',
+    anomalyNum: 80,
+    query: 'Ratnagiri Fishery Zone ocean telemetry, PFZ shoal hotspots, and marine advisory',
+  },
+  {
+    name: 'Veraval Fishing Harbor',
+    vessels: '48 Vessels',
+    lag: '12 min lag',
+    bulletins: '18 Bulletins',
+    anomalyIndex: '65%',
+    anomalyNum: 65,
+    query: 'Veraval Harbor thermal anomalies, sea state telemetry, and shoal drift',
+  },
+  {
+    name: 'Malvan Coastal Belt',
+    vessels: '19 Vessels',
+    lag: '25 min lag',
+    bulletins: '8 Bulletins',
+    anomalyIndex: '72%',
+    anomalyNum: 72,
+    query: 'Malvan coastal upwelling, chlorophyll distribution, and pelagic fish zones',
+  },
+  {
+    name: 'Visakhapatnam Deep Sea',
+    vessels: '54 Vessels',
+    lag: '40 min lag',
+    bulletins: '22 Bulletins',
+    anomalyIndex: '85%',
+    anomalyNum: 85,
+    query: 'Visakhapatnam deep sea bathymetry, current shear, and cyclone telemetry',
+  },
+  {
+    name: 'Kochi Offshore Basin',
+    vessels: '37 Vessels',
+    lag: '18 min lag',
+    bulletins: '15 Bulletins',
+    anomalyIndex: '58%',
+    anomalyNum: 58,
+    query: 'Kochi offshore thermal stratification and monsoon trawl regulation advisory',
+  },
+];
+
+const ANOMALY_TAGS = [
+  'SST Anomaly',
+  'Chlorophyll-a',
+  'Upwelling',
+  'Monsoon Ban',
+  'Stratification',
+  'Trawl Limits',
+];
+
+const DEFAULT_TRENDS_SKELETON = {
+  sector: 'Ratnagiri Coastal Fishery Zone (Maharashtra)',
+  monitoring_period: '2019 - 2024 (5-Year Baseline Correlation)',
+  productivity_index: '84% (High Commercial Yield Envelope)',
+  primary_causes: [
+    'Seasonal Coastal Upwelling (Wind stress curl peak)',
+    'Nutrient-rich sub-surface water displacement',
+    'High chlorophyll concentration gradient along 50m isobath',
+  ],
+  months: ['Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep'],
+  sst_baseline_celsius: [28.2, 27.5, 26.8, 26.2, 26.5, 27.1, 28.0, 29.2, 28.8, 27.9, 27.2, 27.8],
+  sst_observed_celsius: [28.4, 27.1, 26.5, 25.8, 26.1, 26.9, 28.5, 29.8, 29.1, 28.2, 27.5, 28.1],
+  chlorophyll_baseline_mg_m3: [0.65, 0.72, 0.85, 0.95, 0.88, 0.75, 0.60, 0.45, 0.50, 0.62, 0.70, 0.68],
+  chlorophyll_observed_mg_m3: [0.70, 0.81, 0.92, 1.15, 1.05, 0.82, 0.58, 0.38, 0.45, 0.68, 0.78, 0.74],
+  statutory_reference: {
+    title: 'INCOIS Marine Fishery Advisory Services & Ocean State Forecast',
+    reference_id: 'INCOIS-MFAS-2024-TR7',
+    lead_agency: 'Indian National Centre for Ocean Information Services (MoES)',
+  },
+  sources: ['INCOIS Satellite Coastal Altimetry', 'CMFRI Annual Catch Census 2023', 'SAC ISRO Oceansat-3 OCM'],
+};
 
 export const HistoricalTrendsView: React.FC = () => {
   const { t } = useLocalization();
+  const navigate = useNavigate();
+  const { setActiveQuery } = useAppStore();
+
   const [activeMetric, setActiveMetric] = useState<'sst' | 'chlorophyll'>('sst');
-  const [data, setData] = useState<any>(historicalFallback);
+  const [data, setData] = useState<any>(DEFAULT_TRENDS_SKELETON);
   const [isLive, setIsLive] = useState<boolean>(false);
   const [selectedMonth, setSelectedMonth] = useState<string>('May');
+  const [sectorIdx, setSectorIdx] = useState<number>(0);
+  const [selectedTag, setSelectedTag] = useState<string>('SST Anomaly');
+
+  const activeSector = SECTOR_OPTIONS[sectorIdx];
 
   useEffect(() => {
     let isMounted = true;
@@ -111,6 +208,77 @@ export const HistoricalTrendsView: React.FC = () => {
   const actSection = typeof statutory_reference === 'object' ? statutory_reference.section : '';
   const actNote = typeof statutory_reference === 'object' ? statutory_reference.regulatory_note : '';
 
+  // Redirection Handlers
+  const handleGovernanceRedirect = () => {
+    setActiveQuery('Maharashtra Marine Fishing Regulation Act MFRA 1981 Section 4(1) Monsoon Trawl Ban regulatory framework and moratorium compliance');
+    navigate('/reasoning');
+  };
+
+  const handleUpwellingRedirect = async () => {
+    try {
+      const res = await apiClient.submitQuery({ text: `Seasonal coastal upwelling and SST mixing dynamics in ${activeSector.name}` });
+      if (res?.response) {
+        useAppStore.getState().setResponse(res.response);
+        useAppStore.getState().setActiveQuery(`Upwelling: ${activeSector.name}`);
+        useAppStore.getState().setActiveScenarioId(null);
+      }
+    } catch (e) {
+      console.warn('Upwelling explore submission error:', e);
+    }
+    navigate('/map');
+  };
+
+  const handleAdvisoryRedirect = () => {
+    setActiveQuery('Monsoon Trawl Ban statutory enforcement and 12-nautical-mile territorial maritime limits');
+    navigate('/alerts');
+  };
+
+  const handleAnomalyExploreRedirect = (tag?: string) => {
+    const activeTag = tag || selectedTag;
+    setActiveQuery(`Ocean telemetry anomaly deep-dive: ${activeTag} in ${activeSector.name} with baseline comparison`);
+    navigate('/chat');
+  };
+
+  const handleSectorExploreRedirect = async () => {
+    try {
+      const res = await apiClient.submitQuery({ text: activeSector.query });
+      if (res?.response) {
+        useAppStore.getState().setResponse(res.response);
+        useAppStore.getState().setActiveQuery(activeSector.name);
+        useAppStore.getState().setActiveScenarioId(null);
+      }
+    } catch (e) {
+      console.warn('Sector explore submission error:', e);
+    }
+    navigate('/map');
+  };
+
+  const handleSkipSector = () => {
+    setSectorIdx((prev) => (prev + 1) % SECTOR_OPTIONS.length);
+  };
+
+  const handleTagSelect = (tag: string) => {
+    setSelectedTag(tag);
+    if (tag === 'SST Anomaly') {
+      setActiveMetric('sst');
+    } else if (tag === 'Chlorophyll-a') {
+      setActiveMetric('chlorophyll');
+    }
+  };
+
+  const handleMonthSelect = (m: string) => {
+    setSelectedMonth(m);
+    const mIdx = months.findIndex((month: string) => month.toLowerCase() === m.toLowerCase());
+    if (mIdx >= 0) {
+      setHoveredIdx(mIdx);
+    }
+  };
+
+  const handleStatCalloutRedirect = () => {
+    setActiveQuery('Satellite telemetry data points processed and real-time sensor observation logs');
+    navigate('/fleet');
+  };
+
   return (
     <div className="trends-view bento-container">
       {/* 1. Header Section */}
@@ -128,13 +296,30 @@ export const HistoricalTrendsView: React.FC = () => {
 
       {/* 2. Top Summary Row */}
       <div className="bento-top-row">
-        <div className="bento-card bento-card--sector">
+        <div
+          className="bento-card bento-card--sector bento-card--clickable"
+          onClick={handleSectorExploreRedirect}
+          title="Click to view active sector on Tactical Map"
+        >
           <div className="sector-info">
-            <span className="sector-name font-bold">{sector}</span>
+            <span className="sector-name font-bold">{sector || activeSector.name}</span>
             <span className="sector-period mono text-xs">{monitoring_period}</span>
           </div>
-          <div className="decline-pill mono font-bold">
-            {productivity_index}
+          <div className="sector-right-meta">
+            <div className="decline-pill mono font-bold">
+              {productivity_index}
+            </div>
+            <button
+              type="button"
+              className="bento-arrow-btn bento-arrow-btn--sm"
+              aria-label="Explore Sector on Map"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleSectorExploreRedirect();
+              }}
+            >
+              <IconArrowUpRight size={12} />
+            </button>
           </div>
         </div>
 
@@ -162,40 +347,80 @@ export const HistoricalTrendsView: React.FC = () => {
           <div className="bento-card bento-card--focus">
             <div className="card-top-head">
               <span className="card-subtitle text-xs font-bold text-muted">Active Sector Focus</span>
-              <span className="card-more">•••</span>
+              <span
+                className="card-more"
+                onClick={handleSkipSector}
+                title="Cycle to next sector"
+              >
+                •••
+              </span>
             </div>
-            
+
             <div className="focus-body">
               <div className="focus-avatar-pod">
                 <IconSearch size={18} color="#4F8BF9" />
               </div>
               <div className="focus-details">
-                <h3 className="focus-title text-sm font-bold">Ratnagiri Fishery Zone</h3>
+                <h3 className="focus-title text-sm font-bold">{activeSector.name}</h3>
                 <div className="focus-meta mono text-xs text-muted">
-                  <span>31 Vessels</span> • <span>50 min lag</span> • <span>12 Lessons</span>
+                  <span>{activeSector.vessels}</span> • <span>{activeSector.lag}</span> • <span>{activeSector.bulletins}</span>
                 </div>
               </div>
             </div>
 
             <div className="focus-progress-area">
               <div className="progress-labels mono text-xs">
-                <span className="font-bold">80% Anomaly Index</span>
+                <span className="font-bold">{activeSector.anomalyIndex} Anomaly Index</span>
               </div>
               <div className="progress-track">
-                <div className="progress-fill" style={{ width: '80%' }} />
+                <div
+                  className="progress-fill"
+                  style={{ width: `${activeSector.anomalyNum}%` }}
+                />
               </div>
               <div className="focus-actions">
-                <button type="button" className="btn-secondary text-xs">Skip</button>
-                <button type="button" className="btn-primary text-xs">Explore Sector</button>
+                <button
+                  type="button"
+                  className="btn-secondary text-xs"
+                  onClick={handleSkipSector}
+                  title="Switch to next monitored fishing sector"
+                >
+                  Skip
+                </button>
+                <button
+                  type="button"
+                  className="btn-primary text-xs"
+                  onClick={handleSectorExploreRedirect}
+                  title="Explore this sector on Tactical Marine Map"
+                >
+                  Explore Sector
+                </button>
               </div>
             </div>
           </div>
 
           {/* Card 2: Statutory Regulation Card (Pastel Amber) */}
-          <div className="bento-card bento-card--governance">
+          <div
+            className="bento-card bento-card--governance bento-card--clickable"
+            onClick={handleGovernanceRedirect}
+            title="Click to explore Statutory Governance Reasoning"
+          >
             <div className="card-top-head">
-              <span className="governance-badge mono text-xs">GOVERNANCE</span>
-              <button type="button" className="bento-arrow-btn" aria-label="Explore Governance">↗</button>
+              <div className="governance-head-left">
+                <IconScale size={14} color="#92400E" />
+                <span className="governance-badge mono text-xs">GOVERNANCE</span>
+              </div>
+              <button
+                type="button"
+                className="bento-arrow-btn"
+                aria-label="Explore Governance"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleGovernanceRedirect();
+                }}
+              >
+                <IconArrowUpRight size={13} />
+              </button>
             </div>
             <div className="governance-body">
               <h4 className="governance-title text-sm font-bold">{actTitle}</h4>
@@ -210,8 +435,9 @@ export const HistoricalTrendsView: React.FC = () => {
           <div className="bento-card bento-card--hero-dark">
             <div className="hero-dark-header">
               <div className="hero-title-area">
+                <IconLayers size={16} color="#38BDF8" />
                 <h3 className="hero-title">Telemetry Observation</h3>
-                <span className="hero-more">•••</span>
+                <span className="hero-more" title="Telemetry layers active">•••</span>
               </div>
 
               <div className="chart-tabs" role="tablist">
@@ -252,7 +478,7 @@ export const HistoricalTrendsView: React.FC = () => {
                     <stop offset="100%" stopColor="#00E676" stopOpacity="0.0" />
                   </linearGradient>
 
-                  {/* Diagonal Hatch Pattern (Matching Reference Image 2) */}
+                  {/* Diagonal Hatch Pattern */}
                   <pattern id="diagonalHatch" width="8" height="8" patternTransform="rotate(45 0 0)" patternUnits="userSpaceOnUse">
                     <line x1="0" y1="0" x2="0" y2="8" stroke="rgba(255, 255, 255, 0.08)" strokeWidth="1.5" />
                   </pattern>
@@ -365,7 +591,7 @@ export const HistoricalTrendsView: React.FC = () => {
                       key={m}
                       style={{ cursor: 'pointer' }}
                       onMouseEnter={() => setHoveredIdx(idx)}
-                      onClick={() => setHoveredIdx(idx)}
+                      onClick={() => handleMonthSelect(m)}
                     >
                       {/* Transparent Hover Hitbox */}
                       <rect
@@ -425,19 +651,55 @@ export const HistoricalTrendsView: React.FC = () => {
 
           {/* Sub-row cards in center column */}
           <div className="bento-subrow">
-            <div className="bento-card bento-card--pastel-mint">
+            {/* Card 1: Upwelling Status */}
+            <div
+              className="bento-card bento-card--pastel-mint bento-card--clickable"
+              onClick={handleUpwellingRedirect}
+              title="Click to view Upwelling & SST mixing on Map"
+            >
               <div className="card-top-head">
-                <span className="pastel-label text-xs font-bold">Upwelling Status</span>
-                <button type="button" className="bento-arrow-btn" aria-label="Explore Upwelling">↗</button>
+                <div className="pastel-head-left">
+                  <IconWave size={14} color="#065F46" />
+                  <span className="pastel-label text-xs font-bold">Upwelling Status</span>
+                </div>
+                <button
+                  type="button"
+                  className="bento-arrow-btn"
+                  aria-label="Explore Upwelling"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleUpwellingRedirect();
+                  }}
+                >
+                  <IconArrowUpRight size={13} />
+                </button>
               </div>
               <h4 className="pastel-title text-sm font-bold">Seasonal Upwelling Delay</h4>
               <p className="pastel-desc text-xs text-muted">Warm surface cap delays cold nutrient-rich subsurface water mixing.</p>
             </div>
 
-            <div className="bento-card bento-card--pastel-sage">
+            {/* Card 2: Fisheries Advisory */}
+            <div
+              className="bento-card bento-card--pastel-sage bento-card--clickable"
+              onClick={handleAdvisoryRedirect}
+              title="Click to view Active Marine Advisories & Bans"
+            >
               <div className="card-top-head">
-                <span className="pastel-label text-xs font-bold">Fisheries Advisory</span>
-                <button type="button" className="bento-arrow-btn" aria-label="Explore Advisory">↗</button>
+                <div className="pastel-head-left">
+                  <IconFileText size={14} color="#1E40AF" />
+                  <span className="pastel-label text-xs font-bold">Fisheries Advisory</span>
+                </div>
+                <button
+                  type="button"
+                  className="bento-arrow-btn"
+                  aria-label="Explore Advisory"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleAdvisoryRedirect();
+                  }}
+                >
+                  <IconArrowUpRight size={13} />
+                </button>
               </div>
               <h4 className="pastel-title text-sm font-bold">Monsoon Trawl Ban</h4>
               <p className="pastel-desc text-xs text-muted">Strict enforcement active across 12-nautical-mile territorial limits.</p>
@@ -450,20 +712,40 @@ export const HistoricalTrendsView: React.FC = () => {
           {/* Card 1: Calendar / Timeline Widget (Dark) */}
           <div className="bento-card bento-card--calendar">
             <div className="calendar-header">
-              <span className="calendar-nav-btn">‹</span>
+              <span
+                className="calendar-nav-btn"
+                onClick={() => {
+                  const currIdx = months.indexOf(selectedMonth);
+                  const prevIdx = currIdx > 0 ? currIdx - 1 : months.length - 1;
+                  handleMonthSelect(months[prevIdx]);
+                }}
+                title="Previous Month"
+              >
+                ‹
+              </span>
               <span className="calendar-title text-xs font-bold mono">2025–2026 Timeline</span>
-              <span className="calendar-nav-btn">›</span>
+              <span
+                className="calendar-nav-btn"
+                onClick={() => {
+                  const currIdx = months.indexOf(selectedMonth);
+                  const nextIdx = (currIdx + 1) % months.length;
+                  handleMonthSelect(months[nextIdx]);
+                }}
+                title="Next Month"
+              >
+                ›
+              </span>
             </div>
 
             <div className="calendar-month-grid">
               {['Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep'].map((m) => {
-                const isSel = m === selectedMonth;
+                const isSel = m.toLowerCase() === selectedMonth.toLowerCase();
                 return (
                   <button
                     key={m}
                     type="button"
                     className={`month-cell ${isSel ? 'month-cell--active' : ''}`}
-                    onClick={() => setSelectedMonth(m)}
+                    onClick={() => handleMonthSelect(m)}
                   >
                     {m}
                   </button>
@@ -474,29 +756,59 @@ export const HistoricalTrendsView: React.FC = () => {
 
           {/* Card 2: Anomaly Quick Filter Tags (Pastel Rose) */}
           <div className="bento-card bento-card--tags">
-            <h4 className="tags-title text-sm font-bold">Anomaly Drivers</h4>
-            <p className="tags-subtitle text-xs text-muted">Most active environmental parameters on board</p>
-
-            <div className="tags-cloud">
-              <span className="tag-pill tag-pill--active">SST Anomaly</span>
-              <span className="tag-pill">Chlorophyll-a</span>
-              <span className="tag-pill">Upwelling</span>
-              <span className="tag-pill">Monsoon Ban</span>
-              <span className="tag-pill">Stratification</span>
-              <span className="tag-pill">Trawl Limits</span>
+            <div className="tags-card-header">
+              <h4 className="tags-title text-sm font-bold">Anomaly Drivers</h4>
+              <p className="tags-subtitle text-xs text-muted">Most active environmental parameters on board</p>
             </div>
 
-            <div className="tags-explore-link text-xs font-bold">
+            <div className="tags-cloud">
+              {ANOMALY_TAGS.map((tag) => {
+                const isAct = tag === selectedTag;
+                return (
+                  <button
+                    key={tag}
+                    type="button"
+                    className={`tag-pill ${isAct ? 'tag-pill--active' : ''}`}
+                    onClick={() => handleTagSelect(tag)}
+                    title={`Filter by ${tag}`}
+                  >
+                    {tag}
+                  </button>
+                );
+              })}
+            </div>
+
+            <div
+              className="tags-explore-link text-xs font-bold bento-card--clickable"
+              onClick={() => handleAnomalyExploreRedirect()}
+              title="Explore full telemetry records in Copilot Chat"
+            >
               <span>Explore Telemetry Records</span>
-              <button type="button" className="bento-arrow-btn bento-arrow-btn--sm" aria-label="Explore Records">↗</button>
+              <button
+                type="button"
+                className="bento-arrow-btn bento-arrow-btn--sm"
+                aria-label="Explore Records"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleAnomalyExploreRedirect();
+                }}
+              >
+                <IconArrowUpRight size={11} />
+              </button>
             </div>
           </div>
 
           {/* Card 3: Metrics Callout Card (White) */}
-          <div className="bento-card bento-card--stat-callout">
+          <div
+            className="bento-card bento-card--stat-callout bento-card--clickable"
+            onClick={handleStatCalloutRedirect}
+            title="Click to view full Fleet & Telemetry Operations"
+          >
             <div className="stat-num-area">
               <span className="stat-number text-display font-bold">450+</span>
-              <span className="stat-icon">🏆</span>
+              <div className="stat-icon-pod">
+                <IconAward size={22} color="#D97706" />
+              </div>
             </div>
             <p className="stat-label text-xs text-muted">Satellite Telemetry Data Points Processed</p>
           </div>
@@ -509,7 +821,8 @@ export const HistoricalTrendsView: React.FC = () => {
         <div className="footer-sources-row">
           {sources.map((s: string, idx: number) => (
             <span key={idx} className="footer-source-pill">
-              ✓ {s}
+              <IconCheck size={11} color="#0D9488" className="inline mr-1" />
+              {s}
             </span>
           ))}
         </div>

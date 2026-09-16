@@ -502,24 +502,30 @@ async def dispatch_data_agents(state: PlannerState) -> dict:
     dest_lon: float | None = None
 
     should_plan_route = False
-    if intent == "route_request":
+    if dest_info and dest_info.get("lat") and dest_info.get("lon"):
+        dest_lat = float(dest_info["lat"])
+        dest_lon = float(dest_info["lon"])
         should_plan_route = True
-        if dest_info:
-            dest_lat = float(dest_info["lat"])
-            dest_lon = float(dest_info["lon"])
-        else:
-            # Default transit 15 NM offshore seaward from departure port
-            dest_lat = start_lat - 0.15
-            dest_lon = start_lon - 0.15
-    elif intent == "find_fishing_zone":
-        # For fishing zone queries, route only to the local PFZ offshore if available
-        if marine and hasattr(marine, "data") and marine.data.get("pfz_zones"):
-            top_zone = marine.data["pfz_zones"][0]
-            if "coordinates" in top_zone and isinstance(top_zone["coordinates"], (list, tuple)):
-                dest_lon, dest_lat = float(top_zone["coordinates"][0]), float(top_zone["coordinates"][1])
-            elif "latitude" in top_zone and "longitude" in top_zone:
-                dest_lat, dest_lon = float(top_zone["latitude"]), float(top_zone["longitude"])
-            should_plan_route = (dest_lat is not None and dest_lon is not None)
+    elif marine and hasattr(marine, "data") and marine.data.get("pfz_zones") and len(marine.data["pfz_zones"]) > 0:
+        # Route to top recommended PFZ zone in the active coastal sector
+        top_zone = marine.data["pfz_zones"][0]
+        if "lat" in top_zone and "lon" in top_zone:
+            dest_lat = float(top_zone["lat"])
+            dest_lon = float(top_zone["lon"])
+        elif "center_lat" in top_zone and "center_lon" in top_zone:
+            dest_lat = float(top_zone["center_lat"])
+            dest_lon = float(top_zone["center_lon"])
+        elif "coordinates" in top_zone and isinstance(top_zone["coordinates"], (list, tuple)):
+            dest_lon, dest_lat = float(top_zone["coordinates"][0]), float(top_zone["coordinates"][1])
+        elif "latitude" in top_zone and "longitude" in top_zone:
+            dest_lat, dest_lon = float(top_zone["latitude"]), float(top_zone["longitude"])
+        should_plan_route = (dest_lat is not None and dest_lon is not None)
+    elif intent in ("route_request", "find_fishing_zone", "safety_check"):
+        # Default seaward transit corridor (approx 12-15 km offshore into the sea)
+        lon_dir = -1.0 if start_lon < 78.0 else 1.0
+        dest_lat = round(start_lat + 0.05, 4)
+        dest_lon = round(start_lon + (lon_dir * 0.12), 4)
+        should_plan_route = True
 
     if should_plan_route and dest_lat is not None and dest_lon is not None:
         try:
@@ -704,6 +710,9 @@ def _build_map_data(state: PlannerState) -> dict:
     for zone in marine.get("data", {}).get("pfz_zones", []):
         z_lon = float(zone.get("lon") if zone.get("lon") is not None else zone.get("center_lon", 0))
         z_lat = float(zone.get("lat") if zone.get("lat") is not None else zone.get("center_lat", 0))
+        species_list = zone.get("likely_species", zone.get("species_likely", []))
+        species_str = ", ".join(species_list) if isinstance(species_list, list) else str(species_list)
+        depth_val = zone.get("estimated_depth_m") or zone.get("depth") or 30
         features.append({
             "type": "Feature",
             "geometry": {
@@ -713,12 +722,16 @@ def _build_map_data(state: PlannerState) -> dict:
             "properties": {
                 "type": "pfz_zone",
                 "zone_id": zone.get("zone_id"),
-                "name": zone.get("name"),
-                "productivity_score": zone.get("productivity_score"),
-                "distance_km": zone.get("distance_km"),
-                "species": zone.get("likely_species", zone.get("species_likely", [])),
-                "estimated_depth_m": zone.get("estimated_depth_m"),
-                "depth_category": zone.get("depth_category"),
+                "name": zone.get("name") or zone.get("title") or "Potential Fishing Zone",
+                "title": zone.get("name") or zone.get("title") or "Potential Fishing Zone",
+                "productivity_score": zone.get("productivity_score", 0.75),
+                "distance_km": zone.get("distance_km", 15.0),
+                "species": species_str,
+                "estimated_depth_m": depth_val,
+                "depth": f"{depth_val}m" if not str(depth_val).endswith("m") else str(depth_val),
+                "sst": f"{zone.get('sst_c', 28.0)}°C",
+                "chlorophyll": f"{zone.get('chlorophyll', 0.7)} mg/m³",
+                "depth_category": zone.get("depth_category", "shelf"),
                 "gear_compatible": zone.get("gear_compatible", True),
                 "gear_warning": zone.get("gear_warning"),
                 "icon": "fish",
@@ -759,6 +772,20 @@ def _build_map_data(state: PlannerState) -> dict:
             "properties": {
                 "type": "destination_location",
                 "name": dest.get("name", "Destination"),
+                "icon": "flag",
+            },
+        })
+    elif state.get("route_result", {}).get("data", {}).get("destination"):
+        r_dest = state["route_result"]["data"]["destination"]
+        features.append({
+            "type": "Feature",
+            "geometry": {
+                "type": "Point",
+                "coordinates": [r_dest[1], r_dest[0]],
+            },
+            "properties": {
+                "type": "destination_location",
+                "name": state["route_result"]["data"].get("destination_name", "Target PFZ Waypoint"),
                 "icon": "flag",
             },
         })
@@ -924,20 +951,10 @@ class PlannerAgent:
         from backend.gateway.multilingual import translate_in, translate_out
         clean_query, detected_lang = await translate_in(query)
 
-        # Determine target language:
-        # If user explicitly asked in Indic script, detected_lang takes precedence.
-        # Otherwise, if UI locale specifies an Indic language, use that locale.
-        target_lang = "en"
-        if detected_lang != "en":
-            target_lang = detected_lang
-        elif locale:
-            loc = locale.lower()
-            if loc.startswith("hi"):
-                target_lang = "hi"
-            elif loc.startswith("mr"):
-                target_lang = "mr"
-            elif loc.startswith("ta"):
-                target_lang = "ta"
+        # Target language policy:
+        # 1. If user typed in Indic script or Indic vocabulary (Hindi, Marathi, Tamil), respond in that Indic language.
+        # 2. If user typed in English, ALWAYS respond in clear English regardless of UI chrome locale.
+        target_lang = detected_lang if detected_lang in ("hi", "mr", "ta") else "en"
 
         logger.info(
             f"[planner] Query: {query!r} (detected={detected_lang}, target={target_lang}, en={clean_query!r}, run={query_run_id[:8]}…)"

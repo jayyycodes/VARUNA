@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "test": "npx tsx src/test/validateFixtures.ts && npx tsx src/test/integrationSuite.ts",
     "test:fixtures": "npx tsx src/test/validateFixtures.ts",
-    "test:integration": "npx tsx src/test/integrationSuite.ts"
+    "test:integration": "npx tsx src/test/integrationSuite.ts",
+    "audit:integration": "npx tsx src/test/backendAuditSuite.ts"
   },
   "dependencies": {
     "framer-motion": "^13.2.0",

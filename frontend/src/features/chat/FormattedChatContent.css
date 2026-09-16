@@ -1,0 +1,422 @@
+/* ==========================================================================
+   FormattedChatContent — Rich Structured Markdown Styling for VARUNA
+   ========================================================================== */
+
+.v-formatted-chat-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  font-size: 14.5px;
+  line-height: 1.65;
+  color: inherit;
+  word-break: break-word;
+}
+
+/* Headings */
+.v-chat-h1 {
+  font-size: 18px;
+  font-weight: 800;
+  color: #0F172A;
+  margin: 14px 0 6px 0;
+  letter-spacing: -0.015em;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.v-chat-h2 {
+  font-size: 16px;
+  font-weight: 750;
+  color: #0369A1;
+  margin: 12px 0 4px 0;
+  letter-spacing: -0.01em;
+  padding-bottom: 4px;
+  border-bottom: 1.5px solid rgba(2, 132, 199, 0.15);
+}
+
+.v-chat-h3 {
+  font-size: 15px;
+  font-weight: 700;
+  color: #0284C7;
+  margin: 10px 0 3px 0;
+}
+
+[data-theme="dark"] .v-chat-h1 {
+  color: #F8FAFC;
+}
+
+[data-theme="dark"] .v-chat-h2 {
+  color: #38BDF8;
+  border-bottom-color: rgba(56, 189, 248, 0.2);
+}
+
+[data-theme="dark"] .v-chat-h3 {
+  color: #7DD3FC;
+}
+
+/* Paragraphs */
+.v-chat-paragraph {
+  margin: 0;
+  line-height: 1.65;
+}
+
+/* Inline Styles */
+.v-chat-strong {
+  font-weight: 700;
+  color: #0F172A;
+}
+
+[data-theme="dark"] .v-chat-strong {
+  color: #F8FAFC;
+}
+
+.v-chat-code {
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12.5px;
+  background: #F1F5F9;
+  color: #0284C7;
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid #E2E8F0;
+}
+
+[data-theme="dark"] .v-chat-code {
+  background: #1E293B;
+  color: #38BDF8;
+  border-color: #334155;
+}
+
+.v-chat-em {
+  font-style: italic;
+  color: #475569;
+}
+
+[data-theme="dark"] .v-chat-em {
+  color: #94A3B8;
+}
+
+/* Divider */
+.v-chat-divider {
+  border: none;
+  border-top: 1px dashed #CBD5E1;
+  margin: 10px 0;
+  opacity: 0.7;
+}
+
+[data-theme="dark"] .v-chat-divider {
+  border-top-color: #334155;
+}
+
+/* Verdict Inline Badges */
+.v-inline-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.v-inline-badge--safe {
+  background: #DCFCE7;
+  color: #15803D;
+  border: 1px solid #86EFAC;
+}
+
+.v-inline-badge--caution {
+  background: #FEF3C7;
+  color: #B45309;
+  border: 1px solid #FCD34D;
+}
+
+.v-inline-badge--unsafe {
+  background: #FFE4E6;
+  color: #BE123C;
+  border: 1px solid #FDA4AF;
+}
+
+[data-theme="dark"] .v-inline-badge--safe {
+  background: rgba(34, 197, 94, 0.2);
+  color: #4ADE80;
+  border-color: rgba(74, 222, 128, 0.3);
+}
+
+[data-theme="dark"] .v-inline-badge--caution {
+  background: rgba(245, 158, 11, 0.2);
+  color: #FBBF24;
+  border-color: rgba(251, 191, 36, 0.3);
+}
+
+[data-theme="dark"] .v-inline-badge--unsafe {
+  background: rgba(239, 68, 68, 0.2);
+  color: #F87171;
+  border-color: rgba(248, 113, 113, 0.3);
+}
+
+/* Lists */
+.v-chat-list,
+.v-chat-num-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 4px 0;
+  padding: 0;
+  list-style: none;
+}
+
+.v-chat-list-item,
+.v-chat-num-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.v-chat-list-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #0284C7;
+  margin-top: 8px;
+  flex-shrink: 0;
+}
+
+.v-chat-num-badge {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #E0F2FE;
+  color: #0369A1;
+  font-size: 11px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+[data-theme="dark"] .v-chat-num-badge {
+  background: rgba(2, 132, 199, 0.25);
+  color: #38BDF8;
+}
+
+.v-chat-list-content {
+  flex: 1;
+}
+
+/* Verdict Callout Banner */
+.v-chat-verdict-callout {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: linear-gradient(135deg, #F0F9FF 0%, #E0F2FE 100%);
+  border: 1px solid #BAE6FD;
+  border-left: 4px solid #0284C7;
+  border-radius: 10px;
+  margin: 6px 0;
+}
+
+[data-theme="dark"] .v-chat-verdict-callout {
+  background: rgba(2, 132, 199, 0.12);
+  border-color: rgba(56, 189, 248, 0.25);
+  border-left-color: #38BDF8;
+}
+
+.v-verdict-callout-icon {
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.v-verdict-callout-text {
+  font-size: 14px;
+  font-weight: 600;
+  color: #0C4A6E;
+  line-height: 1.5;
+}
+
+[data-theme="dark"] .v-verdict-callout-text {
+  color: #E0F2FE;
+}
+
+/* ==========================================================================
+   Markdown Tables (PFZ Hotspots, Telemetry, Waypoints)
+   ========================================================================== */
+.v-chat-table-container {
+  width: 100%;
+  overflow-x: auto;
+  margin: 12px 0;
+  border-radius: 12px;
+  border: 1px solid #CBD5E1;
+  background: #FFFFFF;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.04);
+  -webkit-overflow-scrolling: touch;
+}
+
+[data-theme="dark"] .v-chat-table-container {
+  background: #111827;
+  border-color: #334155;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+
+.v-chat-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+  text-align: left;
+  min-width: 720px;
+}
+
+.v-chat-table thead tr {
+  background: #F8FAFC;
+  border-bottom: 2px solid #E2E8F0;
+}
+
+[data-theme="dark"] .v-chat-table thead tr {
+  background: #1E293B;
+  border-bottom-color: #334155;
+}
+
+.v-chat-table th {
+  padding: 12px 16px;
+  font-weight: 800;
+  color: #0369A1;
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+[data-theme="dark"] .v-chat-table th {
+  color: #38BDF8;
+}
+
+.v-chat-table td {
+  padding: 12px 16px;
+  color: #334155;
+  border-bottom: 1px solid #F1F5F9;
+  vertical-align: middle;
+  word-break: normal !important;
+  overflow-wrap: normal !important;
+  hyphens: none !important;
+  line-height: 1.5;
+}
+
+[data-theme="dark"] .v-chat-table td {
+  color: #CBD5E1;
+  border-bottom-color: #1E293B;
+}
+
+/* Specific Column Tuning */
+.v-chat-table td.v-table-col-0,
+.v-chat-table th:first-child {
+  min-width: 210px;
+  font-weight: 700;
+  color: #0F172A;
+}
+
+[data-theme="dark"] .v-chat-table td.v-table-col-0 {
+  color: #F8FAFC;
+}
+
+.v-chat-table td.v-table-col-1 {
+  min-width: 130px;
+  font-weight: 700;
+  color: #0284C7;
+  white-space: nowrap;
+}
+
+[data-theme="dark"] .v-chat-table td.v-table-col-1 {
+  color: #38BDF8;
+}
+
+.v-chat-table td.v-table-col-2 {
+  min-width: 170px;
+}
+
+.v-chat-table td.v-table-col-3 {
+  min-width: 140px;
+  color: #475569;
+}
+
+[data-theme="dark"] .v-chat-table td.v-table-col-3 {
+  color: #94A3B8;
+}
+
+.v-chat-table td.v-table-col-4 {
+  min-width: 120px;
+}
+
+.v-chat-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.v-chat-table tbody tr:hover {
+  background: #F0F9FF;
+}
+
+[data-theme="dark"] .v-chat-table tbody tr:hover {
+  background: rgba(2, 132, 199, 0.08);
+}
+
+/* Badges inside tables */
+.v-table-score-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px 10px;
+  background: #CCFBF1;
+  color: #0F766E;
+  font-weight: 800;
+  font-size: 12px;
+  border-radius: 6px;
+  border: 1px solid #99F6E4;
+  white-space: nowrap;
+}
+
+[data-theme="dark"] .v-table-score-badge {
+  background: rgba(20, 184, 166, 0.2);
+  color: #2DD4BF;
+  border-color: rgba(45, 212, 191, 0.3);
+}
+
+.v-table-gear-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+.v-table-gear-badge--yes {
+  background: #DCFCE7;
+  color: #15803D;
+  border: 1px solid #86EFAC;
+}
+
+.v-table-gear-badge--no {
+  background: #FEE2E2;
+  color: #B91C1C;
+  border: 1px solid #FCA5A5;
+}
+
+[data-theme="dark"] .v-table-gear-badge--yes {
+  background: rgba(34, 197, 94, 0.2);
+  color: #4ADE80;
+  border-color: rgba(74, 222, 128, 0.3);
+}
+
+[data-theme="dark"] .v-table-gear-badge--no {
+  background: rgba(239, 68, 68, 0.2);
+  color: #F87171;
+  border-color: rgba(248, 113, 113, 0.3);
+}

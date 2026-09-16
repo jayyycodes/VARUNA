@@ -13,6 +13,7 @@ import {
   IconTree,
   IconRoute,
 } from '../../components/Icons';
+import { FormattedChatContent } from './FormattedChatContent';
 import './ChatAssistantModal.css';
 
 export interface ChatMessage {
@@ -398,15 +399,9 @@ export const ChatAssistantModal: React.FC<ChatAssistantModalProps> = ({
 
                 {/* Main Message Text */}
                 <div className="message-bubble">
-                  <div
-                    className="message-text"
-                    dangerouslySetInnerHTML={{
-                      __html: msg.text
-                        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-                        .replace(/\n\n/g, '<br/><br/>')
-                        .replace(/\n/g, '<br/>'),
-                    }}
-                  />
+                  <div className="message-text">
+                    <FormattedChatContent text={msg.text} />
+                  </div>
 
                   {/* Telemetry Metrics Grid */}
                   {msg.metrics && (

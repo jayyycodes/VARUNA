@@ -22,8 +22,8 @@ function MapController({ center, zoom }: { center: [number, number]; zoom: numbe
     const t1 = setTimeout(() => map.invalidateSize(), 50);
     const t2 = setTimeout(() => {
       map.invalidateSize();
-      map.setView(center, zoom, { animate: false });
-    }, 200);
+      map.setView(center, zoom, { animate: true });
+    }, 150);
 
     const handleResize = () => {
       map.invalidateSize();
@@ -35,7 +35,7 @@ function MapController({ center, zoom }: { center: [number, number]; zoom: numbe
       clearTimeout(t2);
       window.removeEventListener('resize', handleResize);
     };
-  }, [center, zoom, map]);
+  }, [center[0], center[1], zoom, map]);
 
   return null;
 }

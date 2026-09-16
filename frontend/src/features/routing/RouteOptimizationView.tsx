@@ -180,17 +180,29 @@ export const RouteOptimizationView: React.FC<RouteOptimizationViewProps> = ({ re
   const hasLiveRoute = Boolean(routeFeature);
   const rProps = routeFeature?.properties || customPlan || {};
 
+  const depFeature = response?.map?.layers
+    ?.flatMap((l) => l.feature_collection?.features || [])
+    .find((f) => f.properties?.type === 'user_location');
+
+  const destFeature = response?.map?.layers
+    ?.flatMap((l) => l.feature_collection?.features || [])
+    .find((f) => f.properties?.type === 'destination_location' || f.properties?.type === 'pfz_zone' || f.properties?.type === 'pfz');
+
   const depName =
     customPlan?.departure?.name ||
+    depFeature?.properties?.name ||
+    depFeature?.properties?.title ||
     portsCatalog.find((p) => p.id === departurePort)?.name ||
     rProps.departure ||
     'Ratnagiri Harbour';
 
   const destName =
     customPlan?.destination?.name ||
+    destFeature?.properties?.name ||
+    destFeature?.properties?.title ||
     portsCatalog.find((p) => p.id === destinationPort)?.name ||
     rProps.destination ||
-    'Malvan Port';
+    'Target PFZ Waypoint';
 
   const routeTitle = hasLiveRoute ? `Route: ${depName} ➔ ${destName}` : `${t('routeTitle')}: Ratnagiri ➔ Malvan`;
   const corridorBadge = `${t('routeCorridorBadge')} // ${depName.toUpperCase()} ➔ ${destName.toUpperCase()}`;

@@ -3,6 +3,23 @@ import type { UserResponseV1 } from '../../contracts/userResponse';
 import { apiClient } from '../../api/client';
 import type { ActiveNavView } from '../query/Sidebar';
 import { useLocalization } from '../../hooks/useLocalization';
+import { FormattedChatContent } from './FormattedChatContent';
+import {
+  IconFish,
+  IconCompass,
+  IconWave,
+  IconCyclone,
+  IconAnchor,
+  IconMapPin,
+  IconShip,
+  IconLightning,
+  IconFolder,
+  IconLink,
+  IconClipboard,
+  IconDownload,
+  IconDatabase,
+  IconSparkles,
+} from '../../components/Icons';
 import './ChatAssistantView.css';
 
 export interface ChatMessage {
@@ -266,9 +283,37 @@ export const ChatAssistantView: React.FC<ChatAssistantViewProps> = ({
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [showScrollBottom, setShowScrollBottom] = useState(false);
 
+  // New: Attachment Popover, Chips, Share Dialog & Toast State
+  const [attachmentMenuOpen, setAttachmentMenuOpen] = useState(false);
+  const [attachedTelemetry, setAttachedTelemetry] = useState<Array<{ id: string; label: string; text: string; icon?: React.ReactNode }>>([]);
+  const [shareModalOpen, setShareModalOpen] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const attachmentWrapperRef = useRef<HTMLDivElement>(null);
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => {
+      setToastMessage((current) => (current === msg ? null : current));
+    }, 2800);
+  };
+
+  // Close attachment menu on outside click
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (attachmentWrapperRef.current && !attachmentWrapperRef.current.contains(e.target as Node)) {
+        setAttachmentMenuOpen(false);
+      }
+    };
+    if (attachmentMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [attachmentMenuOpen]);
 
   // Save sessions to localStorage
   useEffect(() => {
@@ -323,11 +368,41 @@ export const ChatAssistantView: React.FC<ChatAssistantViewProps> = ({
   };
 
   const trendingPrompts = [
-    { id: '#1', icon: '🐟', label: 'Ratnagiri PFZ & Lightning Risk', prompt: 'Where is the nearest Potential Fishing Zone (PFZ) today from Ratnagiri?' },
-    { id: '#2', icon: '🧭', label: 'Kochi Morning Safety Check', prompt: 'Is it safe to venture into the sea tomorrow morning off Kochi?' },
-    { id: '#3', icon: '🌊', label: 'Veraval Swell & Weather', prompt: 'What are the current tide, swell, and weather conditions near Veraval?' },
-    { id: '#4', icon: '🌀', label: 'Andhra Cyclone & Lightning Alert', prompt: 'Are there any active lightning or cyclone alerts along the Andhra Pradesh coast?' },
-    { id: '#5', icon: '⚓', label: 'Safe Fishing Zones Ratnagiri', prompt: 'Find me safe fishing zones in Ratnagiri.' },
+    { 
+      id: '#1', 
+      icon: <IconFish size={20} color="#0284C7" />, 
+      bgClass: 'v-card-icon--cyan',
+      label: 'Ratnagiri PFZ & Lightning Risk', 
+      prompt: 'Where is the nearest Potential Fishing Zone (PFZ) today from Ratnagiri?' 
+    },
+    { 
+      id: '#2', 
+      icon: <IconCompass size={20} color="#D97706" />, 
+      bgClass: 'v-card-icon--amber',
+      label: 'Kochi Morning Safety Check', 
+      prompt: 'Is it safe to venture into the sea tomorrow morning off Kochi?' 
+    },
+    { 
+      id: '#3', 
+      icon: <IconWave size={20} color="#0D9488" />, 
+      bgClass: 'v-card-icon--teal',
+      label: 'Veraval Swell & Weather', 
+      prompt: 'What are the current tide, swell, and weather conditions near Veraval?' 
+    },
+    { 
+      id: '#4', 
+      icon: <IconCyclone size={20} color="#7C3AED" />, 
+      bgClass: 'v-card-icon--purple',
+      label: 'Andhra Cyclone & Lightning Alert', 
+      prompt: 'Are there any active lightning or cyclone alerts along the Andhra Pradesh coast?' 
+    },
+    { 
+      id: '#5', 
+      icon: <IconAnchor size={20} color="#059669" />, 
+      bgClass: 'v-card-icon--emerald',
+      label: 'Safe Fishing Zones Ratnagiri', 
+      prompt: 'Find me safe fishing zones in Ratnagiri.' 
+    },
   ];
 
   // Start a fresh new chat
@@ -335,6 +410,7 @@ export const ChatAssistantView: React.FC<ChatAssistantViewProps> = ({
     setActiveSessionId(null);
     setMessages([]);
     setInputQuery('');
+    setAttachedTelemetry([]);
     setDrawerOpen(false);
     if (inputRef.current) {
       inputRef.current.focus();
@@ -366,34 +442,118 @@ export const ChatAssistantView: React.FC<ChatAssistantViewProps> = ({
     setTimeout(() => setCopiedId(null), 2000);
   };
 
-  const handleActionClick = (act: { label: string; actionType: 'scenario' | 'view'; target: string }, scenarioSyncId?: string) => {
+  const handleActionClick = (act: { label: string; actionType: 'scenario' | 'view'; target: string }) => {
     if (act.actionType === 'scenario') {
       onSelectScenario(act.target);
       _onChangeView('map');
     } else if (act.actionType === 'view') {
-      if (act.target === 'map' && scenarioSyncId) {
-        onSelectScenario(scenarioSyncId);
-      }
       _onChangeView(act.target as ActiveNavView);
     }
   };
 
-  const handleShareChat = () => {
-    const chatTitle = activeSessionId 
-      ? (sessions.find((s) => s.id === activeSessionId)?.title || 'VARUNA Marine Copilot') 
-      : 'VARUNA Marine Copilot';
-    const textExport = `[VARUNA Marine Copilot Chat: ${chatTitle}]\n\n` + 
-      messages.map((m) => `${m.sender.toUpperCase()} (${m.timestamp}):\n${m.text}\n`).join('\n---\n');
-    
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(textExport);
-      alert('Conversation copied to clipboard! You can share it anywhere.');
+  // Attachment Handlers
+  const handleAttachItem = (item: { id: string; label: string; text: string; icon?: React.ReactNode }) => {
+    if (!attachedTelemetry.some((t) => t.id === item.id)) {
+      setAttachedTelemetry((prev) => [...prev, item]);
+      showToast(`Attached ${item.label}`);
+    }
+    setAttachmentMenuOpen(false);
+    if (inputRef.current) {
+      inputRef.current.focus();
     }
   };
 
+  const handleRemoveAttachment = (id: string) => {
+    setAttachedTelemetry((prev) => prev.filter((t) => t.id !== id));
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const content = event.target?.result as string;
+      const snippet = content.slice(0, 300);
+      handleAttachItem({
+        id: `file-${Date.now()}`,
+        label: file.name,
+        icon: <IconFolder size={14} color="#64748B" />,
+        text: `\n[Attached File: ${file.name} - ${snippet}...]`,
+      });
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  };
+
+  // Share Dialog Actions
+  const handleCopyLink = () => {
+    const link = window.location.href;
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(link);
+      showToast('✓ Link copied to clipboard!');
+      setShareModalOpen(false);
+    }
+  };
+
+  const handleCopyTranscript = () => {
+    const chatTitle = activeSessionId 
+      ? (sessions.find((s) => s.id === activeSessionId)?.title || 'VARUNA Marine Copilot') 
+      : 'VARUNA Marine Copilot';
+    const textExport = `# VARUNA Marine Copilot: ${chatTitle}\nGenerated: ${new Date().toLocaleString()}\n\n` + 
+      messages.map((m) => `### ${m.sender === 'user' ? '👤 Captain' : '⚓ VARUNA Copilot'} (${m.timestamp})\n${m.text}\n`).join('\n---\n');
+    
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(textExport);
+      showToast('✓ Full transcript copied to clipboard!');
+      setShareModalOpen(false);
+    }
+  };
+
+  const handleDownloadMarkdown = () => {
+    const chatTitle = activeSessionId 
+      ? (sessions.find((s) => s.id === activeSessionId)?.title || 'VARUNA Marine Copilot') 
+      : 'VARUNA Marine Copilot';
+    const textExport = `# VARUNA Marine Copilot Advisory: ${chatTitle}\nDate: ${new Date().toLocaleString()}\n\n` + 
+      messages.map((m) => `### ${m.sender === 'user' ? '👤 Captain' : '⚓ VARUNA Copilot'} (${m.timestamp})\n${m.text}\n`).join('\n---\n');
+    
+    const blob = new Blob([textExport], { type: 'text/markdown;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `VARUNA_Advisory_${Date.now()}.md`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showToast('✓ Downloaded Markdown advisory report');
+    setShareModalOpen(false);
+  };
+
+  const handleDownloadJson = () => {
+    const payload = {
+      service: 'VARUNA Marine Copilot',
+      session_id: activeSessionId,
+      exported_at: new Date().toISOString(),
+      messages,
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `VARUNA_Telemetry_${Date.now()}.json`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showToast('✓ Downloaded JSON telemetry export');
+    setShareModalOpen(false);
+  };
+
   const handleSendMessage = async (textToSend?: string) => {
-    const query = (textToSend || inputQuery).trim();
-    if (!query || isThinking) return;
+    const rawQuery = (textToSend || inputQuery).trim();
+    if (!rawQuery && attachedTelemetry.length === 0) return;
+    if (isThinking) return;
+
+    const telemetryContext = attachedTelemetry.map((t) => t.text).join(' ');
+    const query = telemetryContext ? `${rawQuery} ${telemetryContext}`.trim() : rawQuery;
 
     const userMsgId = `user-${Date.now()}`;
     const userMsg: ChatMessage = {
@@ -407,6 +567,7 @@ export const ChatAssistantView: React.FC<ChatAssistantViewProps> = ({
     const updatedMessages = [...messages, userMsg];
     setMessages(updatedMessages);
     setInputQuery('');
+    setAttachedTelemetry([]);
     setIsThinking(true);
 
     try {
@@ -431,10 +592,6 @@ export const ChatAssistantView: React.FC<ChatAssistantViewProps> = ({
 
       // Persist in chat session history
       saveToSessionHistory(query, finalMessages, chatRes.scenarioSyncId);
-
-      if (chatRes.scenarioSyncId) {
-        onSelectScenario(chatRes.scenarioSyncId);
-      }
     } catch (err: any) {
       console.warn('Chat assistant live fallback trigger:', err);
       generateAgentResponse(query, updatedMessages);
@@ -725,7 +882,7 @@ export const ChatAssistantView: React.FC<ChatAssistantViewProps> = ({
             <button
               type="button"
               className="v-topbar-action-btn"
-              onClick={handleShareChat}
+              onClick={() => setShareModalOpen(true)}
               title="Share conversation"
             >
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
@@ -750,7 +907,7 @@ export const ChatAssistantView: React.FC<ChatAssistantViewProps> = ({
                ========================================================================= */
             <div className="v-claude-welcome-container">
               <div className="v-claude-welcome-badge">
-                <span className="v-spark-icon">⚓</span>
+                <IconAnchor size={14} color="#0284C7" />
                 <span>Marine Intelligence Copilot</span>
               </div>
 
@@ -770,7 +927,7 @@ export const ChatAssistantView: React.FC<ChatAssistantViewProps> = ({
                     className="v-claude-prompt-card"
                     onClick={() => handleSendMessage(item.prompt)}
                   >
-                    <span className="v-card-icon">{item.icon}</span>
+                    <span className={`v-card-icon ${item.bgClass}`}>{item.icon}</span>
                     <div className="v-card-text-col">
                       <span className="v-card-label">{item.label}</span>
                       <span className="v-card-query">{item.prompt}</span>
@@ -793,7 +950,7 @@ export const ChatAssistantView: React.FC<ChatAssistantViewProps> = ({
                   >
                     {isAsst && (
                       <div className="v-claude-avatar-asst">
-                        <span>⚓</span>
+                        <IconAnchor size={15} color="#FFFFFF" />
                       </div>
                     )}
 
@@ -836,11 +993,9 @@ export const ChatAssistantView: React.FC<ChatAssistantViewProps> = ({
                         </div>
                       )}
 
-                      {/* Main Message Text */}
+                      {/* Main Message Text — Structured Markdown, Tables & Oceanic Cards */}
                       <div className="v-claude-text-content">
-                        {msg.text.split('\n').map((line, idx) => (
-                          <p key={idx}>{line}</p>
-                        ))}
+                        <FormattedChatContent text={msg.text} />
                       </div>
 
                       {/* Verdict Status Tag */}
@@ -884,7 +1039,7 @@ export const ChatAssistantView: React.FC<ChatAssistantViewProps> = ({
                               key={aIdx}
                               type="button"
                               className="v-action-btn"
-                              onClick={() => handleActionClick(act, msg.scenarioSyncId)}
+                              onClick={() => handleActionClick(act)}
                             >
                               <span>{act.label}</span>
                               <span className="v-action-arrow">→</span>
@@ -920,7 +1075,7 @@ export const ChatAssistantView: React.FC<ChatAssistantViewProps> = ({
               {isThinking && (
                 <div className="v-claude-msg-row v-claude-msg-row--asst">
                   <div className="v-claude-avatar-asst">
-                    <span>⚡</span>
+                    <IconSparkles size={15} color="#FFFFFF" />
                   </div>
                   <div className="v-claude-bubble v-claude-bubble--asst v-bubble-loading">
                     <div className="v-thinking-dots-anim">
@@ -954,9 +1109,18 @@ export const ChatAssistantView: React.FC<ChatAssistantViewProps> = ({
         )}
 
         {/* =========================================================================
-            3. CLAUDE / GROK STYLE FLOATING COMPOSER CARD (Matches Reference Image 1)
+            3. CLAUDE / GROK STYLE FLOATING COMPOSER CARD
             ========================================================================= */}
         <div className="v-claude-composer-wrapper">
+          {/* Hidden File Input for Telemetry Logs */}
+          <input
+            type="file"
+            ref={fileInputRef}
+            style={{ display: 'none' }}
+            accept=".csv,.json,.txt,.log"
+            onChange={handleFileUpload}
+          />
+
           <form
             className="v-claude-composer-card"
             onSubmit={(e) => {
@@ -964,6 +1128,26 @@ export const ChatAssistantView: React.FC<ChatAssistantViewProps> = ({
               handleSendMessage();
             }}
           >
+            {/* Attachment Chips Row */}
+            {attachedTelemetry.length > 0 && (
+              <div className="v-attachment-chips-row">
+                {attachedTelemetry.map((item) => (
+                  <span key={item.id} className="v-attachment-chip">
+                    {item.icon && <span className="v-chip-icon">{item.icon}</span>}
+                    <span>{item.label}</span>
+                    <button
+                      type="button"
+                      className="v-attachment-chip-remove"
+                      onClick={() => handleRemoveAttachment(item.id)}
+                      title="Remove attachment"
+                    >
+                      ✕
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+
             <input
               ref={inputRef}
               type="text"
@@ -976,19 +1160,111 @@ export const ChatAssistantView: React.FC<ChatAssistantViewProps> = ({
 
             <div className="v-composer-bottom-row">
               <div className="v-composer-actions-left">
-                {/* + Attachment / Quick Action Button */}
-                <button
-                  type="button"
-                  className="v-composer-icon-btn"
-                  onClick={() => setInputQuery((prev) => prev ? `${prev} [Buoy Telemetry Attached]` : 'Attach coastal buoy telemetry off Ratnagiri')}
-                  title="Attach coastal data or telemetry"
-                  aria-label="Attach data"
-                >
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                    <line x1="12" y1="5" x2="12" y2="19" />
-                    <line x1="5" y1="12" x2="19" y2="12" />
-                  </svg>
-                </button>
+                {/* + Attachment / Quick Action Button with Interactive Popover */}
+                <div className="v-attachment-wrapper" ref={attachmentWrapperRef}>
+                  <button
+                    type="button"
+                    className={`v-composer-icon-btn ${attachmentMenuOpen ? 'v-composer-icon-btn--active' : ''}`}
+                    onClick={() => setAttachmentMenuOpen(!attachmentMenuOpen)}
+                    title="Attach coastal data or telemetry"
+                    aria-label="Attach data"
+                  >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                      <line x1="12" y1="5" x2="12" y2="19" />
+                      <line x1="5" y1="12" x2="19" y2="12" />
+                    </svg>
+                  </button>
+
+                  {/* Sleek Telemetry Attachment Popover */}
+                  {attachmentMenuOpen && (
+                    <div className="v-attachment-popover">
+                      <div className="v-attachment-header">Attach Ocean Telemetry</div>
+                      
+                      <button
+                        type="button"
+                        className="v-attachment-item"
+                        onClick={() => handleAttachItem({
+                          id: 'incois-buoy',
+                          label: 'INCOIS Buoy CB-02',
+                          icon: <IconWave size={14} color="#0284C7" />,
+                          text: '\n[Telemetry Attached: INCOIS Wave Buoy CB-02 — Swell 1.44m, SST 28.4°C, Wave Period 8.8s]'
+                        })}
+                      >
+                        <span className="v-attachment-icon v-attachment-icon--blue"><IconWave size={16} color="#0284C7" /></span>
+                        <div className="v-attachment-info">
+                          <span className="v-attachment-name">INCOIS Wave Buoy</span>
+                          <span className="v-attachment-sub">Swell 1.44m • SST 28.4°C</span>
+                        </div>
+                      </button>
+
+                      <button
+                        type="button"
+                        className="v-attachment-item"
+                        onClick={() => handleAttachItem({
+                          id: 'gps-fix',
+                          label: 'Coastal GPS Fix',
+                          icon: <IconMapPin size={14} color="#E11D48" />,
+                          text: '\n[GPS Fix Attached: 16.989° N, 73.284° E — Ratnagiri Mirya Bay]'
+                        })}
+                      >
+                        <span className="v-attachment-icon v-attachment-icon--rose"><IconMapPin size={16} color="#E11D48" /></span>
+                        <div className="v-attachment-info">
+                          <span className="v-attachment-name">Vessel GPS Position</span>
+                          <span className="v-attachment-sub">16.989° N, 73.284° E</span>
+                        </div>
+                      </button>
+
+                      <button
+                        type="button"
+                        className="v-attachment-item"
+                        onClick={() => handleAttachItem({
+                          id: 'vessel-craft',
+                          label: 'Mechanized Trawler (14m)',
+                          icon: <IconShip size={14} color="#4F46E5" />,
+                          text: '\n[Vessel Profile: Mechanized Trawler (14m OAL, Draft 2.2m, Class-B AIS)]'
+                        })}
+                      >
+                        <span className="v-attachment-icon v-attachment-icon--indigo"><IconShip size={16} color="#4F46E5" /></span>
+                        <div className="v-attachment-info">
+                          <span className="v-attachment-name">Vessel Craft Profile</span>
+                          <span className="v-attachment-sub">Mechanized Trawler (14m)</span>
+                        </div>
+                      </button>
+
+                      <button
+                        type="button"
+                        className="v-attachment-item"
+                        onClick={() => handleAttachItem({
+                          id: 'imd-radar',
+                          label: 'IMD Cyclone Radar',
+                          icon: <IconLightning size={14} color="#D97706" />,
+                          text: '\n[Atmospheric Radar: Wind Gust 24kt, Lightning Risk: Low]'
+                        })}
+                      >
+                        <span className="v-attachment-icon v-attachment-icon--amber"><IconLightning size={16} color="#D97706" /></span>
+                        <div className="v-attachment-info">
+                          <span className="v-attachment-name">IMD Cyclone Radar</span>
+                          <span className="v-attachment-sub">Wind Gust 24kt • Low Lightning</span>
+                        </div>
+                      </button>
+
+                      <button
+                        type="button"
+                        className="v-attachment-item"
+                        onClick={() => {
+                          setAttachmentMenuOpen(false);
+                          fileInputRef.current?.click();
+                        }}
+                      >
+                        <span className="v-attachment-icon v-attachment-icon--slate"><IconFolder size={16} color="#64748B" /></span>
+                        <div className="v-attachment-info">
+                          <span className="v-attachment-name">Upload Ocean Log</span>
+                          <span className="v-attachment-sub">.csv, .json, .txt dataset</span>
+                        </div>
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div className="v-composer-actions-right">
@@ -1011,7 +1287,7 @@ export const ChatAssistantView: React.FC<ChatAssistantViewProps> = ({
                 <button
                   type="submit"
                   className="v-claude-send-btn"
-                  disabled={!inputQuery.trim() || isThinking}
+                  disabled={(!inputQuery.trim() && attachedTelemetry.length === 0) || isThinking}
                   aria-label="Send message"
                 >
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -1030,6 +1306,82 @@ export const ChatAssistantView: React.FC<ChatAssistantViewProps> = ({
           </div>
         </div>
       </main>
+
+      {/* Share Modal Dialog */}
+      {shareModalOpen && (
+        <div className="v-share-modal-backdrop" onClick={() => setShareModalOpen(false)}>
+          <div className="v-share-modal-card" onClick={(e) => e.stopPropagation()}>
+            <div className="v-share-modal-header">
+              <h3 className="v-share-modal-title">Share Oceanic Advisory</h3>
+              <button
+                type="button"
+                className="v-share-modal-close"
+                onClick={() => setShareModalOpen(false)}
+                title="Close"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="v-share-modal-body">
+              <div className="v-share-topic-preview">
+                <div className="v-share-topic-title">
+                  {activeSessionId 
+                    ? (sessions.find((s) => s.id === activeSessionId)?.title || 'Marine Advisory Conversation')
+                    : 'Current Advisory Session'}
+                </div>
+                <div className="v-share-topic-sub">
+                  {messages.length} messages • Generated with INCOIS & IMD Rule Engine
+                </div>
+              </div>
+
+              <div className="v-share-options-grid">
+                <button
+                  type="button"
+                  className="v-share-option-btn"
+                  onClick={handleCopyLink}
+                >
+                  <span className="v-share-option-icon v-share-option-icon--blue"><IconLink size={18} color="#0284C7" /></span>
+                  <span>Copy Shareable Link</span>
+                </button>
+
+                <button
+                  type="button"
+                  className="v-share-option-btn"
+                  onClick={handleCopyTranscript}
+                >
+                  <span className="v-share-option-icon v-share-option-icon--teal"><IconClipboard size={18} color="#0D9488" /></span>
+                  <span>Copy Markdown Transcript</span>
+                </button>
+
+                <button
+                  type="button"
+                  className="v-share-option-btn"
+                  onClick={handleDownloadMarkdown}
+                >
+                  <span className="v-share-option-icon v-share-option-icon--purple"><IconDownload size={18} color="#7C3AED" /></span>
+                  <span>Download Advisory Report (.md)</span>
+                </button>
+
+                <button
+                  type="button"
+                  className="v-share-option-btn"
+                  onClick={handleDownloadJson}
+                >
+                  <span className="v-share-option-icon v-share-option-icon--indigo"><IconDatabase size={18} color="#4F46E5" /></span>
+                  <span>Download Telemetry JSON (.json)</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Floating Animated Toast Notification */}
+      {toastMessage && (
+        <div className="v-chat-toast">
+          <span>{toastMessage}</span>
+        </div>
+      )}
     </div>
   );
 };

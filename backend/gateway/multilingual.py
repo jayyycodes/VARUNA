@@ -63,10 +63,10 @@ def detect_language(text: str) -> str:
             return "hi"
 
     # Check for Romanized / Latin script Indic phrases (e.g. "kya ratnagiri safe hai")
-    lower = text.lower()
-    if any(term in lower for term in ["kya", "shakto ka", "aahe ka", "machli", "mausam", "surakshit"]):
-        if any(term in lower for term in ["aahe ka", "shakto ka", "sang"]):
-            return "mr"
+    # Use word boundaries to avoid false positives on English words
+    if re.search(r"\b(aahe\s+ka|shakto\s+ka|sang|masemari|havaman)\b", text, re.IGNORECASE):
+        return "mr"
+    if re.search(r"\b(kya|machli|mausam|surakshit|bataye|batao|sakta\s+hu|sakte\s+hai)\b", text, re.IGNORECASE):
         return "hi"
 
     return "en"

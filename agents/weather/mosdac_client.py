@@ -14,6 +14,7 @@ MOSDAC WMS Integration Roadmap:
 from __future__ import annotations
 
 import logging
+import os
 from typing import Any, Optional
 
 logger = logging.getLogger("mosdac_client")
@@ -25,7 +26,10 @@ class MOSDACLightningClient:
     def __init__(self, redis_client=None, timeout: float = 5.0):
         self.redis = redis_client
         self.timeout = timeout
-        self.wms_base_url = "https://mosdac.gov.in/wms/lightning"
+        self.username = os.getenv("MOSDAC_USERNAME", "")
+        self.password = os.getenv("MOSDAC_PASSWORD", "")
+        self.wms_base_url = os.getenv("MOSDAC_WMS_URL", "https://mosdac.gov.in/geoserver/wms")
+        self.wcs_base_url = os.getenv("MOSDAC_WCS_URL", "https://mosdac.gov.in/geoserver/wcs")
 
     def estimate_lightning_risk(
         self,

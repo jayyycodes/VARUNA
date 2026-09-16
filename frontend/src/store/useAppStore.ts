@@ -1,10 +1,12 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { UserResponseV1 } from '../contracts/userResponse';
+import type { DataProvenance } from '../types/provenance';
 
 export interface AppStore {
   // Query & Data state
   response: UserResponseV1 | null;
+  provenance: DataProvenance | null;
   loading: boolean;
   error: string | null;
   activeQuery: string | null;
@@ -25,6 +27,7 @@ export interface AppStore {
 
   // Actions
   setResponse: (r: UserResponseV1 | null) => void;
+  setProvenance: (p: DataProvenance | null) => void;
   setLoading: (v: boolean) => void;
   setError: (e: string | null) => void;
   setActiveQuery: (q: string | null) => void;
@@ -44,6 +47,7 @@ export const useAppStore = create<AppStore>()(
   persist(
     (set, get) => ({
       response: null,
+      provenance: null,
       loading: false,
       error: null,
       activeQuery: null,
@@ -57,6 +61,7 @@ export const useAppStore = create<AppStore>()(
       mode: 'command',
 
       setResponse: (r) => set({ response: r }),
+      setProvenance: (p) => set({ provenance: p }),
       setLoading: (v) => set({ loading: v }),
       setError: (e) => set({ error: e }),
       setActiveQuery: (q) => set({ activeQuery: q }),
