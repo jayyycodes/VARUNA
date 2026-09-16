@@ -23,6 +23,8 @@ import { useAppStore } from './store/useAppStore';
 import { IconMapPin, IconSearch, IconCopilotBot, IconAnchor, IconBook } from './components/Icons';
 import { MobileTabBar } from './components/MobileTabBar';
 import { useIsMobile } from './hooks/useIsMobile';
+import { DataProvenanceBadge } from './components/DataProvenanceBadge';
+import { provenanceLogger } from './utils/provenanceLogger';
 import './App.css';
 
 const NAV_ACCENTS: Record<ActiveNavView, { accent: string; accentText: string }> = {
@@ -89,12 +91,39 @@ function App() {
     document.documentElement.setAttribute('data-theme', 'sunlight');
   }, []);
 
-  // Load initial demo scenario on mount
+  // Load initial live operational query or demo scenario on mount
   useEffect(() => {
     if (!response) {
-      executeScenario('safe_complete');
+      apiClient.checkHealth().then((health) => {
+        if (health.online) {
+          apiClient.submitQuery({ text: 'Ratnagiri port live marine safety and fishing telemetry' })
+            .then((res) => {
+              setResponse(res.response);
+              setActiveQuery('Ratnagiri Coast Live');
+            })
+            .catch(() => {
+              executeScenario('safe_complete');
+            });
+        } else {
+          executeScenario('safe_complete');
+        }
+      }).catch(() => {
+        executeScenario('safe_complete');
+      });
     }
   }, []);
+
+  // Structured request provenance: log RENDER_COMPLETE on view or response change
+  useEffect(() => {
+    if (response?.query_run_id) {
+      provenanceLogger.log({
+        query_run_id: response.query_run_id,
+        stage: 'RENDER_COMPLETE',
+        component: activeView,
+        details: `Rendered view: ${activeView}`,
+      });
+    }
+  }, [response?.query_run_id, activeView]);
 
   const executeScenario = async (fixtureId: string) => {
     setLoading(true);
@@ -230,6 +259,9 @@ function App() {
           </div>
 
           <div className="dashboard-topbar__right">
+            {/* Dev-Only Data Provenance Badge & Inspector */}
+            <DataProvenanceBadge />
+
             {/* Language Selector */}
             <LanguageSelector currentLang={currentLang} onLanguageChange={setLanguage} />
 

@@ -165,6 +165,33 @@
   color: #94A3B8;
   font-weight: bold;
   cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 6px;
+  transition: all 0.15s ease;
+}
+
+.card-more:hover {
+  background: rgba(0, 0, 0, 0.05);
+  color: #0F172A;
+}
+
+[data-theme="dark"] .card-more:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #FFFFFF;
+}
+
+.bento-card--clickable {
+  cursor: pointer;
+  user-select: none;
+}
+
+.bento-card--clickable:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.07);
+}
+
+.bento-card--clickable:active {
+  transform: translateY(0);
 }
 
 .bento-arrow-btn {
@@ -172,26 +199,43 @@
   height: 28px;
   border-radius: 50%;
   border: 1px solid rgba(0, 0, 0, 0.15);
-  background: transparent;
+  background: rgba(255, 255, 255, 0.6);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 12px;
-  font-weight: bold;
   cursor: pointer;
   color: inherit;
-  transition: all 0.2s ease;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  flex-shrink: 0;
 }
 
 .bento-arrow-btn:hover {
-  background: rgba(0, 0, 0, 0.08);
-  transform: translateY(-1px);
+  background: #FFFFFF;
+  border-color: rgba(0, 0, 0, 0.3);
+  transform: translateY(-1px) scale(1.08);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+}
+
+.bento-arrow-btn:active {
+  transform: scale(0.95);
 }
 
 .bento-arrow-btn--sm {
   width: 24px;
   height: 24px;
-  font-size: 10px;
+}
+
+.governance-head-left,
+.pastel-head-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sector-right-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 /* Column 1: Left Column Cards */
@@ -584,19 +628,29 @@
 }
 
 .tag-pill {
-  background: rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.85);
   border: 1px solid #FECDD3;
   border-radius: var(--radius-pill);
   padding: 4px 10px;
   font-size: 10px;
   color: #9F1239;
   font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.tag-pill:hover {
+  background: #FFE4E6;
+  border-color: #FDA4AF;
+  transform: translateY(-1px);
 }
 
 .tag-pill--active {
-  background: #E11D48;
-  color: #FFFFFF;
-  border-color: #E11D48;
+  background: #E11D48 !important;
+  color: #FFFFFF !important;
+  border-color: #E11D48 !important;
+  box-shadow: 0 2px 8px rgba(225, 29, 72, 0.35);
 }
 
 .tags-explore-link {
@@ -605,6 +659,12 @@
   justify-content: space-between;
   margin-top: 4px;
   color: #9F1239;
+  padding: 4px 0;
+  transition: color 0.15s ease;
+}
+
+.tags-explore-link:hover {
+  color: #BE123C;
 }
 
 /* Stat Callout Card */
@@ -628,8 +688,16 @@
   color: #0F172A;
 }
 
-.stat-icon {
-  font-size: 20px;
+.stat-icon-pod {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  background: #FEF3C7;
+  border: 1px solid #FDE68A;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(217, 119, 6, 0.15);
 }
 
 /* Footer */
