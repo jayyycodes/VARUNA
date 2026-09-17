@@ -10,9 +10,6 @@ import {
   IconWave,
   IconCyclone,
   IconAnchor,
-  IconMapPin,
-  IconShip,
-  IconLightning,
   IconFolder,
   IconLink,
   IconClipboard,
@@ -275,7 +272,6 @@ export const ChatAssistantView: React.FC<ChatAssistantViewProps> = ({
   const [inputQuery, setInputQuery] = useState('');
   const [isThinking, setIsThinking] = useState(false);
   const [expandedThinking, setExpandedThinking] = useState<Record<string, boolean>>({});
-  const [isRecording, setIsRecording] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [historySearch, setHistorySearch] = useState('');
   const [modelDropdownOpen, setModelDropdownOpen] = useState(false);
