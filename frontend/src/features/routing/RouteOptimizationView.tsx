@@ -115,16 +115,26 @@ export const RouteOptimizationView: React.FC<RouteOptimizationViewProps> = ({ re
 
       if (minDist < 3.5) {
         setDeparturePort(nearestPort);
-        // Set appropriate default destination in the same sector
-        if (nearestPort === 'visakhapatnam') setDestinationPort('kakinada');
-        else if (nearestPort === 'kakinada') setDestinationPort('visakhapatnam');
-        else if (nearestPort === 'cochin') setDestinationPort('vizhinjam');
-        else if (nearestPort === 'vizhinjam') setDestinationPort('cochin');
-        else if (nearestPort === 'chennai') setDestinationPort('vizhinjam');
-        else if (nearestPort === 'ratnagiri') setDestinationPort('malvan');
-        else if (nearestPort === 'malvan') setDestinationPort('goa');
-        else if (nearestPort === 'mumbai') setDestinationPort('alibaug');
-        else setDestinationPort('malvan');
+        // Check if candidate PFZs exist in response
+        const candidatePfzs = response.map?.layers
+          ?.flatMap((l) => l.feature_collection?.features || [])
+          .filter((f) => f.properties?.type === 'pfz_zone' || f.properties?.type === 'pfz') || [];
+
+        if (candidatePfzs.length > 0) {
+          const topPfzId = candidatePfzs[0].id || 'pfz-0';
+          setDestinationPort(topPfzId);
+        } else {
+          // Set appropriate default destination in the same sector
+          if (nearestPort === 'visakhapatnam') setDestinationPort('kakinada');
+          else if (nearestPort === 'kakinada') setDestinationPort('visakhapatnam');
+          else if (nearestPort === 'cochin') setDestinationPort('vizhinjam');
+          else if (nearestPort === 'vizhinjam') setDestinationPort('cochin');
+          else if (nearestPort === 'chennai') setDestinationPort('vizhinjam');
+          else if (nearestPort === 'ratnagiri') setDestinationPort('malvan');
+          else if (nearestPort === 'malvan') setDestinationPort('goa');
+          else if (nearestPort === 'mumbai') setDestinationPort('alibaug');
+          else setDestinationPort('malvan');
+        }
       }
     }
   }, [response]);
@@ -184,11 +194,32 @@ export const RouteOptimizationView: React.FC<RouteOptimizationViewProps> = ({ re
     ?.flatMap((l) => l.feature_collection?.features || [])
     .find((f) => f.properties?.type === 'user_location');
 
+  const candidatePfzs = response?.map?.layers
+    ?.flatMap((l) => l.feature_collection?.features || [])
+    .filter((f) => f.properties?.type === 'pfz_zone' || f.properties?.type === 'pfz') || [];
+
   const destFeature = response?.map?.layers
     ?.flatMap((l) => l.feature_collection?.features || [])
     .find((f) => f.properties?.type === 'destination_location' || f.properties?.type === 'pfz_zone' || f.properties?.type === 'pfz');
 
-  const depName =
+  const isTargetPfz = destFeature?.properties?.type === 'pfz_zone' || destFeature?.properties?.type === 'pfz';
+  const pfzDistanceKm = Number(destFeature?.properties?.distance_km || destFeature?.properties?.distance || (candidatePfzs[0]?.properties?.distance_km ?? 0));
+
+  const selectedPfz = candidatePfzs.find(
+    (p) => (p.id || '').toLowerCase() === destinationPort.toLowerCase() ||
+           (p.properties?.name || '').toLowerCase() === destinationPort.toLowerCase()
+  );
+
+  const cleanLabel = (name: string | undefined | null, fallback: string = '') => {
+    if (!name || typeof name !== 'string') return fallback;
+    const cleaned = name
+      .replace(/,\s*(?:Maharashtra|Goa|Kerala|Tamil Nadu|Karnataka|Gujarat|Andhra Pradesh|Odisha|West Bengal|default).*$/i, '')
+      .replace(/\s*\(\d+.*?\)/g, '')
+      .trim();
+    return cleaned || fallback;
+  };
+
+  const rawDepName =
     customPlan?.departure?.name ||
     depFeature?.properties?.name ||
     depFeature?.properties?.title ||
@@ -196,28 +227,43 @@ export const RouteOptimizationView: React.FC<RouteOptimizationViewProps> = ({ re
     rProps.departure ||
     'Ratnagiri Harbour';
 
-  const destName =
+  const rawDestName =
     customPlan?.destination?.name ||
-    destFeature?.properties?.name ||
-    destFeature?.properties?.title ||
+    selectedPfz?.properties?.name ||
+    selectedPfz?.id ||
+    (isTargetPfz ? (destFeature?.properties?.name || candidatePfzs[0]?.properties?.name) : null) ||
     portsCatalog.find((p) => p.id === destinationPort)?.name ||
     rProps.destination ||
     'Target PFZ Waypoint';
 
-  const routeTitle = hasLiveRoute ? `Route: ${depName} ➔ ${destName}` : `${t('routeTitle')}: Ratnagiri ➔ Malvan`;
+  const depName = cleanLabel(rawDepName, 'Ratnagiri Harbour');
+  const destName = cleanLabel(rawDestName, 'Target Waypoint');
+
+  const routeTitle = hasLiveRoute
+    ? `Route: ${depName} ➔ ${destName}`
+    : `${t('routeTitle')}: ${depName} ➔ ${destName}`;
   const corridorBadge = `${t('routeCorridorBadge')} // ${depName.toUpperCase()} ➔ ${destName.toUpperCase()}`;
 
-  const distanceNm = customPlan?.distance_nm || rProps.distance_nm || 57.3;
-  const distanceKm = customPlan?.distance_km || rProps.distance_km || 106.1;
-  const eteHours = customPlan?.estimated_time_hours || rProps.ete_hours || 7.2;
-  const fuelLiters = customPlan?.fuel_estimate_liters || rProps.fuel_liters || 126.0;
-  const bearing = customPlan?.initial_bearing_degrees || rProps.bearing || 170;
-  const cardinal = customPlan?.cardinal_direction || rProps.cardinal || 'S';
-  const hazards = customPlan?.hazards_avoided || rProps.hazards_avoided || [
+  const isPfzTarget = Boolean(selectedPfz || isTargetPfz || destinationPort.startsWith('pfz') || candidatePfzs.some(p => p.id === destinationPort));
+  const targetPfzDistance = selectedPfz
+    ? Number(selectedPfz.properties?.distance_km || selectedPfz.properties?.distance || 15)
+    : pfzDistanceKm;
+
+  const distanceKm = customPlan?.distance_km || rProps.distance_km || (targetPfzDistance > 0 ? targetPfzDistance : (destinationPort === 'malvan' ? 98.4 : 57.3));
+  const distanceNm = customPlan?.distance_nm || rProps.distance_nm || (targetPfzDistance > 0 ? Number((targetPfzDistance / 1.852).toFixed(1)) : (destinationPort === 'malvan' ? 53.1 : 31.0));
+  const eteHours = customPlan?.estimated_time_hours || rProps.ete_hours || Number((distanceNm / 8.0).toFixed(1));
+  const fuelLiters = customPlan?.fuel_estimate_liters || rProps.fuel_liters || Number((distanceNm * 2.2).toFixed(1));
+  const bearing = customPlan?.initial_bearing_degrees || rProps.bearing || (isPfzTarget ? 295 : (destinationPort === 'malvan' ? 172 : 170));
+  const cardinal = customPlan?.cardinal_direction || rProps.cardinal || (isPfzTarget ? 'WNW' : 'S');
+  const hazards = customPlan?.hazards_avoided || rProps.hazards_avoided || (isPfzTarget ? [
+    'Mirya Headland Coastal Shoals Cleared',
+    '12 NM Coastal Trawl Exclusion Limit Maintained',
+    'Bathymetric Safety Margin (>15m Depth)',
+  ] : [
     '2km IMBL Buffer Maintained',
     'Malvan Sanctuary Core Cleared',
     'Angria Bank Shoal Clearance',
-  ];
+  ]);
 
   const waypoints = [
     {
@@ -286,9 +332,20 @@ export const RouteOptimizationView: React.FC<RouteOptimizationViewProps> = ({ re
               onChange={(e) => setDestinationPort(e.target.value)}
               className="route-port-select"
             >
-              {portsCatalog.map((p) => (
-                <option key={p.id} value={p.id}>{p.name}</option>
-              ))}
+              {candidatePfzs.length > 0 && (
+                <optgroup label="🎣 Recommended Fishing Zones (PFZ)">
+                  {candidatePfzs.map((pfz, idx) => (
+                    <option key={pfz.id || idx} value={pfz.id || `pfz-${idx}`}>
+                      🐟 {pfz.properties?.name || pfz.id} ({pfz.properties?.distance_km ?? 12} km)
+                    </option>
+                  ))}
+                </optgroup>
+              )}
+              <optgroup label="⚓ Coastal Fishing Harbours">
+                {portsCatalog.map((p) => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </optgroup>
             </select>
           </div>
 
@@ -470,89 +527,134 @@ export const RouteOptimizationView: React.FC<RouteOptimizationViewProps> = ({ re
                   <path d="M 360 0 Q 310 140 330 250 T 290 370 T 340 440" fill="none" stroke="rgba(14, 165, 233, 0.25)" strokeWidth="1.2" strokeDasharray="6 4" />
                   <text x="330" y="100" fill="#0EA5E9" opacity="0.6" fontSize="8" fontFamily="monospace">50m DEEP WATER</text>
 
-                  {/* Environmental / Regulatory Hazard Avoidance Zones */}
-                  {/* 1. Malvan Sanctuary Core (Avoided) */}
-                  <g>
-                    <polygon
-                      points="500,240 560,220 580,290 510,300"
-                      fill="url(#hazardHatch)"
-                      stroke="#EF4444"
-                      strokeWidth="1.5"
-                      strokeDasharray="4 2"
-                    />
-                    <rect x="490" y="258" width="84" height="16" rx="4" fill="rgba(15, 23, 42, 0.85)" />
-                    <text x="532" y="270" fill="#F87171" fontSize="8" fontFamily="Sora" fontWeight="700" textAnchor="middle">
-                      SANCTUARY (AVOIDED)
-                    </text>
-                  </g>
+                  {/* Dynamic Hazard and Waypoint Setup */}
+                  {(() => {
+                    const destX = isPfzTarget ? 480 : 520;
+                    const destY = isPfzTarget ? 270 : 330;
+                    const midX = isPfzTarget ? 310 : 360;
+                    const midY = isPfzTarget ? 115 : 220;
+                    const corridorPath = isPfzTarget
+                      ? 'M 160 80 Q 230 85 310 115 T 480 270'
+                      : 'M 160 80 Q 220 180 360 220 T 520 330';
 
-                  {/* 2. Angria Bank Shoal Clearance */}
-                  <g>
-                    <circle cx="260" cy="180" r="32" fill="rgba(245, 158, 11, 0.12)" stroke="#F59E0B" strokeWidth="1" strokeDasharray="3 3" />
-                    <text x="260" y="184" fill="#FBBF24" fontSize="8" fontFamily="monospace" textAnchor="middle">
-                      SHOAL HAZARD
-                    </text>
-                  </g>
+                    return (
+                      <>
+                        {/* Environmental / Regulatory Hazard Avoidance Zones */}
+                        {isPfzTarget ? (
+                          <>
+                            {/* 1. Mirya Headland Coastal Shoal Hazard (Direct Line Intersected, Safe Corridor Avoids) */}
+                            <g>
+                              <circle cx="320" cy="175" r="32" fill="rgba(245, 158, 11, 0.12)" stroke="#F59E0B" strokeWidth="1.2" strokeDasharray="3 3" />
+                              <text x="320" y="179" fill="#FBBF24" fontSize="8" fontFamily="monospace" textAnchor="middle">
+                                MIRYA SHOAL (AVOIDED)
+                              </text>
+                            </g>
 
-                  {/* Safe Passage Wide Corridor Buffer Ribbon */}
-                  <path
-                    d="M 160 80 Q 260 170 370 210 T 520 330"
-                    fill="none"
-                    stroke="rgba(45, 212, 191, 0.18)"
-                    strokeWidth="32"
-                    strokeLinecap="round"
-                  />
+                            {/* 2. 12 NM Coastal Trawling Exclusion Limit */}
+                            <g>
+                              <line x1="530" y1="20" x2="530" y2="420" stroke="rgba(239, 68, 68, 0.4)" strokeWidth="1.5" strokeDasharray="6 3" />
+                              <rect x="440" y="375" width="170" height="18" rx="4" fill="rgba(15, 23, 42, 0.85)" stroke="#EF4444" strokeWidth="0.8" />
+                              <text x="525" y="387" fill="#F87171" fontSize="8" fontFamily="Sora" fontWeight="700" textAnchor="middle">
+                                12 NM STATUTORY LIMIT
+                              </text>
+                            </g>
+                          </>
+                        ) : (
+                          <>
+                            {/* 1. Malvan Sanctuary Core (Avoided) */}
+                            <g>
+                              <polygon
+                                points="470,240 540,220 560,290 480,300"
+                                fill="url(#hazardHatch)"
+                                stroke="#EF4444"
+                                strokeWidth="1.5"
+                                strokeDasharray="4 2"
+                              />
+                              <rect x="460" y="258" width="88" height="16" rx="4" fill="rgba(15, 23, 42, 0.85)" />
+                              <text x="504" y="270" fill="#F87171" fontSize="8" fontFamily="Sora" fontWeight="700" textAnchor="middle">
+                                SANCTUARY (AVOIDED)
+                              </text>
+                            </g>
 
-                  {/* High Contrast Optimized Route Path */}
-                  <path
-                    d="M 160 80 Q 260 170 370 210 T 520 330"
-                    fill="none"
-                    stroke="url(#routeGradient)"
-                    strokeWidth="4"
-                    strokeLinecap="round"
-                    strokeDasharray="10 5"
-                    filter="url(#corridorGlow)"
-                  />
+                            {/* 2. Angria Bank / Coastal Shoal Clearance */}
+                            <g>
+                              <circle cx="290" cy="160" r="30" fill="rgba(245, 158, 11, 0.12)" stroke="#F59E0B" strokeWidth="1" strokeDasharray="3 3" />
+                              <text x="290" y="164" fill="#FBBF24" fontSize="8" fontFamily="monospace" textAnchor="middle">
+                                SHOAL HAZARD
+                              </text>
+                            </g>
+                          </>
+                        )}
 
-                  {/* Direct Baseline (Sub-optimal direct line for contrast) */}
-                  <line x1="160" y1="80" x2="520" y2="330" stroke="rgba(239, 68, 68, 0.35)" strokeWidth="1.5" strokeDasharray="3 3" />
-                  <text x="290" y="190" fill="#F87171" opacity="0.6" fontSize="8" fontFamily="monospace" transform="rotate(35 290 190)">
-                    DIRECT (HAZARD INTERSECT)
-                  </text>
+                        {/* Safe Passage Wide Corridor Buffer Ribbon */}
+                        <path
+                          d={corridorPath}
+                          fill="none"
+                          stroke="rgba(45, 212, 191, 0.18)"
+                          strokeWidth="32"
+                          strokeLinecap="round"
+                        />
 
-                  {/* Waypoint 1: Departure Port */}
-                  <g transform="translate(160, 80)">
-                    <circle cx="0" cy="0" r="14" fill="rgba(45, 212, 191, 0.2)" />
-                    <circle cx="0" cy="0" r="7" fill="#2DD4BF" stroke="#FFFFFF" strokeWidth="2" />
-                    <rect x="-65" y="-32" width="130" height="20" rx="6" fill="rgba(15, 23, 42, 0.88)" stroke="#2DD4BF" strokeWidth="1" />
-                    <text x="0" y="-18" fill="#FFFFFF" fontSize="9.5" fontFamily="Sora" fontWeight="700" textAnchor="middle">
-                      ⚓ {depName}
-                    </text>
-                  </g>
+                        {/* High Contrast Optimized Route Path */}
+                        <path
+                          d={corridorPath}
+                          fill="none"
+                          stroke="url(#routeGradient)"
+                          strokeWidth="4"
+                          strokeLinecap="round"
+                          strokeDasharray="10 5"
+                          filter="url(#corridorGlow)"
+                        />
 
-                  {/* Waypoint 2: Mid Passage Transit & Active Vessel */}
-                  <g transform="translate(370, 210)">
-                    {/* Outer Pulsing Vessel Radar Ring */}
-                    <circle cx="0" cy="0" r="22" fill="none" stroke="#38BDF8" strokeWidth="1.5">
-                      <animate attributeName="r" values="10;28;10" dur="2.4s" repeatCount="indefinite" />
-                      <animate attributeName="opacity" values="1;0;1" dur="2.4s" repeatCount="indefinite" />
-                    </circle>
-                    <circle cx="0" cy="0" r="8" fill="#38BDF8" stroke="#FFFFFF" strokeWidth="2" />
-                    <rect x="-60" y="16" width="120" height="20" rx="6" fill="rgba(15, 23, 42, 0.9)" stroke="#38BDF8" strokeWidth="1" />
-                    <text x="0" y="30" fill="#38BDF8" fontSize="9" fontFamily="Sora" fontWeight="700" textAnchor="middle">
-                      🚢 VIGILANT ({Math.round(bearing)}°)
-                    </text>
-                  </g>
+                        {/* Direct Baseline (Sub-optimal direct line for contrast) */}
+                        <line x1="160" y1="80" x2={destX} y2={destY} stroke="rgba(239, 68, 68, 0.35)" strokeWidth="1.5" strokeDasharray="3 3" />
+                        <text
+                          x={isPfzTarget ? 320 : 290}
+                          y={isPfzTarget ? 175 : 190}
+                          fill="#F87171"
+                          opacity="0.8"
+                          fontSize="8"
+                          fontFamily="monospace"
+                          transform={isPfzTarget ? "rotate(28 320 175)" : "rotate(35 290 190)"}
+                        >
+                          DIRECT (HAZARD INTERSECT)
+                        </text>
 
-                  {/* Waypoint 3: Destination Port */}
-                  <g transform="translate(520, 330)">
-                    <circle cx="0" cy="0" r="14" fill="rgba(245, 158, 11, 0.25)" />
-                    <circle cx="0" cy="0" r="8" fill="#F59E0B" stroke="#FFFFFF" strokeWidth="2" />
-                    <rect x="-65" y="16" width="130" height="20" rx="6" fill="rgba(15, 23, 42, 0.88)" stroke="#F59E0B" strokeWidth="1" />
-                    <text x="0" y="30" fill="#FBBF24" fontSize="9.5" fontFamily="Sora" fontWeight="700" textAnchor="middle">
-                      🏁 {destName}
-                    </text>
-                  </g>
+                        {/* Waypoint 1: Departure Port */}
+                        <g transform="translate(160, 80)">
+                          <circle cx="0" cy="0" r="14" fill="rgba(45, 212, 191, 0.2)" />
+                          <circle cx="0" cy="0" r="7" fill="#2DD4BF" stroke="#FFFFFF" strokeWidth="2" />
+                          <rect x="-65" y="-32" width="130" height="20" rx="6" fill="rgba(15, 23, 42, 0.88)" stroke="#2DD4BF" strokeWidth="1" />
+                          <text x="0" y="-18" fill="#FFFFFF" fontSize="9.5" fontFamily="Sora" fontWeight="700" textAnchor="middle">
+                            ⚓ {depName}
+                          </text>
+                        </g>
+
+                        {/* Waypoint 2: Mid Passage Transit & Active Vessel */}
+                        <g transform={`translate(${midX}, ${midY})`}>
+                          <circle cx="0" cy="0" r="22" fill="none" stroke="#38BDF8" strokeWidth="1.5">
+                            <animate attributeName="r" values="10;28;10" dur="2.4s" repeatCount="indefinite" />
+                            <animate attributeName="opacity" values="1;0;1" dur="2.4s" repeatCount="indefinite" />
+                          </circle>
+                          <circle cx="0" cy="0" r="8" fill="#38BDF8" stroke="#FFFFFF" strokeWidth="2" />
+                          <rect x="-60" y="16" width="120" height="20" rx="6" fill="rgba(15, 23, 42, 0.9)" stroke="#38BDF8" strokeWidth="1" />
+                          <text x="0" y="30" fill="#38BDF8" fontSize="9" fontFamily="Sora" fontWeight="700" textAnchor="middle">
+                            🚢 VIGILANT ({Math.round(bearing)}°)
+                          </text>
+                        </g>
+
+                        {/* Waypoint 3: Destination Port */}
+                        <g transform={`translate(${destX}, ${destY})`}>
+                          <circle cx="0" cy="0" r="14" fill="rgba(245, 158, 11, 0.25)" />
+                          <circle cx="0" cy="0" r="8" fill="#F59E0B" stroke="#FFFFFF" strokeWidth="2" />
+                          <rect x="-65" y="16" width="130" height="20" rx="6" fill="rgba(15, 23, 42, 0.88)" stroke="#F59E0B" strokeWidth="1" />
+                          <text x="0" y="30" fill="#FBBF24" fontSize="9.5" fontFamily="Sora" fontWeight="700" textAnchor="middle">
+                            🏁 {destName}
+                          </text>
+                        </g>
+                      </>
+                    );
+                  })()}
 
                   {/* Compass Rose Mini */}
                   <g transform="translate(730, 60)">

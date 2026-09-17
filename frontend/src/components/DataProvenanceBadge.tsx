@@ -30,10 +30,16 @@ export const DataProvenanceBadge: React.FC = () => {
     : 'data-provenance-badge--unknown';
 
   const label = isLive
-    ? `LIVE API • ${provenance?.latencyMs ? `${provenance.latencyMs.toFixed(0)}ms` : 'OK'}`
+    ? `Live API${provenance?.latencyMs ? ` • ${provenance.latencyMs.toFixed(0)}ms` : ''}`
     : isFixture
-    ? `FIXTURE: ${provenance?.fixtureName || activeScenarioId || 'mock'}`
-    : 'STANDBY';
+    ? 'Demo Mode'
+    : 'Standby';
+
+  const tooltipText = isLive
+    ? `Live Ocean Telemetry (${provenance?.latencyMs ? `${provenance.latencyMs.toFixed(0)}ms` : 'Connected'}) - Click to inspect`
+    : isFixture
+    ? `Scenario: ${provenance?.fixtureName || activeScenarioId || 'mock'} - Click to inspect audit trail`
+    : 'Standby - Click to inspect';
 
   const history = provenance?.query_run_id
     ? provenanceLogger.getHistory(provenance.query_run_id)
@@ -45,7 +51,7 @@ export const DataProvenanceBadge: React.FC = () => {
         type="button"
         className={`data-provenance-badge ${badgeClass}`}
         onClick={() => setModalOpen(true)}
-        title="Click to inspect Data Provenance & Contract Audit Trail (Dev-Only)"
+        title={tooltipText}
       >
         <span className="data-provenance-pulse-dot" />
         <span>{label}</span>

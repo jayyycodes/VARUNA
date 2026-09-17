@@ -170,6 +170,7 @@ class ChatResponse(BaseModel):
     query_run_id: str
     intent: str
     text: str
+    query: str | None = None
     map_data: dict | None = None
     evidence: list | None = None
     risk_verdict: dict | None = None

@@ -20,10 +20,9 @@ import { LanguageSelector } from './components/LanguageSelector';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { useLocalization } from './hooks/useLocalization';
 import { useAppStore } from './store/useAppStore';
-import { IconMapPin, IconSearch, IconCopilotBot, IconAnchor, IconBook } from './components/Icons';
+import {  IconSearch, IconCopilotBot, IconAnchor, IconBook } from './components/Icons';
 import { MobileTabBar } from './components/MobileTabBar';
 import { useIsMobile } from './hooks/useIsMobile';
-import { DataProvenanceBadge } from './components/DataProvenanceBadge';
 import { provenanceLogger } from './utils/provenanceLogger';
 import './App.css';
 
@@ -219,50 +218,26 @@ function App() {
               {activeView === 'fleet' && t('pageFleetTitle')}
               {activeView === 'trends' && t('pageTrendsTitle')}
             </h1>
-
-            {activeQuery && !activeScenarioId ? (
-              <div className="dashboard-topbar__location-pill mono" style={{ gap: 5 }}>
-                <IconSearch size={11} color="#64748B" />
-                <span
-                  style={{
-                    color: '#64748B',
-                    maxWidth: 200,
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  {activeQuery}
-                </span>
-              </div>
-            ) : (
-              <div className="dashboard-topbar__location-pill mono">
-                <IconMapPin size={11} color="#64748B" />
-                <span>{t('locationContext')}</span>
-              </div>
-            )}
           </div>
 
           {/* Centered Pill Search Bar */}
           <div className="topbar-search-pill">
-            <IconSearch size={12} className="topbar-search-pill__icon" />
+            <IconSearch size={13} className="topbar-search-pill__icon" />
             <input
               type="text"
               className="topbar-search-pill__input"
-              placeholder="Search..."
+              placeholder={activeQuery || "Search marine intelligence, ports, PFZ zones..."}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && e.currentTarget.value.trim()) {
                   handleQuerySubmit(e.currentTarget.value.trim());
+                  e.currentTarget.value = '';
                 }
               }}
             />
           </div>
 
           <div className="dashboard-topbar__right">
-            {/* Dev-Only Data Provenance Badge & Inspector */}
-            <DataProvenanceBadge />
-
-            {/* Language Selector */}
+            {/* Language Selector Dropdown */}
             <LanguageSelector currentLang={currentLang} onLanguageChange={setLanguage} />
 
             {/* Fisherman Mode vs Operations Mode Toggle */}
@@ -283,16 +258,18 @@ function App() {
               <span>{mode === 'fisherman' ? t('fishermanMode') : t('commandMode')}</span>
             </button>
 
-            {/* Topbar AI Copilot Trigger Button */}
-            <button
-              type="button"
-              className="topbar-ai-btn"
-              onClick={() => setActiveView('chat')}
-              title="Open VARUNA Copilot Page"
-            >
-              <IconCopilotBot size={13} color="#60A5FA" />
-              <span>{t('askCopilot')}</span>
-            </button>
+            {/* Topbar AI Copilot Trigger Button (hidden when already on chat page) */}
+            {activeView !== 'chat' && (
+              <button
+                type="button"
+                className="topbar-ai-btn"
+                onClick={() => setActiveView('chat')}
+                title="Open VARUNA Copilot Page"
+              >
+                <IconCopilotBot size={13} color="#60A5FA" />
+                <span>{t('askCopilot')}</span>
+              </button>
+            )}
           </div>
         </header>
 

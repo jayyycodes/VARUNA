@@ -35,64 +35,37 @@ export const LanguageSelector: React.FC<LanguageSelectorProps> = ({
 
   return (
     <div className="lang-selector-container" ref={containerRef}>
-      {/* Desktop Multi-Pill Bar (Hidden on Mobile via CSS) */}
-      <div
-        className="lang-selector lang-selector--desktop"
-        role="group"
-        aria-label="Select Interface Language"
+      <button
+        type="button"
+        className="lang-trigger-btn"
+        onClick={() => setDropdownOpen(!dropdownOpen)}
+        aria-expanded={dropdownOpen}
+        aria-label={`Current language: ${currentOption.label}. Tap to change language`}
       >
-        {supportedLanguages.map((lang) => {
-          const isSelected = lang.code === currentLang;
-          return (
-            <button
-              key={lang.code}
-              type="button"
-              className={`lang-btn ${isSelected ? 'lang-btn--active' : ''}`}
-              onClick={() => onLanguageChange(lang.code)}
-              aria-pressed={isSelected}
-              aria-label={`Switch language to ${lang.label}`}
-            >
-              <span className="lang-native">{lang.nativeLabel}</span>
-              <span className="lang-code">{lang.code.toUpperCase()}</span>
-            </button>
-          );
-        })}
-      </div>
+        <span className="lang-trigger-globe">🌐</span>
+        <span className="lang-trigger-code">{currentOption.code.toUpperCase()}</span>
+        <span className="lang-trigger-arrow">▾</span>
+      </button>
 
-      {/* Mobile Compact Dropdown Trigger (Shown only on Mobile) */}
-      <div className="lang-selector--mobile">
-        <button
-          type="button"
-          className="lang-trigger-btn"
-          onClick={() => setDropdownOpen(!dropdownOpen)}
-          aria-expanded={dropdownOpen}
-          aria-label={`Current language: ${currentOption.label}. Tap to change language`}
-        >
-          <span className="lang-trigger-globe">🌐</span>
-          <span className="lang-trigger-code">{currentOption.code.toUpperCase()}</span>
-          <span className="lang-trigger-arrow">▾</span>
-        </button>
-
-        {dropdownOpen && (
-          <div className="lang-dropdown-menu">
-            {supportedLanguages.map((lang) => {
-              const isSelected = lang.code === currentLang;
-              return (
-                <button
-                  key={lang.code}
-                  type="button"
-                  className={`lang-dropdown-item ${isSelected ? 'lang-dropdown-item--active' : ''}`}
-                  onClick={() => handleSelect(lang.code)}
-                >
-                  <span className="lang-dropdown-native">{lang.nativeLabel}</span>
-                  <span className="lang-dropdown-label">({lang.label})</span>
-                  {isSelected && <span className="lang-dropdown-check">✓</span>}
-                </button>
-              );
-            })}
-          </div>
-        )}
-      </div>
+      {dropdownOpen && (
+        <div className="lang-dropdown-menu">
+          {supportedLanguages.map((lang) => {
+            const isSelected = lang.code === currentLang;
+            return (
+              <button
+                key={lang.code}
+                type="button"
+                className={`lang-dropdown-item ${isSelected ? 'lang-dropdown-item--active' : ''}`}
+                onClick={() => handleSelect(lang.code)}
+              >
+                <span className="lang-dropdown-native">{lang.nativeLabel}</span>
+                <span className="lang-dropdown-label">({lang.label})</span>
+                {isSelected && <span className="lang-dropdown-check">✓</span>}
+              </button>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 };
