@@ -1494,6 +1494,35 @@
   box-shadow: none;
 }
 
+.v-claude-send-btn--stop {
+  background: #EF4444 !important;
+  color: #FFFFFF !important;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4) !important;
+  animation: pulseStop 1.8s infinite ease-in-out;
+}
+
+.v-claude-send-btn--stop:hover {
+  background: #DC2626 !important;
+  transform: scale(1.08) !important;
+}
+
+@keyframes pulseStop {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+  }
+  50% {
+    transform: scale(1.04);
+    box-shadow: 0 0 0 6px rgba(239, 68, 68, 0);
+  }
+}
+
+.v-composer-hint {
+  font-size: 11px;
+  color: #94A3B8;
+  user-select: none;
+}
+
 [data-theme="dark"] .v-claude-send-btn:disabled {
   background: #334155;
   color: #64748B;

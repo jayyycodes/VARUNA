@@ -25,6 +25,7 @@ export interface LiveChatResponse {
   query_run_id: string;
   intent: string;
   text: string;
+  query?: string;
   map_data: any | null;
   evidence: any[] | null;
   risk_verdict: {
@@ -301,11 +302,34 @@ export class VarunaApiClient {
                 pfz: pfzCount ? `${pfzCount} Zones Active` : '3 Zones Active',
                 confidence: json.risk_verdict?.confidence ? `${Math.round(json.risk_verdict.confidence * 100)}%` : 'HIGH (INCOIS Verified)',
               },
-              actions: [
-                { label: 'Inspect Tactical Ocean Map', actionType: 'view', target: 'map' },
-                { label: 'Check Navigation Routes', actionType: 'view', target: 'routing' },
-                { label: 'View Multi-Agent Reasoning DAG', actionType: 'view', target: 'reasoning' },
-              ],
+              actions: (() => {
+                const intent = json.intent || 'safety_check';
+                if (intent === 'find_fishing_zone') {
+                  return [
+                    { label: 'Inspect PFZ Zones on Ocean Map', actionType: 'view', target: 'map' },
+                    { label: 'View Multi-Agent Reasoning DAG', actionType: 'view', target: 'reasoning' },
+                    { label: 'Plan Passage to Nearest Zone', actionType: 'view', target: 'routing' },
+                  ];
+                } else if (intent === 'route_request') {
+                  return [
+                    { label: 'Open Safe Passage Corridor', actionType: 'view', target: 'routing' },
+                    { label: 'Inspect Navigation Route on Map', actionType: 'view', target: 'map' },
+                    { label: 'View Pathfinding Reasoning DAG', actionType: 'view', target: 'reasoning' },
+                  ];
+                } else if (intent === 'regulation_question' || intent === 'regulatory_query') {
+                  return [
+                    { label: 'Inspect Legal Citations & DAG', actionType: 'view', target: 'reasoning' },
+                    { label: 'View Marine Boundaries on Map', actionType: 'view', target: 'map' },
+                    { label: 'Check Active Regulatory Notices', actionType: 'view', target: 'alerts' },
+                  ];
+                } else {
+                  return [
+                    { label: 'View Deterministic Decision DAG', actionType: 'view', target: 'reasoning' },
+                    { label: 'Inspect Sea State on Ocean Map', actionType: 'view', target: 'map' },
+                    { label: 'Check Active Marine Warnings', actionType: 'view', target: 'alerts' },
+                  ];
+                }
+              })(),
             };
           }
         } catch {
@@ -991,6 +1015,98 @@ export class VarunaApiClient {
 
     // 5. Statutory Regulations, Monsoon Ban, MFRA Laws
     if (lower.includes('ban') || lower.includes('monsoon') || lower.includes('mfra') || lower.includes('law') || lower.includes('legal') || lower.includes('mesh') || lower.includes('light') || lower.includes('mechanized')) {
+      const mockContract = createMockContract(
+        'UNSAFE',
+        'UNSAFE — Mechanized trawling strictly prohibited under Monsoon Ban (1 June – 31 July).',
+        'Postpone trawl deployment until seasonal monsoon ban lifts on 1 August. Traditional artisanal craft permitted under 5 NM.',
+        'Ratnagiri Coastal Zone',
+        [73.28, 16.99],
+        [],
+        [],
+        [
+          {
+            id: 'rule-monsoon-trawl',
+            rule_id: 'RULE-REG-MONSOON-01',
+            rule_name: 'Uniform Seasonal Monsoon Fishing Ban',
+            domain: 'statutory_regulations',
+            measured_value: 'July (Active Prohibition Window)',
+            threshold_value: 'June 1 – July 31',
+            comparator: 'not_in',
+            unit: 'calendar_window',
+            passed: false,
+            severity: 'unsafe',
+            threshold_version: 'v2.1',
+            explanation: 'Mechanized trawlers and purse-seiners strictly prohibited under Section 4 of Maharashtra MFRA 1981.',
+          },
+          {
+            id: 'rule-mesh-size',
+            rule_id: 'RULE-GEAR-MESH-01',
+            rule_name: 'Minimum Codend Mesh Size Standard',
+            domain: 'statutory_regulations',
+            measured_value: '35mm square mesh mandatory',
+            threshold_value: '>= 35mm',
+            comparator: '>=',
+            unit: 'mm',
+            passed: true,
+            severity: 'safe',
+            threshold_version: 'v2.1',
+            explanation: 'Sub-40mm diamond mesh prohibited to protect juvenile stock.',
+          },
+        ]
+      );
+
+      // Add 12 NM geofence polygon layer to the contract
+      mockContract.map = {
+        viewport: { center: [73.28, 16.99], zoom: 8 },
+        layers: [
+          {
+            id: 'layer-geofence-ban',
+            type: 'geofence',
+            label: 'Maharashtra 12 NM Monsoon Trawling Prohibition Belt',
+            visible_by_default: true,
+            feature_collection: {
+              type: 'FeatureCollection',
+              features: [
+                {
+                  type: 'Feature',
+                  id: 'feat-monsoon-trawling-ban',
+                  geometry: {
+                    type: 'Polygon',
+                    coordinates: [
+                      [
+                        [73.35, 15.80],
+                        [73.10, 15.80],
+                        [72.75, 17.00],
+                        [72.60, 18.00],
+                        [72.50, 19.30],
+                        [72.85, 19.30],
+                        [73.00, 18.00],
+                        [73.35, 17.00],
+                        [73.35, 15.80],
+                      ],
+                    ],
+                  },
+                  properties: {
+                    type: 'geofence',
+                    layer_id: 'layer-geofence-ban',
+                    title: 'Maharashtra 12 NM Monsoon Trawling Prohibition Belt (1 June – 31 July)',
+                    severity: 'unsafe',
+                    restriction_level: 'Total Mechanized Trawl Exclusion',
+                    legal_act: 'Maharashtra Marine Fishing Regulation Act, 1981 (Section 4)',
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      };
+
+      try {
+        useAppStore.getState().setResponse(mockContract);
+        useAppStore.getState().setActiveQuery(query);
+        useAppStore.getState().setActiveScenarioId('illegal_gear');
+      } catch {}
+
       return {
         verdict: 'UNSAFE',
         scenarioSyncId: 'illegal_gear',
@@ -1009,8 +1125,9 @@ export class VarunaApiClient {
           confidence: '100% (MFRA & Dept of Fisheries)',
         },
         actions: [
-          { label: 'Inspect Legal Advisory DAG', actionType: 'view', target: 'reasoning' },
-          { label: 'Check Fleet Operations', actionType: 'view', target: 'fleet' },
+          { label: 'Inspect Legal Citations & DAG', actionType: 'view', target: 'reasoning' },
+          { label: 'View Marine Boundaries on Map', actionType: 'view', target: 'map' },
+          { label: 'Check Active Regulatory Notices', actionType: 'view', target: 'alerts' },
         ],
       };
     }
@@ -1401,6 +1518,12 @@ export class VarunaApiClient {
       }));
       const routeFeats = allFeats.filter((f: any) => f.properties?.type === 'route' || f.geometry?.type === 'LineString');
       const pfzFeats = allFeats.filter((f: any) => f.properties?.type === 'pfz_zone' || f.properties?.type === 'pfz');
+      const geofenceFeats = allFeats.filter(
+        (f: any) =>
+          f.properties?.type === 'geofence' ||
+          f.properties?.type === 'restricted_zone' ||
+          (f.geometry?.type === 'Polygon' && (f.properties?.layer_id?.includes('geofence') || f.properties?.restriction_level))
+      );
       const navFeats = allFeats.filter((f: any) => f.properties?.type?.includes('location') || f.properties?.type === 'mpa');
 
       if (routeFeats.length > 0) {
@@ -1431,6 +1554,24 @@ export class VarunaApiClient {
         });
       }
 
+      if (geofenceFeats.length > 0) {
+        mapLayers.push({
+          id: 'layer-live-geofence',
+          type: 'geofence',
+          label: 'Statutory Restricted Boundaries (12 NM / MPA)',
+          visible_by_default: true,
+          feature_collection: { type: 'FeatureCollection', features: geofenceFeats },
+        });
+
+        if (routeFeats.length === 0 && pfzFeats.length === 0) {
+          const firstPoly = geofenceFeats[0].geometry?.coordinates;
+          if (firstPoly && firstPoly[0] && firstPoly[0][0]) {
+            center = [firstPoly[0][0][0], firstPoly[0][0][1]];
+            zoom = 8;
+          }
+        }
+      }
+
       if (navFeats.length > 0) {
         mapLayers.push({
           id: 'layer-live-waypoints',
@@ -1440,7 +1581,7 @@ export class VarunaApiClient {
           feature_collection: { type: 'FeatureCollection', features: navFeats },
         });
 
-        if (routeFeats.length === 0 && navFeats[0].geometry?.coordinates) {
+        if (routeFeats.length === 0 && geofenceFeats.length === 0 && navFeats[0].geometry?.coordinates) {
           center = [navFeats[0].geometry.coordinates[0], navFeats[0].geometry.coordinates[1]];
         }
       }
@@ -1471,25 +1612,74 @@ export class VarunaApiClient {
         source_language: ev.source_language || 'en-IN',
       }));
 
+    const activeStoreQuery = useAppStore.getState().activeQuery || '';
+    const rawCombinedText = `${raw.text || ''} ${raw.query || ''} ${activeStoreQuery}`.toLowerCase();
+    let detectedStateName = 'Maharashtra';
+    let detectedActTitle = 'Maharashtra Marine Fishing Regulation Act, 1981 (Section 4)';
+    let detectedPublisher = 'Government of Maharashtra Law & Judiciary Department';
+    let detectedBanDates = '1 June – 31 July';
+
+    if (/kerala|kochi|cochin|kollam|vizhinjam|beypore/i.test(rawCombinedText)) {
+      detectedStateName = 'Kerala';
+      detectedActTitle = 'Kerala Marine Fishing Regulation Act, 1980 (Sections 4 & 5)';
+      detectedPublisher = 'Government of Kerala Fisheries Department';
+      detectedBanDates = '1 June – 31 July';
+    } else if (/tamil nadu|chennai|thoothukudi|tuticorin|rameshwaram|cuddalore|mannar|palk/i.test(rawCombinedText)) {
+      detectedStateName = 'Tamil Nadu';
+      detectedActTitle = 'Tamil Nadu Marine Fishing Regulation Act, 1983 (Section 5)';
+      detectedPublisher = 'Government of Tamil Nadu Animal Husbandry & Fisheries Dept';
+      detectedBanDates = '15 April – 14 June';
+    } else if (/andhra|visakhapatnam|vizag|kakinada|machilipatnam/i.test(rawCombinedText)) {
+      detectedStateName = 'Andhra Pradesh';
+      detectedActTitle = 'Andhra Pradesh Marine Fishing (Regulation) Act, 1994';
+      detectedPublisher = 'Government of Andhra Pradesh Fisheries Dept';
+      detectedBanDates = '15 April – 14 June';
+    } else if (/odisha|orissa|paradeep|dhamra|gahirmatha/i.test(rawCombinedText)) {
+      detectedStateName = 'Odisha';
+      detectedActTitle = 'Orissa Marine Fishing Regulation Act, 1982 & Rules 1983';
+      detectedPublisher = 'Government of Odisha Fisheries & ARD Department';
+      detectedBanDates = '15 April – 14 June';
+    } else if (/west bengal|bengal|digha|kakdwip|sundarban/i.test(rawCombinedText)) {
+      detectedStateName = 'West Bengal';
+      detectedActTitle = 'West Bengal Marine Fishing Regulation Act, 1993';
+      detectedPublisher = 'Government of West Bengal Department of Fisheries';
+      detectedBanDates = '15 April – 14 June';
+    } else if (/gujarat|veraval|porbandar|kutch/i.test(rawCombinedText)) {
+      detectedStateName = 'Gujarat';
+      detectedActTitle = 'Gujarat Fisheries Act, 2003';
+      detectedPublisher = 'Government of Gujarat Fisheries Department';
+      detectedBanDates = '1 June – 31 July';
+    } else if (/karnataka|mangalore|malpe|karwar/i.test(rawCombinedText)) {
+      detectedStateName = 'Karnataka';
+      detectedActTitle = 'Karnataka Marine Fishing Regulation Act, 1986';
+      detectedPublisher = 'Government of Karnataka Directorate of Fisheries';
+      detectedBanDates = '1 June – 31 July';
+    } else if (/goa|panaji|mormugao|vasco/i.test(rawCombinedText)) {
+      detectedStateName = 'Goa';
+      detectedActTitle = 'Goa Marine Fishing Regulation Rules, 1980';
+      detectedPublisher = 'Government of Goa Directorate of Fisheries';
+      detectedBanDates = '1 June – 31 July';
+    }
+
     if (isRegulatory && citations.length === 0) {
       citations.push({
         id: 'cite-reg-1',
-        title: 'Maharashtra Marine Fishing Regulation Act, 1981 (Section 4)',
-        publisher: 'Government of Maharashtra Law & Judiciary Department',
+        title: detectedActTitle,
+        publisher: detectedPublisher,
         published_at: '1981-08-01',
         accessed_at: new Date().toISOString(),
-        url: 'https://fisheries.maharashtra.gov.in',
-        excerpt: 'No mechanized fishing vessel shall engage in fishing within 5 nautical miles from the coast. Monsoon trawl bans apply uniformly.',
+        url: 'https://dof.gov.in',
+        excerpt: `Inshore territorial waters reserved for traditional artisanal fishermen. Mechanized trawlers and purse-seiners restricted under ${detectedStateName} statutory provisions.`,
         source_language: 'en-IN',
       });
       citations.push({
         id: 'cite-reg-2',
-        title: 'Annual Uniform Monsoon Fishing Ban Notification (1 June – 31 July)',
-        publisher: 'Ministry of Fisheries, Animal Husbandry and Dairying / Dept of Fisheries MH',
+        title: `Annual Uniform Monsoon Fishing Ban Notification (${detectedBanDates})`,
+        publisher: 'Ministry of Fisheries, Animal Husbandry and Dairying',
         published_at: '2024-05-15',
         accessed_at: new Date().toISOString(),
         url: 'https://dof.gov.in',
-        excerpt: 'Complete prohibition on mechanized fishing and trawlers in Exclusive Economic Zone (EEZ) and territorial waters during southwest monsoon.',
+        excerpt: `Complete prohibition on mechanized fishing and trawlers in Exclusive Economic Zone (EEZ) and territorial waters during monsoon ban (${detectedBanDates}).`,
         source_language: 'en-IN',
       });
     }
@@ -1497,8 +1687,8 @@ export class VarunaApiClient {
     let actionText: string;
     if (isRegulatory) {
       actionText = verdict === 'UNSAFE'
-        ? 'Postpone trawl deployment until seasonal monsoon ban lifts on 1 August. Vessel seizure applies under Sections 14 and 17.'
-        : 'Ensure operating outside artisanal 5 NM zone and maintain licensed gear specifications.';
+        ? `Postpone trawl deployment until seasonal monsoon ban lifts (${detectedBanDates}). Vessel seizure applies under statutory enforcement.`
+        : 'Ensure operating outside artisanal inshore zone and maintain licensed gear specifications.';
     } else if (verdict === 'SAFE') {
       actionText = 'Safe to proceed with standard navigation precautions.';
     } else if (verdict === 'CAUTION') {
@@ -1511,11 +1701,11 @@ export class VarunaApiClient {
     let headline = 'Marine conditions evaluated across active coastal stations.';
     if (isRegulatory) {
       if (verdict === 'UNSAFE') {
-        headline = 'Operation PROHIBITED under Maharashtra MFRA 1981 §4 & Annual Monsoon Fishing Ban.';
+        headline = `Operation PROHIBITED under ${detectedActTitle} & Annual Monsoon Fishing Ban (${detectedBanDates}).`;
       } else if (verdict === 'SAFE') {
-        headline = 'Operation PERMITTED: Complies with coastal zoning and authorized gear regulations.';
+        headline = `Operation PERMITTED under ${detectedStateName} regulations: Complies with coastal zoning and authorized gear.`;
       } else {
-        headline = 'Statutory Legal Advisory: Subject to territorial limits and seasonal restrictions.';
+        headline = `Statutory Legal Advisory (${detectedStateName}): Subject to territorial limits and seasonal restrictions.`;
       }
     } else if (raw.text) {
       const cleaned = raw.text
@@ -1541,7 +1731,7 @@ export class VarunaApiClient {
         verdict,
         confidence_band: 'high',
         confidence_reason: isRegulatory
-          ? 'Cross-verified against Maharashtra MFRA 1981 Gazette and Uniform Monsoon Ban notifications.'
+          ? `Cross-verified against ${detectedActTitle} Gazette and Uniform Monsoon Ban notifications (${detectedBanDates}).`
           : 'All authoritative telemetry feeds synchronized with INCOIS/IMD stations.',
         action: actionText,
       },

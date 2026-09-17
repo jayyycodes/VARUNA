@@ -547,11 +547,20 @@ export const ChatAssistantView: React.FC<ChatAssistantViewProps> = ({
     setShareModalOpen(false);
   };
 
+  const isStoppedRef = useRef(false);
+
+  const handleStopGenerating = () => {
+    isStoppedRef.current = true;
+    setIsThinking(false);
+    showToast('Response generation stopped');
+  };
+
   const handleSendMessage = async (textToSend?: string) => {
     const rawQuery = (textToSend || inputQuery).trim();
     if (!rawQuery && attachedTelemetry.length === 0) return;
     if (isThinking) return;
 
+    isStoppedRef.current = false;
     const telemetryContext = attachedTelemetry.map((t) => t.text).join(' ');
     const query = telemetryContext ? `${rawQuery} ${telemetryContext}`.trim() : rawQuery;
 
@@ -572,6 +581,8 @@ export const ChatAssistantView: React.FC<ChatAssistantViewProps> = ({
 
     try {
       const chatRes = await apiClient.submitChatQuery(query, currentLang);
+      if (isStoppedRef.current) return;
+
       const assistantMsgId = `asst-${Date.now()}`;
 
       const assistantMsg: ChatMessage = {
@@ -593,6 +604,7 @@ export const ChatAssistantView: React.FC<ChatAssistantViewProps> = ({
       // Persist in chat session history
       saveToSessionHistory(query, finalMessages, chatRes.scenarioSyncId);
     } catch (err: any) {
+      if (isStoppedRef.current) return;
       console.warn('Chat assistant live fallback trigger:', err);
       generateAgentResponse(query, updatedMessages);
     } finally {
@@ -1160,141 +1172,36 @@ export const ChatAssistantView: React.FC<ChatAssistantViewProps> = ({
 
             <div className="v-composer-bottom-row">
               <div className="v-composer-actions-left">
-                {/* + Attachment / Quick Action Button with Interactive Popover */}
-                <div className="v-attachment-wrapper" ref={attachmentWrapperRef}>
-                  <button
-                    type="button"
-                    className={`v-composer-icon-btn ${attachmentMenuOpen ? 'v-composer-icon-btn--active' : ''}`}
-                    onClick={() => setAttachmentMenuOpen(!attachmentMenuOpen)}
-                    title="Attach coastal data or telemetry"
-                    aria-label="Attach data"
-                  >
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                      <line x1="12" y1="5" x2="12" y2="19" />
-                      <line x1="5" y1="12" x2="19" y2="12" />
-                    </svg>
-                  </button>
-
-                  {/* Sleek Telemetry Attachment Popover */}
-                  {attachmentMenuOpen && (
-                    <div className="v-attachment-popover">
-                      <div className="v-attachment-header">Attach Ocean Telemetry</div>
-                      
-                      <button
-                        type="button"
-                        className="v-attachment-item"
-                        onClick={() => handleAttachItem({
-                          id: 'incois-buoy',
-                          label: 'INCOIS Buoy CB-02',
-                          icon: <IconWave size={14} color="#0284C7" />,
-                          text: '\n[Telemetry Attached: INCOIS Wave Buoy CB-02 — Swell 1.44m, SST 28.4°C, Wave Period 8.8s]'
-                        })}
-                      >
-                        <span className="v-attachment-icon v-attachment-icon--blue"><IconWave size={16} color="#0284C7" /></span>
-                        <div className="v-attachment-info">
-                          <span className="v-attachment-name">INCOIS Wave Buoy</span>
-                          <span className="v-attachment-sub">Swell 1.44m • SST 28.4°C</span>
-                        </div>
-                      </button>
-
-                      <button
-                        type="button"
-                        className="v-attachment-item"
-                        onClick={() => handleAttachItem({
-                          id: 'gps-fix',
-                          label: 'Coastal GPS Fix',
-                          icon: <IconMapPin size={14} color="#E11D48" />,
-                          text: '\n[GPS Fix Attached: 16.989° N, 73.284° E — Ratnagiri Mirya Bay]'
-                        })}
-                      >
-                        <span className="v-attachment-icon v-attachment-icon--rose"><IconMapPin size={16} color="#E11D48" /></span>
-                        <div className="v-attachment-info">
-                          <span className="v-attachment-name">Vessel GPS Position</span>
-                          <span className="v-attachment-sub">16.989° N, 73.284° E</span>
-                        </div>
-                      </button>
-
-                      <button
-                        type="button"
-                        className="v-attachment-item"
-                        onClick={() => handleAttachItem({
-                          id: 'vessel-craft',
-                          label: 'Mechanized Trawler (14m)',
-                          icon: <IconShip size={14} color="#4F46E5" />,
-                          text: '\n[Vessel Profile: Mechanized Trawler (14m OAL, Draft 2.2m, Class-B AIS)]'
-                        })}
-                      >
-                        <span className="v-attachment-icon v-attachment-icon--indigo"><IconShip size={16} color="#4F46E5" /></span>
-                        <div className="v-attachment-info">
-                          <span className="v-attachment-name">Vessel Craft Profile</span>
-                          <span className="v-attachment-sub">Mechanized Trawler (14m)</span>
-                        </div>
-                      </button>
-
-                      <button
-                        type="button"
-                        className="v-attachment-item"
-                        onClick={() => handleAttachItem({
-                          id: 'imd-radar',
-                          label: 'IMD Cyclone Radar',
-                          icon: <IconLightning size={14} color="#D97706" />,
-                          text: '\n[Atmospheric Radar: Wind Gust 24kt, Lightning Risk: Low]'
-                        })}
-                      >
-                        <span className="v-attachment-icon v-attachment-icon--amber"><IconLightning size={16} color="#D97706" /></span>
-                        <div className="v-attachment-info">
-                          <span className="v-attachment-name">IMD Cyclone Radar</span>
-                          <span className="v-attachment-sub">Wind Gust 24kt • Low Lightning</span>
-                        </div>
-                      </button>
-
-                      <button
-                        type="button"
-                        className="v-attachment-item"
-                        onClick={() => {
-                          setAttachmentMenuOpen(false);
-                          fileInputRef.current?.click();
-                        }}
-                      >
-                        <span className="v-attachment-icon v-attachment-icon--slate"><IconFolder size={16} color="#64748B" /></span>
-                        <div className="v-attachment-info">
-                          <span className="v-attachment-name">Upload Ocean Log</span>
-                          <span className="v-attachment-sub">.csv, .json, .txt dataset</span>
-                        </div>
-                      </button>
-                    </div>
-                  )}
-                </div>
+                <span className="v-composer-hint">Press Enter ↵ to send</span>
               </div>
 
               <div className="v-composer-actions-right">
-                {/* Microphone / Voice Dictation Button */}
-                <button
-                  type="button"
-                  className={`v-composer-icon-btn ${isRecording ? 'v-composer-icon-btn--recording' : ''}`}
-                  onClick={() => setIsRecording(!isRecording)}
-                  title="Voice dictation"
-                  aria-label="Voice input"
-                >
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
-                    <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
-                    <line x1="12" y1="19" x2="12" y2="22" />
-                  </svg>
-                </button>
-
-                {/* Send Button (Perfect Circle) */}
-                <button
-                  type="submit"
-                  className="v-claude-send-btn"
-                  disabled={(!inputQuery.trim() && attachedTelemetry.length === 0) || isThinking}
-                  aria-label="Send message"
-                >
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <line x1="22" y1="2" x2="11" y2="13" />
-                    <polygon points="22 2 15 22 11 13 2 9 22 2" />
-                  </svg>
-                </button>
+                {isThinking ? (
+                  <button
+                    type="button"
+                    className="v-claude-send-btn v-claude-send-btn--stop"
+                    onClick={handleStopGenerating}
+                    title="Stop generating response"
+                    aria-label="Stop response"
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                      <rect x="4" y="4" width="16" height="16" rx="2" />
+                    </svg>
+                  </button>
+                ) : (
+                  <button
+                    type="submit"
+                    className="v-claude-send-btn"
+                    disabled={!inputQuery.trim() && attachedTelemetry.length === 0}
+                    title="Send message"
+                    aria-label="Send message"
+                  >
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <line x1="22" y1="2" x2="11" y2="13" />
+                      <polygon points="22 2 15 22 11 13 2 9 22 2" />
+                    </svg>
+                  </button>
+                )}
               </div>
             </div>
           </form>

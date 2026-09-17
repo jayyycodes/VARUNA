@@ -26,6 +26,8 @@
 
 .route-header__titles {
   min-width: 0;
+  max-width: 600px;
+  flex: 1;
 }
 
 .route-badge {
@@ -34,15 +36,23 @@
   color: var(--pfz-mid, #0D9488);
   letter-spacing: 0.08em;
   margin-bottom: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 600px;
 }
 
 .route-title {
   font-family: var(--font-display);
-  font-size: 1.55rem;
+  font-size: 1.35rem;
   font-weight: 800;
   margin: 0 0 3px 0;
   color: var(--text-light-primary, #0F172A);
   letter-spacing: -0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 600px;
 }
 
 .route-subtitle {

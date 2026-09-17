@@ -126,8 +126,12 @@ RULES — you MUST follow all of these:
 4. If geofencing data is available, mention boundary status and any warnings.
 5. If route navigation data is available, provide the compass heading, nautical distance (NM), estimated travel time (hours), and fuel required (liters).
 6. If historical fishery trends or productivity decline data are available, explain the root causes (SST anomaly, upwelling suppression, chlorophyll deficit).
-7. Respond fully and naturally in the user's language without injecting English metadata phrases like "Risk verdict: N/A" or "What you should do:".
-8. End with one clear, actionable recommendation."""
+7. CRITICAL LANGUAGE RULE: You MUST write your entire response in {language_name}. If {language_name} is English, write strictly in clear, professional English without any Devanagari or regional Indic translation. Never switch to Marathi, Hindi, or Tamil simply because the queried port (such as Ratnagiri or Mumbai) is in Maharashtra or another state.
+8. FORMATTING & COMPLETION RULES:
+   - Format tables cleanly using standard markdown pipe syntax (| Zone | Distance | Species |). Never use raw tab characters.
+   - Do NOT generate redundant or overly long waypoint tables — summarize key navigational metrics concisely instead. Full waypoints and charts are already displayed on dedicated UI tabs.
+   - Keep markdown tags balanced and clean (e.g. **bold**, *italic*). Never leave dangling hashes (#) or unclosed asterisks (*).
+   - Conclude cleanly with one clear, actionable recommendation. Ensure your response is complete and never cut off halfway."""
 
 
 # ── Verified Indian Coastal Ports Gazetteer ─────────────────────────────
@@ -634,15 +638,19 @@ async def synthesize_response(state: PlannerState) -> dict:
         "risk_verdict": verdict_data,
     }
 
+    target_lang = state.get("detected_language", "en")
+    lang_name_map = {"en": "English", "hi": "Hindi", "mr": "Marathi", "ta": "Tamil"}
+    target_lang_name = lang_name_map.get(target_lang, "English")
+
     messages = [
         {
             "role": "system",
-            "content": SYNTHESIS_SYSTEM_PROMPT.format(verdict=verdict_str),
+            "content": SYNTHESIS_SYSTEM_PROMPT.format(verdict=verdict_str, language_name=target_lang_name),
         },
         {
             "role": "user",
             "content": (
-                f"User query: {state['query']}\n\n"
+                f"User query ({target_lang_name}): {state['query']}\n\n"
                 f"Agent results:\n{json.dumps(agent_context, indent=2, default=str)}"
             ),
         },
@@ -650,16 +658,20 @@ async def synthesize_response(state: PlannerState) -> dict:
 
     # ── Generate response text ────────────────────────────────────
     try:
-        text = await call_llm("synthesizer", messages, temperature=0.3, max_tokens=1024)
+        text = await call_llm("synthesizer", messages, temperature=0.3, max_tokens=2048)
     except Exception as e:
         logger.error(f"[planner] Synthesis LLM failed: {e}")
         text = _fallback_text(state)
+
+    if text:
+        text = _clean_synthesized_text(text)
 
     # ── Build structured output ───────────────────────────────────
     return {
         "response": {
             "query_run_id": state["query_run_id"],
             "intent": intent,
+            "query": state["query"],
             "text": text,
             "map_data": _build_map_data(state),
             "evidence": _build_evidence(state),
@@ -667,6 +679,64 @@ async def synthesize_response(state: PlannerState) -> dict:
             "status": "success",
         }
     }
+
+
+def _clean_synthesized_text(text: str) -> str:
+    """Post-processes LLM text to fix unclosed markdown tokens, tabbed tables, and truncated ends."""
+    if not text:
+        return ""
+
+    lines = text.split("\n")
+    cleaned_lines = []
+
+    for line in lines:
+        l_str = line.strip()
+        # Clean leading escape backslashes like \The model...
+        if l_str.startswith("\\") and not l_str.startswith("\\n"):
+            l_str = l_str[1:].strip()
+
+        # If line contains tabs and looks like table columns, convert to markdown table
+        if "\t" in l_str:
+            parts = [p.strip() for p in l_str.split("\t") if p.strip()]
+            if len(parts) >= 2:
+                l_str = "| " + " | ".join(parts) + " |"
+
+        # Balance double asterisks in individual line if needed
+        count_stars = l_str.count("**")
+        if count_stars % 2 != 0:
+            l_str = l_str + "**"
+
+        cleaned_lines.append(l_str)
+
+    # Check if last line is an incomplete cut-off table, heading, or dangling fragment
+    while cleaned_lines:
+        last = cleaned_lines[-1].strip()
+        if not last:
+            cleaned_lines.pop()
+            continue
+
+        is_cut_off_pipe = (last.startswith("|") and not last.endswith("|")) or last == "|"
+        is_hanging_header = (
+            last.lower().startswith("item\tvalue")
+            or last.lower() == "| item | value |"
+            or last in ("#", "##", "###")
+        )
+        is_dangling_label = (
+            last.endswith(":")
+            and len(last) < 40
+            and not any(p in last.lower() for p in ("recommendation:", "advisory:", "warning:"))
+        )
+
+        if is_cut_off_pipe or is_hanging_header or is_dangling_label:
+            cleaned_lines.pop()
+        else:
+            break
+
+    result = "\n".join(cleaned_lines).strip()
+    if result.count("**") % 2 != 0:
+        result += "**"
+
+    return result
 
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -742,14 +812,13 @@ def _build_map_data(state: PlannerState) -> dict:
     geo = state.get("geofencing_result", {})
     mpa = geo.get("data", {}).get("nearest_mpa", {})
     if mpa and mpa.get("name"):
+        mpa_lat = mpa.get("lat") or (loc.get("lat", 0) - 0.2)
+        mpa_lon = mpa.get("lon") or (loc.get("lon", 0) + (-0.2 if loc.get("lon", 0) < 78.5 else 0.2))
         features.append({
             "type": "Feature",
             "geometry": {
                 "type": "Point",
-                "coordinates": [
-                    loc.get("lon", 0) - 0.5,  # approximate offset
-                    loc.get("lat", 0) - 0.3,
-                ],
+                "coordinates": [round(float(mpa_lon), 4), round(float(mpa_lat), 4)],
             },
             "properties": {
                 "type": "mpa",
@@ -759,6 +828,189 @@ def _build_map_data(state: PlannerState) -> dict:
                 "icon": "shield",
             },
         })
+
+    # Statutory Geofence / Regulatory Boundaries for regulation questions
+    q_lower = state.get("query", "").lower()
+    loc_name = loc.get("name", "").lower()
+    intent = state.get("intent", "")
+    is_reg = intent in ("regulation_question", "regulatory_query") or any(
+        k in q_lower for k in ("ban", "monsoon", "trawl", "sanctuary", "mfra", "restricted", "prohibit", "reserve")
+    )
+
+    if is_reg:
+        # Detect state from query or port location
+        c_lat = float(loc.get("lat", 16.99))
+        c_lon = float(loc.get("lon", 73.30))
+
+        if any(k in q_lower or k in loc_name for k in ("gujarat", "veraval", "porbandar", "kutch")):
+            state_key = "gujarat"
+        elif any(k in q_lower or k in loc_name for k in ("kerala", "kochi", "cochin", "kollam", "vizhinjam", "beypore")):
+            state_key = "kerala"
+        elif any(k in q_lower or k in loc_name for k in ("tamil nadu", "chennai", "thoothukudi", "tuticorin", "rameshwaram", "cuddalore", "nagapattinam")):
+            state_key = "tamil_nadu"
+        elif any(k in q_lower or k in loc_name for k in ("andhra", "visakhapatnam", "vizag", "kakinada", "machilipatnam")):
+            state_key = "andhra_pradesh"
+        elif any(k in q_lower or k in loc_name for k in ("odisha", "orissa", "paradeep", "dhamra", "gahirmatha")):
+            state_key = "odisha"
+        elif any(k in q_lower or k in loc_name for k in ("west bengal", "bengal", "digha", "kakdwip")):
+            state_key = "west_bengal"
+        elif any(k in q_lower or k in loc_name for k in ("karnataka", "mangalore", "malpe", "karwar")):
+            state_key = "karnataka"
+        elif any(k in q_lower or k in loc_name for k in ("goa", "panaji", "mormugao", "vasco")):
+            state_key = "goa"
+        elif any(k in q_lower or k in loc_name for k in ("maharashtra", "mumbai", "ratnagiri", "malvan", "konkan")):
+            state_key = "maharashtra"
+        else:
+            # Geographic coordinate fallback
+            if c_lon >= 78.5:
+                if c_lat >= 21.2:
+                    state_key = "west_bengal"
+                elif c_lat >= 19.0:
+                    state_key = "odisha"
+                elif c_lat >= 13.7:
+                    state_key = "andhra_pradesh"
+                else:
+                    state_key = "tamil_nadu"
+            else:
+                if c_lat >= 20.5:
+                    state_key = "gujarat"
+                elif c_lat >= 15.8:
+                    state_key = "maharashtra"
+                elif c_lat >= 14.8:
+                    state_key = "goa"
+                elif c_lat >= 12.8:
+                    state_key = "karnataka"
+                else:
+                    state_key = "kerala"
+
+        STATE_POLYGONS = {
+            "maharashtra": {
+                "title": "Maharashtra 12 NM Monsoon Trawling Prohibition Belt (1 June – 31 July)",
+                "legal_act": "Maharashtra Marine Fishing Regulation Act, 1981 (Section 4)",
+                "coords": [[73.35, 15.80], [73.10, 15.80], [72.75, 17.00], [72.60, 18.00], [72.50, 19.30], [72.85, 19.30], [73.00, 18.00], [73.35, 17.00], [73.35, 15.80]],
+            },
+            "kerala": {
+                "title": "Kerala 12 NM Monsoon Trawling Prohibition Belt (1 June – 31 July)",
+                "legal_act": "Kerala Marine Fishing Regulation Act, 1980 (Sections 4 & 5)",
+                "coords": [[77.05, 8.30], [76.75, 8.30], [76.10, 9.90], [75.60, 11.30], [74.85, 12.80], [75.10, 12.80], [75.85, 11.30], [76.35, 9.90], [77.05, 8.30]],
+            },
+            "karnataka": {
+                "title": "Karnataka 12 NM Monsoon Trawling Prohibition Belt (1 June – 31 July)",
+                "legal_act": "Karnataka Marine Fishing Regulation Act, 1986 (Section 3)",
+                "coords": [[74.90, 12.80], [74.60, 12.80], [74.30, 13.70], [74.00, 14.85], [74.25, 14.85], [74.55, 13.70], [74.90, 12.80]],
+            },
+            "goa": {
+                "title": "Goa 12 NM Monsoon Trawling Prohibition Belt (1 June – 31 July)",
+                "legal_act": "Goa, Daman and Diu Marine Fishing Regulation Rules, 1980",
+                "coords": [[73.95, 14.85], [73.70, 14.85], [73.60, 15.55], [73.85, 15.80], [74.05, 15.80], [73.95, 14.85]],
+            },
+            "gujarat": {
+                "title": "Gujarat 12 NM Monsoon Trawling Prohibition Belt (1 June – 31 July)",
+                "legal_act": "Gujarat Fisheries Act, 2003",
+                "coords": [[72.70, 20.50], [72.45, 20.50], [70.90, 20.70], [69.60, 22.30], [68.80, 23.20], [69.10, 23.20], [69.90, 22.30], [71.20, 20.70], [72.70, 20.50]],
+            },
+            "tamil_nadu": {
+                "title": "Tamil Nadu 12 NM Monsoon Trawling Prohibition Belt (15 April – 14 June)",
+                "legal_act": "Tamil Nadu Marine Fishing Regulation Act, 1983 (Section 5)",
+                "coords": [[77.55, 8.10], [78.20, 8.80], [79.20, 9.30], [79.85, 10.80], [80.35, 13.20], [80.60, 13.20], [80.15, 10.80], [79.50, 9.30], [78.50, 8.80], [77.85, 8.10], [77.55, 8.10]],
+            },
+            "andhra_pradesh": {
+                "title": "Andhra Pradesh 12 NM Monsoon Trawling Prohibition Belt (15 April – 14 June)",
+                "legal_act": "Andhra Pradesh Marine Fishing (Regulation) Act, 1994",
+                "coords": [[80.30, 13.70], [80.55, 13.70], [80.90, 15.80], [82.20, 16.90], [83.35, 17.70], [84.80, 19.10], [84.55, 19.10], [83.10, 17.70], [81.95, 16.90], [80.65, 15.80], [80.30, 13.70]],
+            },
+            "odisha": {
+                "title": "Odisha 12 NM Monsoon Trawling Prohibition Belt (15 April – 14 June)",
+                "legal_act": "Orissa Marine Fishing Regulation Act, 1982 & Rules 1983",
+                "coords": [[84.90, 19.10], [85.20, 19.10], [85.90, 19.80], [86.75, 20.30], [87.55, 21.60], [87.30, 21.60], [86.50, 20.30], [85.65, 19.80], [84.90, 19.10]],
+            },
+            "west_bengal": {
+                "title": "West Bengal 12 NM Monsoon Trawling Prohibition Belt (15 April – 14 June)",
+                "legal_act": "West Bengal Marine Fishing Regulation Act, 1993",
+                "coords": [[87.40, 21.60], [87.65, 21.60], [88.20, 21.30], [89.10, 21.60], [88.90, 22.00], [88.00, 21.80], [87.40, 21.60]],
+            },
+        }
+
+        poly_data = STATE_POLYGONS.get(state_key, STATE_POLYGONS["maharashtra"])
+        features.append({
+            "type": "Feature",
+            "id": f"feat-monsoon-trawling-ban-{state_key}",
+            "geometry": {
+                "type": "Polygon",
+                "coordinates": [poly_data["coords"]],
+            },
+            "properties": {
+                "type": "geofence",
+                "layer_id": "layer-geofence-ban",
+                "title": poly_data["title"],
+                "severity": "unsafe",
+                "restriction_level": "Total Mechanized Trawl Exclusion",
+                "legal_act": poly_data["legal_act"],
+                "icon": "shield",
+            },
+        })
+
+        # Core MPA specific overlays
+        if any(k in q_lower for k in ("malvan", "sindhudurg")) or state_key == "maharashtra":
+            features.append({
+                "type": "Feature",
+                "id": "feat-malvan-mpa-core",
+                "geometry": {
+                    "type": "Polygon",
+                    "coordinates": [
+                        [[73.44, 16.02], [73.50, 16.02], [73.51, 16.09], [73.44, 16.09], [73.44, 16.02]]
+                    ],
+                },
+                "properties": {
+                    "type": "geofence",
+                    "layer_id": "layer-geofence-core",
+                    "title": "Malvan Marine Sanctuary Core Zone (29.12 sq km)",
+                    "severity": "unsafe",
+                    "restriction_level": "No-Take / Total Exclusion",
+                    "legal_act": "Wildlife Protection Act, 1972",
+                    "icon": "shield",
+                },
+            })
+        elif any(k in q_lower for k in ("mannar", "palk")) or state_key == "tamil_nadu":
+            features.append({
+                "type": "Feature",
+                "id": "feat-mannar-mpa-core",
+                "geometry": {
+                    "type": "Polygon",
+                    "coordinates": [
+                        [[78.90, 9.05], [79.40, 9.05], [79.40, 9.35], [78.90, 9.35], [78.90, 9.05]]
+                    ],
+                },
+                "properties": {
+                    "type": "geofence",
+                    "layer_id": "layer-geofence-core",
+                    "title": "Gulf of Mannar Marine National Park Core Zone (560 sq km)",
+                    "severity": "unsafe",
+                    "restriction_level": "No-Take / Biosphere Reserve",
+                    "legal_act": "Wildlife Protection Act, 1972",
+                    "icon": "shield",
+                },
+            })
+        elif any(k in q_lower for k in ("gahirmatha", "olive ridley")) or state_key == "odisha":
+            features.append({
+                "type": "Feature",
+                "id": "feat-gahirmatha-mpa-core",
+                "geometry": {
+                    "type": "Polygon",
+                    "coordinates": [
+                        [[86.80, 20.55], [87.15, 20.55], [87.15, 20.85], [86.80, 20.85], [86.80, 20.55]]
+                    ],
+                },
+                "properties": {
+                    "type": "geofence",
+                    "layer_id": "layer-geofence-core",
+                    "title": "Gahirmatha Marine Sanctuary Turtle Breeding Zone (1435 sq km)",
+                    "severity": "unsafe",
+                    "restriction_level": "Strict Seasonal Trawl Exclusion",
+                    "legal_act": "Wildlife Protection Act, 1972 & Orissa MFRA",
+                    "icon": "shield",
+                },
+            })
 
     # Destination location
     dest = state.get("destination")
